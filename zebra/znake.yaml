@@ -1,0 +1,97 @@
+znake:
+  info:
+    package: zebra
+    maintainer: Engineering Services
+    maintainer_email: engineering-services@zenterio.com
+    short_description: Tool to build Zenterio products inside docker containers
+    long_description: |
+      Tool to build Zenterio products inside docker containers.
+      Provides support for pulling the correct images, configuring mounts
+      and other things to make it easy to build inside a container
+    changelog:
+      - version: 1.0.0
+        changes:
+        - "First open source version"
+        date: Sat, 11 May 2019 18:00:00 +0000
+  license: 'Apache License 2.0'
+  classifiers:
+    - 'Development Status :: 3 - Alpha'
+    - 'Intended Audience :: Developers'
+    - 'Topic :: Software Development :: Build Tools'
+    - 'Programming Language :: Python :: 3.6'
+  keywords:
+    - build
+    - docker
+    - container
+  entry_points:
+    console_scripts:
+      - zebra = zebra.__main__:main
+    zebra.addons:
+      - zebraexec = zebra.ui.exec:ExecExtension
+      - zebramake = zebra.ui.make:MakeExtension
+      - zebrashell = zebra.ui.shell:ShellExtension
+      - zebradotzebra = zebra.config.dotzebra:DotZebraExtension
+      - zebralogging = zebra.logging.logging:ZebraLoggingExtension
+      - zebradockerconfig = zebra.docker.dockerconfig:DockerConfigExtension
+  package_data:
+    - package: zebra.docgen
+      include:
+        - 'templates/*.rst'
+  requirements:
+    - Jinja2==2.9.6
+    - coloredlogs==5.1.1
+    - dohq-artifactory==0.3.99
+    - ruamel.yaml==0.15.47
+    - zenterio-zaf==0.24.3
+  static:
+    packages:
+      - zebra
+      - systest
+  doc:
+    pre:
+      - mkdir -p build/doc/user_guide/generated/
+      - >-
+          zebra docgen --doc-dir build/doc/user_guide/generated/
+          --limit-extension-namespaces zebra.addons --no-include-hidden-commands
+          --no-include-components --no-include-endpoints-and-messages --no-include-classes
+          --additional-extensions logger --additional-extensions filelogger --additional-extensions fileconfig
+          --additional-extensions helpcommand --additional-extensions changelog
+          --additional-extensions changelogcommand
+    targets:
+      - guide: user_guide
+  deb:
+    dependencies:
+      - docker-ce
+      - zenterio-ca-certificates
+      - zenterio-zmake
+    package: zenterio-zebra
+    doc:
+      - user_guide
+    links:
+      - target: /opt/venvs/zenterio-zebra/bin/zebra
+        link: /usr/bin/zebra
+    include:
+      - source: znaketools/zenterio-zebra-bash-completion.sh
+        target: /etc/bash_completion.d/
+      - source: znaketools/daemon.json
+        target: /etc/docker/
+  test:
+    packages:
+      - zebra
+  systest:
+    packages:
+      - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml
+  debtest:
+    packages:
+      - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml
+dependencies:
+  "{build_dir}/doc/user_guide/html":
+    - doc/user_guide/**
+    - zebra/**
+  "{build_dir}/doc/user_guide/pdf":
+    - doc/user_guide/**
+    - zebra/**

@@ -1,0 +1,14 @@
+*~
+\#*\#
+.\#*
+/build/
+/debian/
+*.egg-info/
+*.pyc
+.python-version
+__pycache__
+/.venv/
+.idea/
+
+zebra/version.py
+setup.py

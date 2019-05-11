@@ -1,0 +1,1 @@
+../../build/doc/user_guide/generated/command_list.rst

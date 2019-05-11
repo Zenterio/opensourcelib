@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -eu
+
+if [ "$1" = "install" ]; then
+  echo ""
+  echo "================================================================================"
+  echo "To start using the Zebra tool, some manual steps are required:"
+  echo ""
+  echo "1. The user that is going to use the Zebra tool needs to be a member of the"
+  echo "   \"docker\" group. To add your user to the \"docker\" group, run:"
+  echo ""
+  echo "    $ sudo adduser [user] docker"
+  echo ""
+  echo "For these changes to take effect, please log out and log back in again."
+  echo ""
+  echo "2. Restart the docker service:"
+  echo ""
+  echo "    $ sudo service docker restart"
+  echo ""
+  echo "Note that this will terminate any running containers. Use with caution!"
+  echo ""
+  echo "================================================================================"
+  echo ""
+fi

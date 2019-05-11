@@ -1,0 +1,53 @@
+log.warning: [nose]
+
+plugins.paths:
+  - systest/plugins
+
+ext.default.enabled: false
+
+# Extensions that need to be activated
+ext.click.enabled: true
+ext.configcommand.enabled: true
+ext.configurationvalidator.enabled: true
+ext.docker.enabled: true
+ext.filelogger.enabled: true
+ext.logdefaults.enabled: true
+ext.logger.enabled: true
+ext.looper.enabled: true
+ext.output.enabled: true
+ext.proc.enabled: true
+ext.pyproc.enabled: true
+ext.runcommand.enabled: true
+ext.signalhandler.enabled: true
+ext.sut.enabled: true
+ext.testfinder.enabled: true
+ext.testrunner.enabled: true
+ext.testscheduler.enabled: true
+ext.testresults.enabled: true
+ext.textreport.enabled: true
+ext.testngreport.enabled: true
+
+# Plugins that need to be activated
+ext.initializejenkins.enabled: true
+
+# Logging
+logdefaults.enabled: true
+log.info: [k2.extension.pyproc, k2.extension.initializejenkins, k2.extension.jenkins, testcase]
+
+# Jenkins docker node configuration
+suts.ids:
+  - jenkins
+
+suts.jenkins.ip: ''
+suts.jenkins.docker.image: jenkins
+
+docker.images.ids:
+  - jenkins
+
+docker.images.jenkins.repository: docker.zenterio.lan/zenterio/ci-tools.jenkins
+docker.images.jenkins.mountpoints:
+  - type=bind,source=${cwd}/systest/data/jenkins/jenkins.yaml,target=/var/jenkins_home/casc_configs/jenkins.yaml
+  - type=bind,source=${cwd}/systest/data/repos,target=/git
+  - type=bind,source=${cwd}/systest/data/znake,target=/znake
+  - type=bind,source=${cwd}/systest/data/znake/znake,target=/usr/bin/znake
+  - type=bind,source=${cwd}/systest/data/bin/twine,target=/usr/bin/twine

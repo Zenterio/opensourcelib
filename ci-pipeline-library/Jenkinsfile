@@ -1,0 +1,24 @@
+pipeline {
+    agent {
+        label 'build'
+    }
+    stages {
+        stage('Check') {
+            steps {
+                bash "znake -e --root check"
+            }
+            post {
+                always {
+                    step([$class: 'Publisher', reportFilenamePattern: 'build/test/output-*/reports/testng/testng-results.xml'])
+                    archiveArtifacts 'build/test/output-*/logs/**'
+                }
+            }
+        }
+        stage('Tag') {
+            steps {
+                bash "git tag --force LAST_SUCCESSFUL_BUILD"
+                bash "git push --force origin LAST_SUCCESSFUL_BUILD"
+            }
+        }
+    }
+}

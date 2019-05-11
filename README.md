@@ -14,6 +14,7 @@ Each component/tool has its own license.
 Components/Tools
 ----------------
 
+* ci-pipeline-library
 * citools, Zenterio Jenkins CI Seed Tool
 * compiz, commandline tool for marking code ownership in source trees
 * deb-packer, tool for simplifying creation of debian packages
@@ -24,6 +25,7 @@ Components/Tools
 * Log-Analyzer, tool for identifying patterns in text logs
 * ZAF, python application framework
 * zchangelog, generate change log from git and jira
+* Zebra, build environment tool
 * zftrace, file tracing utility
 * Znake, python build-system
 * Zpider, document generation tool

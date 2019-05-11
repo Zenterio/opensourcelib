@@ -1,0 +1,7 @@
+#!/bin/bash
+echo "Running 'systest':" "$@"
+mkdir -p build/test/output-local/reports/testng
+touch build/test/output-local/reports/testng/testng-results.xml
+mkdir -p build/test/output-local/logs/
+touch build/test/output-local/logs/all.log
+

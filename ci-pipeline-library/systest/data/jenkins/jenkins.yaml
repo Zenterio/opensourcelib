@@ -1,0 +1,57 @@
+
+security:
+  globaljobdslsecurityconfiguration:
+    useScriptSecurity: false
+
+unclassified:
+  globalLibraries:
+    libraries:
+      - defaultVersion: "master"
+        implicit: true
+        name: "ci-pipeline-library"
+        retriever:
+          modernSCM:
+            scm:
+              git:
+                remote: "file:///git/ci-pipeline-library.git"
+
+
+jenkins:
+  systemMessage: |
+    <h1>POC: ci-pipeline-library systest</h1>
+  
+  labelString: "master build test"
+  numExecutors: 5
+
+  authorizationStrategy: unsecured
+
+credentials:
+  system:
+    domainCredentials:
+    - credentials:
+      - usernamePassword:
+          scope:    GLOBAL
+          id:       artifactory-credentials
+          username: artifactory_user
+          password: artifactory_password
+
+jobs:
+  - script: >
+      pipelineJob("default") {
+        parameters {
+          stringParam("BRANCH", "master", "branch")
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                branch '${BRANCH}'
+                remote {
+                  url "file:///git/systest-job.git"
+                }
+              }
+            }
+          }
+        }
+        quietPeriod 0
+      }

@@ -1,0 +1,12 @@
+*~
+\#*\#
+.\#*
+/build/
+*.egg-info/
+*.pyc
+setup.py
+/systest/version.py
+/.venv/
+
+/.vscode/
+/.idea/

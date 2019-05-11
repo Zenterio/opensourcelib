@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Running 'pypi':" "$@"
+mkdir -p build/pypi/sdist/
+touch build/pypi/sdist/zenterio-znake-0.25.0+0.tar.gz
+mkdir -p build/pypi/wheel/
+touch build/pypi/wheel/zenterio_znake-0.25.0+0-py3-none-any.whl

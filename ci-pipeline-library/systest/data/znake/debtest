@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Running 'debtest':" "$@"
+mkdir -p build/test/output-u16/reports/testng
+touch build/test/output-u16/reports/testng/testng-results.xml
+mkdir -p build/test/output-u16/logs/
+touch build/test/output-u16/logs/all.log

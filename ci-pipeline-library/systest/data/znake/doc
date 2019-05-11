@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Running 'doc':" "$@"
+mkdir -p build/doc/user_guide/html/
+mkdir -p build/doc/user_guide/pdf/
+touch build/doc/user_guide/html/index.html
+touch build/doc/user_guide/pdf/user_guide.pdf

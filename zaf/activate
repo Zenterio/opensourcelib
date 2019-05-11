@@ -1,0 +1,5 @@
+# Source this file to create and activate a Znake virtual environment
+znake venv
+source .venv/bin/activate
+echo
+echo .venv created and activated

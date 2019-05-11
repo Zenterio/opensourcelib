@@ -1,0 +1,3 @@
+@Library('ci-pipeline-library') _
+
+znake(name: 'zaf', systestCoverage: false)

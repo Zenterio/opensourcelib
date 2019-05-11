@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -eu
+
+DH_VERBOSE=0
+DH_VENV_DEBUG=0
+
+# This is the magic required to update the Python interpreter binary when installing the Debian packages.
+
+#DEBHELPER#
+
+python3 -m compileall /opt/venvs/zenterio-zaf/lib/*/site-packages/ 2&> /dev/null || true

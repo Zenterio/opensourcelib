@@ -1,0 +1,4 @@
+log.level: warning
+plugins.paths:
+  - systest/data/plugins
+log.warning: [nose]

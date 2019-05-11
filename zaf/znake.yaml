@@ -1,0 +1,129 @@
+znake:
+    info:
+        package: zaf
+        maintainer: Zenterio AB
+        maintainer_email: foss@zenterio.com
+        short_description: Zenterio Application Framework
+        long_description: |
+          Application framework for building applications with support for
+          events, plugins/addons, metric collection, logging, configuration and
+          command line argument parsing.
+        changelog:
+          - version: 1.0.0
+            changes:
+              - 'First Open source release.'
+            date: Fri, 10 May 2019 22:00:00 +0200
+    license: 'Apache 2.0'
+    classifiers:
+        - 'Development Status :: 5 - Production/Stable'
+        - 'Intended Audience :: Developers'
+        - 'Topic :: Software Development :: Build Tools'
+        - 'License :: OSI Approved :: Apache Software License'
+        - 'Programming Language :: Python :: 3.6'
+    keywords:
+        - zaf
+        - python
+    entry_points:
+        console_scripts:
+            - zaf = zaf.__main__:main
+        zaf.addons:
+            - zafblocker = zaf.builtin.blocker.blocker:Blocker
+            - zafremoteblocker = zaf.builtin.blocker.remote:RemoteBlockerExtension
+            - zafclickplugins = zaf.builtin.click.click:ClickInitPluginPath
+            - zafclickextensions = zaf.builtin.click.click:ClickInitExtensions
+            - zafclickextensionoptions = zaf.builtin.click.click:ClickExtensionOptions
+            - zafclickcli = zaf.builtin.click.click:ClickParseCli
+            - zafclicktrycli = zaf.builtin.click.click:ClickTryParseCli
+            - zafdocgencommand = zaf.builtin.docgen.docgen:DocGenCommand
+            - zafmessagescommand = zaf.builtin.messages:MessagesCommand
+            - zafextensionscommand = zaf.builtin.extensions:ExtensionsCommand
+            - zafendpointscommand = zaf.builtin.endpoints:EndpointsCommand
+            - zafcommandscommand = zaf.builtin.commands:CommandsCommand
+            - zafunittestcommand = zaf.builtin.unittest.unittest:UnittestCommand
+            - zafconfigcommand = zaf.builtin.config.config:ConfigCommand
+            - zafnoopcommand = zaf.builtin.noop:NoopExtension
+            - zafhelpcommand = zaf.builtin.help.help:HelpCommand
+            - zafremoteserver = zaf.builtin.remote.remote:RemoteServer
+            - zafremoteclient = zaf.builtin.remote.client:RemoteClientExtension
+            - zafexplicitfielconfigloader = zaf.builtin.config.loader:ExplicitFileConfigLoader
+            - zafsystemfileconfigloader = zaf.builtin.config.loader:SystemFileConfigLoader
+            - zafuserfileconfigloader = zaf.builtin.config.loader:UserFileConfigLoader
+            - zaflocalfileconfigloader = zaf.builtin.config.loader:LocalFileConfigLoader
+            - zafadditionalfileconfigloader = zaf.builtin.config.loader:AdditionalFileConfigLoader
+            - zafentitymainincludeconfigloader = zaf.builtin.config.loader:EntityMainIncludeConfigLoader
+            - zafentitycommandincludeconfigloader = zaf.builtin.config.loader:EntityCommandIncludeConfigLoader
+            - zafdisabledefaultconfigfileloader = zaf.builtin.config.loader:DisableDefaultConfigFileLoader
+            - zafconfigurationvalidator = zaf.builtin.config.validator:ConfigurationValidator
+            - zafrootlogger = zaf.builtin.logging.logging:RootLogger
+            - zaffilelogger = zaf.builtin.logging.file:FileLogger
+            - zafoutput = zaf.builtin.output.output:Output
+            - zafchangelog = zaf.builtin.changelog.changelog:ChangeLogExtension
+            - zafchangelogconfig = zaf.builtin.changelog.changelog:ChangeLogConfigExtension
+            - zafchangelogcommand = zaf.builtin.changelog.command:ChangeLogCommandExtension
+        zaf.test_addons:
+            - testcommandaddon = zaf.extensions.test.addons.testcommandaddon:TestCommandAddon
+    package_data:
+      - package: zaf.builtin.docgen
+        include:
+          - 'templates/*.rst'
+    requirements:
+        - click<8.0,>=7
+        - coverage<5.0,>=4
+        - fastentrypoints<1.0,>=0
+        - jinja2<3.0,>=2
+        - JSON-log-formatter<1.0,>=0
+        - nose<2.0,>=1
+        - nose-pattern-exclude<1.0,>=0
+        - nose-timer<1.0,>=0
+        - ordered-set<3.0,>=2
+        - pytracing<1.0,>=0
+        - rpyc<4.0,>=3
+        - ruamel.yaml<1.0,>=0
+        - voluptuous<1.0,>=0
+    requirements_dev:
+        - sphinx-rtd-theme==0.3.0
+        - Sphinx==1.7.2
+        - sphinxcontrib-plantuml==0.11
+        - sphinxprettysearchresults==0.3.4
+        - wheel==0.31.1
+    static:
+        packages:
+            - zaf
+            - systest
+    doc:
+        pre:
+          - mkdir -p build/doc/user_guide/generated/
+          - zaf docgen --doc-dir build/doc/user_guide/generated/
+        targets:
+            - guide: user_guide
+    deb:
+        package: zenterio-zaf
+        dependencies:
+        doc:
+          - user_guide
+        links:
+          - target: /opt/venvs/zenterio-zaf/bin/zaf
+            link: /usr/bin/zaf
+    test:
+        packages:
+            - zaf
+        coverage_flags: "--coverage-enabled --coverage-file build/coverage/.coverage-{image} --coverage-xml-enabled"
+        command_pattern: "zaf --log-level off unittest --tests zaf {coverage_flags}"
+    systest:
+        packages:
+            - systest.tests
+        vars:
+            config_file: systest/systest_config.yaml
+    debtest:
+        packages:
+            - systest.tests
+            - systest.debtests
+        vars:
+            config_file: systest/systest_config.yaml
+dependencies:
+  "{build_dir}/doc/user_guide/html/index.html":
+    - doc/user_guide/**
+    - zaf/**
+  "{build_dir}/doc/user_guide/pdf/user_guide.pdf":
+    - doc/user_guide/**
+    - zaf/**

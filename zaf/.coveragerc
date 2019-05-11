@@ -1,0 +1,6 @@
+
+[report]
+omit =
+    */zacthrift/generated*
+    */site-packages/*
+    */test/*

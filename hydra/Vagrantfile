@@ -1,0 +1,33 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  config.vm.box_download_insecure = true
+
+  config.vm.define "u12" do |u12|
+    u12.vm.box = "zenterio/ubuntu-12"
+    u12.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-12/metadata.json"
+    u12.vm.network "forwarded_port", guest: 80, host: 8080
+  end
+
+  config.vm.define "u14" do |u14|
+    u14.vm.box = "zenterio/ubuntu-14"
+    u14.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-14/metadata.json"
+    u14.vm.network "forwarded_port", guest: 80, host: 8081
+  end
+
+  config.vm.define "u16" do |u16|
+    u16.vm.box = "zenterio/ubuntu-16"
+    u16.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-16/metadata.json"
+    u16.vm.network "forwarded_port", guest: 80, host: 8082
+  end
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 2048
+  end
+
+  config.vm.provision "apt-get-update", type: "shell", inline: <<-SHELL
+    sudo apt-get update
+  SHELL
+
+end

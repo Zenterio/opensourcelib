@@ -1,0 +1,101 @@
+#!/bin/bash
+
+set -eu
+
+if [ "${SUDO_USER}" != "vagrant" ]; then
+    echo "The script $(basename $0) must be run as sudo from within a vagrant machine"
+    echo "since it makes modifications on an installed system."
+    exit 1
+fi
+
+INSTALL_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TEST_ROOT=$(cd "${INSTALL_ROOT}/../tests" && pwd)
+RESOURCE_ROOT=$(cd "${TEST_ROOT}/systemtests/resources" && pwd)
+CI_PHPUNIT="codeigniter-phpunit-2.x"
+CI_PHPUNIT_ZIP="${INSTALL_ROOT}/../3pp/CodeIgniter/${CI_PHPUNIT}.zip"
+UNPACK_DIR=$(mktemp -d)
+HYDRA_APPLICATION_PATH="/usr/share/hydra"
+CONFIG_PATH="/etc/hydra"
+ECHO=echo
+
+trap "cleanup" exit
+cleanup() {
+    rm -rf "$UNPACK_DIR"
+}
+
+install_composer() {
+    local expected_signature=$(wget -q -O - https://composer.github.io/installer.sig)
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    actual_signature=$(php -r "echo hash_file('SHA384', 'composer-setup.php');")
+
+    if [ "$expected_signature" != "$actual_signature" ]
+    then
+        >&2 echo 'ERROR: Invalid installer signature'
+        rm composer-setup.php
+        exit 1
+    fi
+
+    sudo -u vagrant php composer-setup.php
+    local result=$?
+    rm composer-setup.php
+    return $result
+}
+
+install_phpunit() {
+    if [ $(echo $(php --version | grep -oE "[0-9]+\.[0-9]+" | head -1)'>='7.0 | bc -l) -eq 1 ]; then
+        apt-get install -y phpunit
+    elif [ $(echo $(php --version | grep -oE "[0-9]+\.[0-9]+" | head -1)'>='5.6 | bc -l) -eq 1 ]; then
+        wget https://phar.phpunit.de/phpunit.phar
+        chmod +x phpunit.phar
+        mv phpunit.phar /usr/local/bin/phpunit
+    else
+        (cd ~vagrant && install_composer)
+        sudo -u vagrant php /home/vagrant/composer.phar global require "phpunit/phpunit=4.1.*"
+        sudo -u vagrant php /home/vagrant/composer.phar global require "phpunit/php-invoker=~1.1."
+        ln -s  ~/.composer/vendor/phpunit/phpunit/phpunit   /usr/local/bin/
+    fi
+    phpunit --version
+}
+
+install_config() {
+    local config_path=$1
+    $ECHO "Install config (path=$config_path)"
+    cp -f "${RESOURCE_ROOT}/test_config.php" "${config_path}/hydra.php"
+    cp -f "${RESOURCE_ROOT}/id_rsa" "${config_path}/id_rsa"
+    chown www-data:www-data "${config_path}/id_rsa"
+    chmod 400 "${config_path}/id_rsa"
+
+
+    if ! grep --file="${RESOURCE_ROOT}/id_rsa.pub" -q /home/vagrant/.ssh/authorized_keys; then
+        cat "${RESOURCE_ROOT}/id_rsa.pub" >> /home/vagrant/.ssh/authorized_keys
+    fi
+
+    local ecdsa_key=$(ssh-keyscan -t ecdsa localhost 2> /dev/null)
+    local know_hosts_file="${config_path}/known_hosts"
+    sudo touch "${know_hosts_file}"
+    chmod 640 "${know_hosts_file}"
+    chown root:www-data "${know_hosts_file}"
+    if ! grep -q "${ecdsa_key}" "${know_hosts_file}"; then
+        echo ${ecdsa_key} >> "${know_hosts_file}"
+    fi
+}
+
+$ECHO "** Installing Hydra Tests** "
+
+$ECHO "Install phpunit"
+if ! which phpunit > /dev/null; then
+    install_phpunit
+fi
+
+$ECHO "Install CodeIgniter PHP-Unit"
+unzip -qo "$CI_PHPUNIT_ZIP" -d "$UNPACK_DIR"
+cp "$UNPACK_DIR/$CI_PHPUNIT/phpunit.xml" "${HYDRA_APPLICATION_PATH}"
+cp -r $UNPACK_DIR/$CI_PHPUNIT/system/core/* ${HYDRA_APPLICATION_PATH}/system/core/
+
+$ECHO "Install tests"
+cp -r "${TEST_ROOT}" "${HYDRA_APPLICATION_PATH}/application/"
+cp "$UNPACK_DIR/$CI_PHPUNIT/application/tests/bootstrap.php" "${HYDRA_APPLICATION_PATH}/application/tests/"
+
+install_config "${CONFIG_PATH}"
+
+$ECHO "Hydra test installation complete"

@@ -1,0 +1,338 @@
+#!/bin/bash
+#
+# Install hydra
+#
+# Description:
+# The script installs scripts and other files for the hydra web-service.
+#
+# It does not install the required user.
+#
+
+set -o errexit -o nounset -o pipefail
+
+# --- Usage and version ---
+
+usage() {
+    cat <<EOF
+Usage:
+    $SCRIPT [-h|--help] [--version] [-k|--keep-config] [-q|--quiet]
+
+    options:
+     -h, --help          	output this small usage guide and exit
+     --version       	    output version information and exit
+     -k,--KEEP_CONFIG       do not overwrite config
+                            can also be set with environmental variable:
+                            HYDRA_KEEP_CONFIG=true
+     -q, --quiet        	quiet mode, minimal output
+
+    See also README for more information about installing hydra.
+EOF
+}
+
+version() {
+    echo "$SCRIPT -- version $VERSION"
+    echo "Copyright Zenterio AB, 2016"
+}
+
+# --- Globals and cleanup ---
+
+SCRIPT=`basename $0`
+VERSION=2.0
+DEBUG=${DEBUG:-false}
+QUIET=false
+ECHO=echo
+INSTALL_HYDRA=true
+KEEP_CONFIG=${HYDRA_KEEP_CONFIG:-false}
+HYDRA_ROOT=$(cd "$(dirname "$0")"; cd ..; pwd)
+CONFIG_PATH=/etc/hydra
+APPLICATION_PATH=/usr/share/hydra
+DATA_PATH=/var/lib/hydra
+LOG_PATH=/var/log/hydra
+PHP_TEMP_PATH=/tmp
+CODE_IGNITER_VERSION=2.2.6
+declare -a DEB_INSTALL_BIN_CHECK
+declare -a DEB_INSTALL_PACKAGE
+GLOBALS="SCRIPT VERSION QUIET DEBUG ECHO"
+GLOBALS="$GLOBALS INSTALL_HYDRA KEEP_CONFIG DATA_PATH PHP_TEMP_PATH"
+GLOBALS="$GLOBALS HYDRA_ROOT CONFIG_PATH APPLICATION_PATH"
+GLOBALS="$GLOBALS CODE_IGNITER_VERSION"
+GLOBALS="$GLOBALS DEB_INSTALL_BIN_CHECK DEB_INSTALL_PACKAGE"
+TEMP_INSTALL_DIR=
+
+#trap "cleanup" EXIT
+cleanup() {
+    if [ -d "${TEMP_INSTALL_DIR}" ]; then
+        rm -rf "${TEMP_INSTALL_DIR}"
+    fi
+}
+
+# --- Commandline parsing ---
+
+set +e
+ARGS=$(getopt -o hqk -l "help,version,keep-config,quiet," -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    usage
+    exit 2
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h|--help)
+            shift;
+            usage
+            exit 0;
+            ;;
+        --version)
+            shift;
+            version;
+            ;;
+        --keep-config)
+            shift;
+            KEEP_CONFIG=true;
+            ;;
+        -q|--quiet)
+            shift;
+            QUIET=1;
+            ECHO=true;
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+
+#------------------------
+# Functions
+#------------------------
+print_var_list() {
+    for var in $@;do
+        echo "$var=${!var}"
+    done
+}
+
+do_debug() {
+    print_var_list "$GLOBALS"
+    $ECHO "Remaining args=$@"
+    set -o xtrace
+}
+
+# Install deb-packages registered for installation
+do_install_reg_deb() {
+    local max_index=${#DEB_INSTALL_PACKAGE[@]}
+    local i
+    local deb_package
+    local binary
+    for ((i=0; i<${max_index}; i++));
+    do
+        deb_package=${DEB_INSTALL_PACKAGE[$i]}
+        binary=${DEB_INSTALL_BIN_CHECK[$i]}
+        $ECHO "  $deb_package"
+        if ! which "${binary}" > /dev/null; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y "${deb_package}"
+        fi
+    done
+}
+
+# 1 - debian packages
+# 2 - binary to check for (optional defaults to package name)
+reg_deb_install() {
+    local deb_package=$1
+    local binary=${2:-$deb_package}
+    DEB_INSTALL_BIN_CHECK+=("${binary}")
+    DEB_INSTALL_PACKAGE+=("${deb_package}")
+}
+
+install_debs() {
+    $ECHO "Install debian packages"
+    reg_deb_install apache2 apache2ctl
+    reg_deb_install git
+    reg_deb_install unzip
+    reg_deb_install bc
+
+    do_install_reg_deb
+
+    $ECHO "  php"
+    if ! which php > /dev/null; then
+        apt-get install -y php || apt-get install -y php5
+    fi
+
+    if [ $(echo $(php --version | grep -oE "[0-9]+\.[0-9]+" | head -1)'>='7.0 | bc -l) -eq 1 ]; then
+        apt-get install libapache2-mod-php7.0
+    fi
+
+    if [ $(/usr/sbin/apache2 -v | grep "Apache/2.4" -wc) == 1 ]; then
+        APACHE_CONF=/etc/apache2/conf-available
+    else
+        APACHE_CONF=/etc/apache2/conf.d
+    fi
+}
+
+# 1 - tmp installation directory
+unpack_application() {
+    local tmp_install="$1"
+    $ECHO "Unpack application ($tmp_install)"
+
+    $ECHO "  unzipping CodeIgniter"
+    unzip -xq "${HYDRA_ROOT}/3pp/CodeIgniter/CodeIgniter-${CODE_IGNITER_VERSION}.zip" -d "${tmp_install}"
+    tmp_install=${tmp_install}/CodeIgniter-${CODE_IGNITER_VERSION}
+
+    $ECHO "  copying controllers"
+    cp -p "${HYDRA_ROOT}"/controllers/* "${tmp_install}/application/controllers/"
+
+    $ECHO "  copying views"
+    cp -p "${HYDRA_ROOT}"/views/* "${tmp_install}/application/views/"
+
+    $ECHO "  copying static"
+    cp -rp "${HYDRA_ROOT}"/static "${tmp_install}/"
+
+    $ECHO "  copying config"
+    cp -p "${HYDRA_ROOT}"/config/* "${tmp_install}/application/config/"
+
+    $ECHO "  copying helpers"
+    cp -p "${HYDRA_ROOT}"/helpers/* "${tmp_install}/application/helpers/"
+
+    $ECHO "  copying hydra scripts"
+    cp -rp "${HYDRA_ROOT}/scripts" "${tmp_install}/"
+
+    $ECHO "  change access rights"
+    chown -R root:www-data "${tmp_install}"
+    chmod -R 750 "${tmp_install}"
+}
+
+# 1 - tmp installation directory
+# 2 - destination path
+install_application() {
+    local tmp_install=$1
+    local destination=$2
+    $ECHO "Install application ($destination)"
+    rm -rf "${destination}"
+    mv "${tmp_install}/CodeIgniter-${CODE_IGNITER_VERSION}" "${destination}"
+}
+
+# 1 - data path
+install_data() {
+    local data_path=$1
+    $ECHO "Install data (${data_path})"
+    mkdir -p "${data_path}/cache"
+    chown www-data:www-data "${data_path}"
+    chown www-data:www-data "${data_path}/cache"
+    chmod 770 "${data_path}"
+    chmod 770 "${data_path}/cache"
+}
+
+# 1 - configuration path
+# 2 - log path
+# 3 - application path
+install_configuration() {
+    local config_path=$1
+    local log_path=$2
+    local application_path=$3
+    $ECHO "Install configuration (${config_path})"
+
+    mkdir -p "${config_path}"
+
+    if ${KEEP_CONFIG}; then
+        $ECHO "  Keeping apache2 configuration"
+        ln -sf "${config_path}/apache2.conf" "${APACHE_CONF}/hydra.conf"
+
+        $ECHO "  Keeping hydra application configuration"
+        ln -sf "${config_path}/hydra.php" "${application_path}/application/config/hydra.php"
+    else
+        $ECHO "  apache2 configuration"
+        cp -f --suffix=".old" "${HYDRA_ROOT}/install/apache2.conf" "${config_path}/apache2.conf"
+        ln -sf "${config_path}/apache2.conf" "${APACHE_CONF}/hydra.conf"
+
+        $ECHO "  hydra application configuration"
+        cp -f --suffix=".old" "${HYDRA_ROOT}/install/hydra.php" "${config_path}/hydra.php"
+        ln -sf "${config_path}/hydra.php" "${application_path}/application/config/hydra.php"
+    fi
+
+    $ECHO "  configuration directory access"
+    chmod -R 750 "${config_path}"
+    chown -R root:www-data "${config_path}"
+
+    $ECHO "  apache2 rewrite module"
+    a2enmod rewrite
+
+    $ECHO "  apache2 version module"
+    # this module is pre-compiled with the binary in some versions and will
+    # therefore fail.
+    a2enmod version || true
+
+    $ECHO "  apache2 headers module"
+    a2enmod headers
+
+    $ECHO "  enable apache2 confs and mods"
+    set +e
+    which a2enconf > /dev/null && a2enconf hydra
+    set -e
+
+    $ECHO "  restarting apache2 webservice."
+    service apache2 restart
+
+    $ECHO "  setup application logging (${log_path})"
+    mkdir -p "${log_path}"
+    chown -R www-data:www-data "${log_path}"
+    chmod -R 770 "${log_path}"
+
+    $ECHO "  prepare for remote git server access"
+    touch /etc/hydra/id_rsa
+    chown www-data:www-data /etc/hydra/id_rsa
+    chmod 400 /etc/hydra/id_rsa
+    touch /etc/hydra/known_hosts
+    chown root:www-data /etc/hydra/known_hosts
+    chmod 660 /etc/hydra/known_hosts
+
+}
+
+install_crontab() {
+    cat ${HYDRA_ROOT}/install/crontab.conf | crontab -u www-data -
+}
+
+install_logrotate() {
+    cp -f ${HYDRA_ROOT}/install/logrotate.conf /etc/logrotate.d/hydra
+    chmod 644 "/etc/logrotate.d/hydra"
+}
+
+install_hydra() {
+
+    $ECHO "** Installing Hydra **"
+
+    TEMP_INSTALL_DIR=$(mktemp -d)
+
+    unpack_application "${TEMP_INSTALL_DIR}"
+
+    install_application "${TEMP_INSTALL_DIR}" "${APPLICATION_PATH}"
+
+    install_data "${DATA_PATH}"
+
+    install_configuration "${CONFIG_PATH}" "${LOG_PATH}" "${APPLICATION_PATH}"
+
+    install_crontab
+
+    install_logrotate
+}
+
+# --- Execution ---
+if $DEBUG; then
+    do_debug
+fi
+
+if [ "$(id -u)" != "0" ]; then
+   echo "ERROR: This script must be run as root" 1>&2
+   exit 1
+fi
+
+if $INSTALL_HYDRA; then
+    install_debs
+    install_hydra
+fi
+
+#----------------
+$ECHO "Hydra installation complete"
+exit 0

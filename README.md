@@ -18,6 +18,7 @@ Components/Tools
 * compiz, Commandline tool for marking code ownership in source trees
 * docker, various images and build-system
 * git-project, makes it easier to work with submodules
+* Hydra, web-application for running git-repo content on a web-server.
 * K2, test framework
 * ZAF, python application framework
 * Znake, python build-system

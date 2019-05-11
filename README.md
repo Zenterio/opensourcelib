@@ -14,10 +14,10 @@ Each component/tool has its own license.
 Components/Tools
 ----------------
 
-* citools
-* compiz
+* citools, Zenterio Jenkins CI Seed Tool
+* compiz, Commandline tool for marking code ownership in source trees
 * docker, various images and build-system
-* git-project
-* K2
-* ZAF
-* Znake
+* git-project, makes it easier to work with submodules
+* K2, test framework
+* ZAF, python application framework
+* Znake, python build-system

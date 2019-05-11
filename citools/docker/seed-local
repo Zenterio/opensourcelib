@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+curl -X POST http://jenkins.local:8082/job/seed-icons/build
+curl -X POST http://jenkins.local:8082/job/seed-test-configuration/build

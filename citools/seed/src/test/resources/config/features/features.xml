@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../../config/config.dtd">
+<projects>
+    <project-info name="Features">
+        <coverity upstream="false"/>
+        <!--
+        TODO: Enable <description> for coverity
+        Coverity upstream false example. Does not run in the build flow, can be started manually or with periodic="CRONTIME"
+        -->
+        <doc>
+            <publish-build-over-ssh server="ci-staging" name="doc"
+                root-dir="/mnt/netapp/build"
+                artifact-pattern="result/doc/index.html"
+                remove-prefix="result"/>
+            <publish-over-ssh server="ci-staging">
+                <transfer-set>
+                    echo "Only to show that it can coexist with publish-build-over-ssh"
+                </transfer-set>
+            </publish-over-ssh>
+            <custom-build-step enabled="true" mode="append">
+                <![CDATA[
+#!/usr/bin/env bash
+# From documentation custom build-step in features.xml
+echo "Custom build steps can be used in documentation builds as well."
+]]>
+            </custom-build-step>
+        </doc>
+        <description>
+            <![CDATA[
+                The <i>Features</i> project illustrates different ways of using
+                the features available:
+                <ul>
+                <li>Coverity</li>
+                <li>Documentation</li>
+                <li>Publish Over SSH</li>
+                <li>Publish Test Report Over SSH</li>
+                <li>SW upgrade offsets</li>
+                <li>Trigger</li>
+                <li>Test groups</li>
+                <li>CSV data plots</li>
+                <li>XML to CSV</li>
+                <li>Workspace browsing</>
+                </ul>
+            ]]>
+        </description>
+        <incremental enabled="false"/>
+        <pm name="Feature PM" email="test.feature.pm@zenterio.com" />
+        <techlead name="Feature Tech lead" email="test.feature.tech.lead@zenterio.com" />
+        <variable name="project-variable">variable-${project}</variable>
+    </project-info>
+</projects>

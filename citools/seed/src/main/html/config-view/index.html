@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Seed Data Viewer</title>
+    <meta charset="UTF-8">
+
+    <script src="../jquery/jquery-3.1.1.min.js" type="text/javascript"></script>
+    <script src="../jstree/jstree.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="../jstree/themes/default/style.css">
+    <link rel="stylesheet" href="zenterio.jstree.css">
+    <script type="text/javascript">
+        function renderTree() {
+            $.getJSON(
+                'data.json',
+                function(data) {
+                    $('#configuration-jstree').jstree({
+                        'core' : {
+                            'data': data,
+                            'themes': { 'icons': false }
+                        },
+                        'plugins' : []
+                    });
+                }
+            );
+        }
+    </script>
+</head>
+<body onload="renderTree()">
+    <h1>Seed Data Viewer</h1>
+    <div id="configuration-jstree"></div>
+</body>
+</html>

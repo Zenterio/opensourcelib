@@ -1,0 +1,65 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder "..", "/vagrant"
+  config.vm.define "zenterio-ci-staging" do |ci|
+
+    ci.vm.box = "zenterio-ci-staging"
+    ci.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ci-staging/metadata.json"
+    ci.vm.box_download_insecure = true
+    ci.vm.hostname = "ci-staging"
+    ci.vm.network "forwarded_port", guest: 8080, host: 8080
+    ci.vm.network "forwarded_port", guest: 80, host: 8090
+    ci.vm.network "forwarded_port", guest: 2525, host: 2525
+    ci.vm.network "forwarded_port", guest: 9909, host: 9909
+
+    ci.vm.post_up_message = 'Available services via port-forwarding:
+Jenkins:
+    - http://localhost:8080/
+      user: admin, password: admin
+Apache:
+    - http://localhost:8090/zign/
+    - http://localhost:8090/phpmyadmin/
+      user: root, no password
+    - http://localhost:8090/release/
+Mail-server:
+    - smtp://localhost:2525
+    - http://localhost:9909/
+Gitolite3:
+    - git@localhost:gitolite-admin
+      jenkins is a user
+      all users have admin access
+
+Hosts redirected to localhost:
+zign.zenterio.lan
+git.zenterio.lan
+
+Temporary filesystem mounts (RAM only):
+    - /mnt/externals_projects
+    - /mnt/kazam
+    - /mnt/netapp
+    - /mnt/coredumps
+'
+
+    ci.vm.provider "virtualbox" do |v|
+      v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+      v.memory = 5120
+      v.cpus = 2
+      v.name = "ci-vagrant"
+    end
+
+    ci.vm.provision "init", type: "shell", inline: <<-SHELL
+        mkdir -p /mnt/netapp/nfs_cache
+        chmod 777 /mnt/netapp/nfs_cache
+        mkdir -p /mnt/netapp/nfs_cache2
+        chmod 777 /mnt/netapp/nfs_cache2
+        mkdir -p /mnt/netapp/nfsroot
+        mkdir -p /mnt/netapp/tftproot
+    SHELL
+
+  end
+
+end

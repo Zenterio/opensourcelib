@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+curl -X POST http://jenkins.local:8082/configuration-as-code/export

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+repo="$1"
+branch="$2"
+exec curl http://localhost:8080/git/notifyCommit?url=git@git.zenterio.lan:${repo}\&branches=${branch}

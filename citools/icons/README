@@ -1,0 +1,40 @@
+
+Installation
+============
+1 Install "Custom Job Icon plugin"
+2 on jenkins master, run
+  citools/install/configure-icons --install
+
+3 Add style and top div from legend.html to Additional Page HTML Markup in Jenkins system settings.
+
+The configure-icons script contains a list of file extensions that are considered
+icons. If you add other formats than png, update that list.
+All files with the given extension will be installed as icons.
+
+Sources
+=======
+Icons used are under various free licenses that allow use, modification and distribution.
+
+Coverity Icon is made from the official Coverity logo, with minor image manipulation.
+Flow is from build-flow-plugin.
+
+Gears are customized versions of gear found in oxygen-collection.
+Helps are customized versions of help found in oxygen-collection.
+http://www.iconarchive.com/show/oxygen-icons-by-oxygen-icons.org.html
+
+Package is from Application Icons
+http://www.iconarchive.com/show/application-icons-by-seanau.html
+
+The lightning used for incremental icons are from
+http://www.iconarchive.com/show/weather-icons-by-custom-icon-design/lightning-icon.html
+
+Database icon
+http://www.iconarchive.com/show/farm-fresh-icons-by-fatcow/database-black-icon.html
+
+References to sign, seed and tag have been lost. Somewhere on
+http://www.iconarchive.com
+
+The checkbox for test jobs is original art work.
+
+Flash icon:
+http://www.iconarchive.com/show/simple-green-icons-by-simplefly/power-lightning-icon.html

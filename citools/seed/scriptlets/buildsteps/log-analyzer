@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Auto-generated from build step "log-analyzer"
+#
+# Macros:
+# ARTIFACTS_PATH=${ARTIFACTS_PATH}
+# CONFIGURATION_FILE=${CONFIGURATION_FILE}
+# REPORT_FILE=${REPORT_FILE}
+# SUMMARY_FILE=${SUMMARY_FILE}
+# LOGANALYZER_WATCHERS_FILE=${LOGANALYZER_WATCHERS_FILE}
+#
+# Environment variables:
+# WORKSPACE - Jenkins workspace directory
+#
+set -eux
+mkdir -p "${ARTIFACTS_PATH}"
+
+/usr/bin/zloganalyzer \
+    --in "${WORKSPACE}/console.log" \
+    --out "${REPORT_FILE}" \
+    --summary "${SUMMARY_FILE}" \
+    --watchers-file "${LOGANALYZER_WATCHERS_FILE}" \
+    --watchers-separator ", " \
+    "${CONFIGURATION_FILE}" || true
+
+if [ -f "${SUMMARY_FILE}" ]; then
+    echo "" >> "${SUMMARY_FILE}" || true
+    echo "To learn more about the log-analysis, see https://wiki.zenterio.lan/index.php/LogAnalyzer" >> "${SUMMARY_FILE}" || true
+fi

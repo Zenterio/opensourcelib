@@ -1,0 +1,13 @@
+
+import com.zenterio.jenkins.application.StagingXmlSeedDslApplication
+import com.zenterio.jenkins.logging.LogConfigurationLoader
+
+new LogConfigurationLoader()
+def seedProjectFilter = System.getenv("ZENTERIO_SEED_PROJECT_FILTER")?.tokenize(' ')
+def configFileFilter = System.getenv("ZENTERIO_SEED_CONFIG_FILE_FILTER")?.tokenize(' ')
+
+def app = new StagingXmlSeedDslApplication("${WORKSPACE}/seed/scriptlets",
+                                     { name -> freeStyleJob(name) },
+                                     { name -> buildFlowJob(name) },
+                                     { name -> listView(name) })
+app.seedFile("${WORKSPACE}/seed/config/pd_ref.xml", seedProjectFilter)

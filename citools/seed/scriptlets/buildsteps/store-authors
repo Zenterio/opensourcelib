@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -exu
+# Auto-generated from build-step "store-authors"
+#
+# Macros:
+# REPO_NAME_LIST=${REPO_NAME_LIST}
+# REPO_PATH_LIST=${REPO_PATH_LIST}
+#
+
+# CONSTANTS
+AUTHORS_RESULT_FILE="${ARTIFACTS_PATH}/authors.txt"
+LAST_SUCCESS_BUILD_INFO="last-successful-build-info.txt"
+CURRENT_BUILD_INFO="${ARTIFACTS_PATH}/build-info.txt"
+JOB_URL="${BUILD_URL%/*/}"
+
+set +e
+wget "${JOB_URL}/lastSuccessfulBuild/artifact/result/build-info.txt" -O ${LAST_SUCCESS_BUILD_INFO} -q
+wget_status=$?
+set -e
+
+authors_email_list=()
+repo_name_array=(${REPO_NAME_LIST})
+repo_path_array=(${REPO_PATH_LIST})
+
+i=0
+while [[ ${i} < ${#repo_name_array[*]} ]]; do
+    repo_name=${repo_name_array[$i]}
+    repo_path=${repo_path_array[$i]}
+
+    ## get current_ref
+    current_ref=$(grep "Repository: ${repo_name}" -A 3 "${CURRENT_BUILD_INFO}" | grep "Commit: " | cut -c 9-)
+
+    ## get last_success_ref, if none exists, only look at the last commit in each repo
+    last_successful_ref="${current_ref}~1"
+    if [[ ${wget_status} == 0 ]]; then
+        last_successful_ref=$(grep "Repository: ${repo_name}" -A 3 "${LAST_SUCCESS_BUILD_INFO}" | grep "Commit: " | cut -c 9-)
+    fi
+
+    # Add emails to list
+    authors_email_list=("${authors_email_list[@]-}" $(cd "${repo_path}" && git log --pretty=format:"%ce" "${last_successful_ref}...${current_ref}"))
+
+    # Update index counter
+    let i+=1
+done
+
+printf "%s\n" "${authors_email_list[@]-}" | sort -u > "${AUTHORS_RESULT_FILE}"

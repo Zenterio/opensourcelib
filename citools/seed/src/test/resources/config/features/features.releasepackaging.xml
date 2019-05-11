@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../../config/config.dtd">
+<projects>
+    <project name="Features">
+        <origin name="relpack-locked">
+
+            <coverity enabled="false" />
+            <doc enabled="false" />
+            <release-packaging configurable="false" />
+            <description>
+                <![CDATA[
+                In this origin, release packaging is not configurable and locked
+                to use the external build-number as version.
+                ]]>
+            </description>
+            <repository name="zids" dir="zids"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <product name="default"/>
+        </origin>
+        <origin name="relpack-disabled">
+            <coverity enabled="false" />
+            <doc enabled="false" />
+            <release-packaging enabled="false"/>
+            <description>
+                <![CDATA[
+                In this origin, release packaging is disabled.
+                ]]>
+            </description>
+            <repository name="zids" dir="zids"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <product name="default"/>
+        </origin>
+    </project>
+</projects>

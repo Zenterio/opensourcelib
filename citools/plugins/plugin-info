@@ -1,0 +1,7 @@
+#/bin/bash
+#
+# Prints information about the jenkins plugin
+#
+set -eu
+PLUGIN=$1
+unzip -p "${PLUGIN}" "META-INF/MANIFEST.MF"

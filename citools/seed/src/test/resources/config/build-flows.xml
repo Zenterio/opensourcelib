@@ -1,0 +1,189 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../config/config.dtd">
+<projects>
+	<project-info name="Build-flow">
+	    <incremental enabled="false"/>  
+		<pm name="pm" email="pm@zenterio.com" />
+		<techlead name="tl" email="tl@zenterio.com" />
+	</project-info>
+	<project name="Build-flow">
+		<origin name="default">
+		    <coverity enabled="true"/>
+	        <doc enabled="true"/>
+			
+			<repository name="zids" dir="zids"
+				remote="git@git.zenterio.lan:product-stub" branch="master" />
+			<debug enabled = "true">
+			    <test-group name="tg" 
+			                stb-label="Kazam-stub" 
+			                test-root="verification/kazamTests"
+                            box-configuration="box_config_file.cfg" 
+                            product-configuration="product_config_file.cfg">
+			        <image artifact="result/kfs.zmg"/>
+			        <repository name="verification" 
+			                    branch="master" dir="verification" 
+			                    remote="git@git.zenterio.lan:verification-stub"/>
+			        <test-context name="jasmine">
+			             <jasmine repository="verification" config-file="test.pvr.json"/>
+			             <test-suite path="Suite_Jasmine.xml"/>
+			        </test-context>
+		        </test-group>
+		        <incremental>
+	                <test-group name="tg" 
+	                            stb-label="Kazam-stub" 
+	                            test-root="verification/kazamTests"
+	                            box-configuration="box_config_file.cfg" 
+	                            product-configuration="product_config_file.cfg">
+	                    <image artifact="result/kfs.zmg"/>
+	                    <repository name="verification" 
+	                                branch="master" dir="verification" 
+	                                remote="git@git.zenterio.lan:verification-stub"/>
+	                    <test-context name="jasmine">
+	                         <jasmine repository="verification" config-file="test.pvr.json"/>
+	                         <test-suite path="Suite_Jasmine.xml"/>
+	                    </test-context>
+	                </test-group>		        
+		        </incremental>
+			</debug>
+			<release enabled="true"/>
+			<production enabled="true" />
+			
+			<product name="zids-unittest-serial">
+				<build-flow style="zids-unit-test-serial" />
+				<unit-test built-in="false"/>
+			</product>
+			<product name="zids-unittest-serial-without-debug">
+                <build-flow style="zids-unit-test-serial" />
+                <debug enabled="false" />
+                <unit-test built-in="false" />
+            </product>
+            <product name="zids-unittest-serial-without-unit-test">
+                <build-flow style="zids-unit-test-serial" />
+                <unit-test enabled="false" />
+            </product>
+            <product name="zids-unittest-serial-without-unit-test-debug">
+                <build-flow style="zids-unit-test-serial" />
+                <debug enabled="false" />
+                <production enabled="true"/>
+                <unit-test enabled="false" />
+            </product>
+			<product name="zids-unittest-parallel">
+				<build-flow style="zids-unit-test-parallel" />
+				<unit-test built-in="false" />
+			</product>
+			<product name="zids-unittest-parallel-coverity-async">
+                <build-flow style="zids-unit-test-parallel" />
+                <coverity upstream="async"/>
+                <doc enabled="false"/>
+                <debug enabled="true"/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+                <unit-test built-in="false" />
+            </product>
+            <product name="zids-unittest-parallel-coverity-upstream-false">
+                <build-flow style="zids-unit-test-parallel" />
+                <coverity upstream="false"/>
+                <doc enabled="false"/>
+                <debug enabled="true"/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+                <unit-test built-in="false" />
+            </product>
+            <product name="zids-unittest-parallel-without-debug">
+                <build-flow style="zids-unit-test-parallel" />
+                <debug enabled="false" />
+                <unit-test built-in="false" />
+            </product>
+            <product name="zids-unittest-parallel-without-unit-test">
+                <build-flow style="zids-unit-test-parallel" />
+                <unit-test enabled="false" />
+            </product>
+            <product name="zids-unittest-parallel-without-unit-test-debug">
+                <build-flow style="zids-unit-test-parallel" />
+                <debug enabled="false" />
+                <production enabled="true" />
+                <unit-test enabled="false" />
+            </product>
+            <product name="zids-unittest-parallel-without-jobs-after-join">
+                <build-flow style="zids-unit-test-parallel" />
+                <coverity enabled="false"/>
+                <doc enabled="false"/>
+                <debug enabled="true"/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+                <unit-test enabled="true" built-in="false" />
+            </product>
+			<product name="unittest-builtin">
+                <coverity enabled="false"/>
+                <doc enabled="false"/>
+                <debug enabled="true"/>
+                <release enabled="false"/>
+                <production enabled="true"/>
+                <unit-test built-in="true" />
+            </product>
+            <product name="unittest-default-standalone">
+                <coverity enabled="false"/>
+                <doc enabled="false"/>
+                <incremental enabled="true"/>
+                <debug enabled="false"/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+                <unit-test built-in="false" />
+            </product>
+			<product name="unittest-custom-standalone">
+                <coverity enabled="false"/>
+                <doc enabled="false"/>
+			    <incremental enabled="true"/>
+			    <debug enabled="false"/>
+			    <release enabled="false"/>
+			    <production enabled="false"/>
+				<unit-test built-in="false">
+					<cache />
+					<csv-data-plot input="data.csv" title="unit-test" group="unit-test" style="line"/>
+					<custom-build-step mode="override"><![CDATA[
+					#!/bin/bash
+					set -eux
+					echo -e "data\n0\n" > data.csv
+					test "x${MAKE_PREFIX}" = "xPREFIX"
+					test "x${MAKE_ROOT}" = "xzids"
+					test "x${MAKE_TARGET}" = "xTARGET"
+					test "x${VAR}" = "xVALUE"
+					# shellcheck disable=SC2050
+					if [ "${JOB_TYPE}" = "unit-test" ]; then
+					   test "${JOB_TYPE}" = "unit-test"
+					elif [ "${JOB_TYPE}" = "incremental unit-test" ]; then
+					   test "${JOB_TYPE}" = "incremental unit-test"
+					else
+					   exit 1
+				    fi
+					echo -e "data\n1\n" > data.csv
+					]]>
+					</custom-build-step>
+					<description><![CDATA[
+						A unit-test job with many property and feature tags activated:
+						<br />
+						<ul>
+							<li>ccache</li>
+							<li>csv-data-plot</li>
+							<li>custom-build-step</li>
+							<li>description</li>
+							<li>log-parsing</li>
+							<li>make-prefix</li>
+							<li>make-root</li>
+							<li>make-target</li>
+							<li>resources</li>
+							<li>variables</li>
+						</ul>
+					]]>
+					</description>
+					<log-parsing />
+					<make-prefix value="PREFIX"/>
+					<make-root name="zids"/>
+					<make-target name="TARGET"/>
+					<resources label="a" quantity="1"/>
+					<variable name="VAR">VALUE</variable>
+				</unit-test>
+			</product>
+		</origin>
+	</project>
+</projects>

@@ -1,0 +1,656 @@
+<!-- Element declarations -->
+<!-- Structure
+Format:
+    Name
+
+    Features
+
+    Properties
+
+    Build-Variants
+-->
+<!ELEMENT projects (
+        project-info*,
+        project*
+        )>
+<!ELEMENT project-info (
+        build-flow?,
+        cache?,
+        coverity?,
+        csv-data-plot*,
+        doc?,
+        inc-build-flow?,
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+        release-packaging?,
+        sw-upgrade*,
+        trigger?,
+
+        build-env?,
+        build-node*,
+        build-timeout?,
+        concurrent-builds?,
+        credential*,
+        custom-build-step*,
+        description?,
+        incremental?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        pm,
+        resources?,
+        retention-policy?,
+        started-by?,
+        techlead,
+        variable*,
+        watcher*,
+        workspace-browsing?,
+
+        debug?,
+        release?,
+        production?,
+        unit-test?
+        )>
+<!ELEMENT project (
+        origin+
+        )>
+<!ELEMENT origin (
+        build-flow?,
+        cache?,
+        coverity?,
+        csv-data-plot*,
+        doc?,
+        inc-build-flow?,
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+        release-packaging?,
+        sw-upgrade*,
+        trigger?,
+
+        build-env?,
+        build-node*,
+        build-timeout?,
+        concurrent-builds?,
+        credential*,
+        custom-build-step*,
+        description?,
+        incremental?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        pm?,
+        priority?,
+        repository+,
+        resources?,
+        retention-policy?,
+        started-by?,
+        techlead?,
+        variable*,
+        watcher*,
+        workspace-browsing?,
+
+        debug?,
+        release?,
+        production?,
+        unit-test?,
+
+        product+
+        )>
+<!ELEMENT product (
+        build-flow?,
+        cache?,
+        coverity?,
+        csv-data-plot*,
+        doc?,
+        inc-build-flow?,
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+        sw-upgrade*,
+
+        build-env?,
+        build-node*,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        incremental?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        pm?,
+        resources?,
+        techlead?,
+        variable*,
+        watcher*,
+        workspace-browsing?,
+
+        debug?,
+        release?,
+        production?,
+        unit-test?
+        )>
+<!-- Product variants and unit test -->
+<!ELEMENT debug (
+        cache?,
+        csv-data-plot*,
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+        sw-upgrade*,
+        test-group*,
+
+        build-env?,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        incremental?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        resources?,
+        variable*,
+        watcher*,
+        workspace-browsing?
+        )>
+<!ELEMENT release (
+        cache?,
+        csv-data-plot*,
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+        sw-upgrade*,
+        test-group*,
+
+        build-env?,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        incremental?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        resources?,
+        variable*,
+        watcher*,
+        workspace-browsing?
+        )>
+<!ELEMENT production (
+        cache?,
+        csv-data-plot*,
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+        sw-upgrade*,
+        test-group*,
+
+        build-env?,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        incremental?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        resources?,
+        variable*,
+        watcher*,
+        workspace-browsing?
+        )>
+<!ELEMENT unit-test (
+        cache?,
+        csv-data-plot*,
+        publish-over-ssh*,
+
+        build-env?,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        log-parsing?,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        resources?,
+        variable*,
+        watcher*,
+        workspace-browsing?
+        )>
+<!-- Features -->
+<!ELEMENT build-env EMPTY>
+<!ELEMENT build-flow EMPTY>
+<!ELEMENT cache EMPTY>
+<!ELEMENT coverity (
+        publish-over-ssh*,
+
+        build-env?,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        resources?,
+        variable*,
+        workspace-browsing?
+        )>
+<!ELEMENT csv-data-plot EMPTY>
+<!ELEMENT doc (
+        publish-build-over-ssh*,
+        publish-over-ssh*,
+
+        build-env?,
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        make-prefix?,
+        make-root?,
+        make-target?,
+        resources?,
+        variable*
+        )>
+<!ELEMENT inc-build-flow EMPTY>
+<!ELEMENT publish-build-over-ssh EMPTY>
+<!ELEMENT publish-over-ssh (
+        transfer-set+,
+        variable*
+        )>
+<!ELEMENT publish-test-report-over-ssh EMPTY>
+<!ELEMENT release-packaging (
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        log-parsing?,
+        publish-over-ssh*,
+        repository*,
+        resources?,
+        variable*
+        )>
+<!ELEMENT sw-upgrade EMPTY>
+<!ELEMENT test-group (
+        publish-over-ssh*,
+        publish-test-report-over-ssh*,
+
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        epg*,
+        image?,
+        log-parsing?,
+        repository+,
+        resources?,
+        retention-policy?,
+        test-context+,
+        test-report?,
+        variable*,
+        watcher*,
+        workspace-browsing?
+        )>
+<!ELEMENT trigger EMPTY>
+<!ELEMENT xml-to-csv (
+        xml-data+
+        )>
+<!-- Properties -->
+<!ELEMENT build-node EMPTY>
+<!ELEMENT build-timeout EMPTY>
+<!ELEMENT concurrent-builds EMPTY>
+<!ELEMENT credential EMPTY>
+<!ELEMENT custom-build-step (#PCDATA)>
+<!ELEMENT description (#PCDATA)>
+<!ELEMENT duration EMPTY>
+<!ELEMENT email-policy EMPTY>
+<!ELEMENT epg EMPTY>
+<!ELEMENT image EMPTY>
+<!ELEMENT incremental (
+        cache?,
+        test-group*,
+
+        resources?,
+        variable*
+        )>
+<!ELEMENT jasmine EMPTY>
+<!ELEMENT log-parsing EMPTY>
+<!ELEMENT make-prefix EMPTY>
+<!ELEMENT make-root EMPTY>
+<!ELEMENT make-target EMPTY>
+<!ELEMENT owner (
+        email-policy?
+        )>
+<!ELEMENT pm (email-policy?)>
+<!ELEMENT priority EMPTY>
+<!ELEMENT resources EMPTY>
+<!ELEMENT repository EMPTY>
+<!ELEMENT retention-policy EMPTY>
+<!ELEMENT started-by EMPTY>
+<!ELEMENT techlead (
+        email-policy?
+        )>
+<!ELEMENT test-command-args EMPTY>
+<!ELEMENT test-context (
+        csv-data-plot*,
+        publish-over-ssh*,
+        publish-test-report-over-ssh*,
+        xml-to-csv*,
+
+        build-timeout?,
+        credential*,
+        custom-build-step*,
+        description?,
+        duration?,
+        epg*,
+        image?,
+        jasmine?,
+        log-parsing?,
+        owner*,
+        repository*,
+        resources?,
+        retention-policy?,
+        test-command-args?,
+        test-job-input-parameter*,
+        test-report?,
+        test-suite+,
+        variable*,
+        watcher*,
+        workspace-browsing?
+        )>
+<!ELEMENT test-job-input-parameter EMPTY>
+<!ELEMENT test-report EMPTY>
+<!ELEMENT test-suite EMPTY>
+<!ELEMENT transfer-set (#PCDATA)>
+<!ELEMENT variable (#PCDATA)>
+<!ELEMENT watcher (
+        email-policy?
+        )>
+<!ELEMENT workspace-browsing EMPTY>
+<!ELEMENT xml-data EMPTY>
+
+<!-- Attribute list declarations -->
+<!-- Structure -->
+<!ATTLIST project-info
+    name CDATA #REQUIRED>
+<!ATTLIST project
+    name CDATA #REQUIRED>
+<!ATTLIST origin
+    name CDATA #REQUIRED
+    configurable (false | true) "false"
+    tag-scm (false | true) "true"
+    >
+<!ATTLIST product
+    name CDATA #REQUIRED
+    alt-name CDATA #IMPLIED
+    >
+<!-- Product variants -->
+<!ATTLIST debug
+    build-type CDATA #FIXED "debug"
+    enabled (false | true) "true"
+    >
+<!ATTLIST release
+    build-type CDATA #FIXED "release"
+    enabled (false | true) "true"
+    >
+<!ATTLIST production
+    build-type CDATA #FIXED "production"
+    enabled (false | true) "true"
+    >
+<!ATTLIST unit-test
+    enabled (false | true) "true"
+    built-in (false | true) "true"
+    >
+<!-- Features -->
+<!ATTLIST build-env
+    enabled (false | true) "true"
+    env CDATA #IMPLIED
+    args CDATA #IMPLIED
+    >
+<!ATTLIST build-flow
+    style (zids-unit-test-parallel|zids-unit-test-serial) "zids-unit-test-serial"
+    >
+<!ATTLIST cache
+    ccache-enabled (false | true) "true"
+    mcache-enabled (false | true) "true"
+    ccache-publish (false | true) "true"
+    mcache-publish (false | true) "true"
+    ccache-size (small|medium|large) "medium"
+    ccache-storage CDATA #IMPLIED
+    >
+<!ATTLIST coverity
+    stream CDATA #IMPLIED
+    enabled (false | true) "true"
+    periodic CDATA #IMPLIED
+    upstream (false | true | async) "true"
+    aggressiveness-level (low | medium | high) "low"
+    build-type (debug | production | release) "debug"
+    >
+<!ATTLIST csv-data-plot
+    input CDATA #IMPLIED
+    title CDATA #IMPLIED
+    group CDATA #IMPLIED
+    scale CDATA #IMPLIED
+    y-min CDATA #IMPLIED
+    y-max CDATA #IMPLIED
+    style (area | bar | bar3d | line | line3d | stackedarea | stackedbar | stackedbar3d | waterfall) #IMPLIED
+    enabled (false | true) "true"
+    >
+<!ATTLIST doc
+    enabled (false | true) "true"
+    >
+<!ATTLIST inc-build-flow
+    style (zids-unit-test-parallel|zids-unit-test-serial) "zids-unit-test-parallel"
+    >
+<!ATTLIST publish-build-over-ssh
+    enabled (false | true) "true"
+    name CDATA #REQUIRED
+    server CDATA #REQUIRED
+    artifact-pattern CDATA #REQUIRED
+    remove-prefix CDATA #IMPLIED
+    root-dir CDATA #REQUIRED
+    number-of-builds-to-keep CDATA #IMPLIED
+    product-alt-name CDATA #IMPLIED
+    retry-times CDATA #IMPLIED
+    retry-delay-ms CDATA #IMPLIED
+    label CDATA #IMPLIED
+    >
+<!ATTLIST publish-over-ssh
+    enabled (false | true) "true"
+    server CDATA #REQUIRED
+    retry-times CDATA #IMPLIED
+    retry-delay-ms CDATA #IMPLIED
+    label CDATA #IMPLIED
+    >
+<!ATTLIST publish-test-report-over-ssh
+    enabled (false | true) "true"
+    server CDATA #REQUIRED
+    name CDATA #REQUIRED
+    report-file-pattern CDATA #REQUIRED
+    remove-prefix CDATA #IMPLIED
+    suite-name CDATA #REQUIRED
+    retry-times CDATA #IMPLIED
+    retry-delay-ms CDATA #IMPLIED
+    label CDATA #IMPLIED
+    >
+<!ATTLIST release-packaging
+    configurable (false | true) "true"
+    enabled (false | true) "true"
+    >
+<!ATTLIST sw-upgrade
+    offset CDATA #IMPLIED
+    enabled (false | true) "true"
+    >
+<!ATTLIST test-group
+    name CDATA #REQUIRED
+    type (kazam | k2) "kazam"
+    test-root CDATA #REQUIRED
+    stb-label CDATA #REQUIRED
+    box-configuration CDATA #IMPLIED
+    product-configuration CDATA #IMPLIED
+    coredump-handling (false | true) "true"
+    enabled (false | true) "true"
+    >
+<!ATTLIST trigger
+    polling CDATA #IMPLIED
+    periodic CDATA #IMPLIED
+    accept-notify-commit (false | true) "false"
+    enabled (false | true) "true"
+    >
+<!ATTLIST xml-to-csv
+    input CDATA #IMPLIED
+    output CDATA #IMPLIED
+    >
+<!-- Properties -->
+<!ATTLIST build-node
+    label CDATA #REQUIRED
+    >
+<!ATTLIST build-timeout
+    policy (absolute|elastic) #IMPLIED
+    configurable (false | true) "false"
+    minutes CDATA #IMPLIED
+    fail-build (false | true) "false"
+    enabled (false | true) "true"
+    >
+<!ATTLIST concurrent-builds
+    enabled (false | true) "true"
+    >
+<!ATTLIST credential
+    type (text|file|username-password) #IMPLIED
+    id CDATA #IMPLIED
+    variable-name CDATA #IMPLIED
+    enabled (false | true) "true"
+    >
+<!ATTLIST custom-build-step
+    mode (prepend | append | override | override-named) "override"
+    type (shell | system-groovy) "shell"
+    enabled (false | true) "true"
+    override-name CDATA #IMPLIED
+    >
+<!ATTLIST duration
+    time CDATA #REQUIRED
+    >
+<!ATTLIST email-policy
+    slow-feedback (success|always|failure|never) "failure"
+    fast-feedback (success|always|failure|never) "never"
+    utility  (success|always|failure|never) "never"
+    test (success|always|failure|never) "never"
+    >
+<!ATTLIST epg
+    path CDATA #REQUIRED
+    >
+<!ATTLIST image
+    artifact CDATA #IMPLIED
+    enabled (false | true) "true"
+    flatten (false | true) "true"
+    >
+<!ATTLIST incremental
+    enabled (false | true) "true"
+    >
+<!ATTLIST jasmine
+    repository CDATA #REQUIRED
+    config-file CDATA #REQUIRED
+    url CDATA #IMPLIED
+    disable-rcu (false | true) "true"
+    disable-rcu-check (false | true) "true"
+    >
+<!ATTLIST log-parsing
+    config CDATA #IMPLIED
+    enabled (false | true) "true"
+    >
+<!ATTLIST make-prefix
+    value CDATA #REQUIRED
+    >
+<!ATTLIST make-root
+    name CDATA #REQUIRED
+    >
+<!ATTLIST make-target
+    name CDATA #REQUIRED
+    >
+<!ATTLIST owner
+    name CDATA #REQUIRED
+    email CDATA #REQUIRED
+    group CDATA #REQUIRED
+    >
+<!ATTLIST pm
+    name CDATA #REQUIRED
+    email CDATA #REQUIRED
+    >
+<!ATTLIST resources
+    enabled (true | false) "true"
+    name CDATA #IMPLIED
+    label CDATA #IMPLIED
+    quantity CDATA "0"
+    >
+<!ATTLIST repository
+    name CDATA #REQUIRED
+    dir CDATA #REQUIRED
+    remote CDATA #REQUIRED
+    branch CDATA #REQUIRED
+    configurable (true | false | origin) "origin"
+    >
+<!ATTLIST retention-policy
+        duration (short | medium | long | very-long | infinite ) #REQUIRED
+        save-artifacts (true | false) "true"
+        >
+<!ATTLIST started-by
+    enabled (false | true) "false"
+    >
+<!ATTLIST techlead
+    name CDATA #REQUIRED
+    email CDATA #REQUIRED
+    >
+<!ATTLIST test-command-args
+    value CDATA #REQUIRED
+    >
+<!ATTLIST test-context
+    name CDATA #REQUIRED
+    upstream (false | true | async) "true"
+    polling CDATA #IMPLIED
+    periodic CDATA #IMPLIED
+    stb-label CDATA #IMPLIED
+    coredump-handling CDATA #IMPLIED
+    enabled (false | true) "true"
+    >
+<!ATTLIST test-job-input-parameter
+    name CDATA #REQUIRED
+    default CDATA #REQUIRED
+    description CDATA #IMPLIED
+    >
+<!ATTLIST test-report
+    type (junit | testng) "junit"
+    >
+<!ATTLIST test-suite
+    path CDATA #REQUIRED
+    >
+<!ATTLIST transfer-set
+        src CDATA #IMPLIED
+        remove-prefix CDATA #IMPLIED
+        remote-dir CDATA #IMPLIED
+        exclude-files CDATA #IMPLIED
+        pattern-separator CDATA #IMPLIED
+        no-default-excludes (false | true) "false"
+        make-empty-dirs (false | true) "false"
+        flatten-files (false | true) "false"
+        remote-dir-is-date-format (false | true) "false"
+        exec-timeout-ms CDATA #IMPLIED
+        exec-in-pseudo-tty (false | true) "false"
+        >
+<!ATTLIST variable
+    name CDATA #REQUIRED
+    >
+<!ATTLIST watcher
+    name CDATA #REQUIRED
+    email CDATA #REQUIRED
+    >
+<!ATTLIST workspace-browsing
+    enabled (false | true) "true"
+    >
+<!ATTLIST priority
+    level (low|medium|high) "medium"
+    >
+<!ATTLIST xml-data
+    source CDATA #REQUIRED
+    operation (avg|min|max) #REQUIRED
+    field CDATA #REQUIRED
+    caption CDATA #REQUIRED
+    >

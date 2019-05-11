@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Auto-generated from build-step "create-artifacts-dir"
+set -eux
+mkdir -p ${ARTIFACTS_PATH}

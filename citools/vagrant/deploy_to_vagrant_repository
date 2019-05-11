@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -eu
+
+source vagrantlib
+
+VAGRANT_BOX_FILE=$1
+VERSION=$2
+PROVIDER=virtualbox
+BOX_NAME=$3
+FULL_BOX_NAME="${BOX_NAME}_${VERSION}.box"
+
+read -r -p "Username ($USER): " USERNAME
+read -r -s -p "Password: " PASSWORD
+
+if [ -z "${USERNAME}" ]; then
+    USERNAME=$USER
+fi
+
+echo ""
+echo "Deploying ${VAGRANT_BOX_FILE} as ${FULL_BOX_NAME}"
+echo "name=${BOX_NAME}, version=${VERSION}, provider=${PROVIDER}"
+upload "${USERNAME}" "${PASSWORD}" "${VAGRANT_BOX_FILE}" "${FULL_BOX_NAME}" \
+    "${BOX_NAME}" "${PROVIDER}" "${VERSION}"

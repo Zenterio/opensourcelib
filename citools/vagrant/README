@@ -1,0 +1,27 @@
+This vagrant machine is "hand made" in the sense that it can not be automatically
+reassembled. The package target in the make file uses the current active
+vagrant and re-packages it for common distribution.
+
+Make sure you have the latest version before you start doing changes to it.
+
+Update the CHANGELOG file describing what changes you have made. For example,
+manually configured jobs, updating or installing jenkins plugins, installing
+debian packages, etc.
+The changelog is copied into the vagrant as part of the packaging and is stored
+in /home/vagrant/CHANGELOG
+
+To package the new box run:
+
+  make package
+
+To deploy the packaged box to the vagrant server:
+
+  make deploy
+
+To learn what versions are already deployed:
+
+  make list-box-versions
+
+To learn what next expected version is:
+
+  make list-next-version

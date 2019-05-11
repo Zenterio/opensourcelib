@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../config/config.dtd">
+<projects>
+    <project-info name="Info">
+        <trigger periodic="" polling=""/>
+        <description>
+            <![CDATA[
+                The <i>Info</i> project illustrates different ways of making
+                information about the project visible in Jenkins. <br/>
+                Descriptions can contain any standard HTML if enclosed in CDATA
+                tags. <br/>
+                Keeping it simple is usually best. Such as a link to the project's
+                <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+                wiki page and similar.</a><br/>
+                The information about project manager, tech-lead are mandatory
+                data declared on project level. <br/>
+                <i>Watchers</i>, users that want email notifications, declared
+                on project level, <br/>
+                are also applied to origin levels since origin is the lowest level <br/>
+                that is meaningful from an email notification perspective.
+            ]]>
+        </description>
+        <incremental enabled="false"/>
+
+        <pm name="Info PM" email="test.info.pm@zenterio.com" />
+        <techlead email="test.info.tech.lead@zenterio.com" name="Project defined info tech-lead" />
+        <watcher email="info.watcher@zenterio.com" name="Project level declared info watcher"/>
+        <debug>
+             <description>
+                 <![CDATA[
+                 Custom descriptions can be set for product variants; in this
+                 case the debug builds.<br/>
+                 This configuration is declared on project level, affecting all
+                 debug builds, unless overriden in a higher level declaration.<br/>
+                 Watchers, only interested in specific product variants can also be set.
+                 ]]>
+            </description>
+            <watcher email="info.watcher.debug@zenterio.com" name="Debug info watcher"/>
+        </debug>
+    </project-info>
+    <project name="Info">
+        <origin name="Main">
+            <description>
+            Origin description ends up here! Watchers added on this level are
+            mixed with watchers declared on project level.
+            If no HTML tags are used, as in this description,
+            the configuration doesn't need to be wrapped in CDATA tags.
+            </description>
+
+            <repository name="zids" dir="zids"
+                remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <watcher email="info.watcher@zenterio.com"
+                name="Origin level declared info watcher"/>
+
+            <product name ="customized">
+                <description>
+                <![CDATA[
+                Product description end up here! <br/>
+                The project techlead and project manager can be overriden on origin level and, as
+                seen here, on product level. <br/>
+                Watchers, project managers and techleads can all set a mail policy to specify when they get a mail,
+                see the documentation for details.
+                </dl>
+                ]]>
+                </description>
+                <pm name="Info PM" email="test.info.pm@zenterio.com">
+                    <email-policy fast-feedback="failure" slow-feedback="always" utility="success" />
+                </pm>
+                <techlead name="Info Techlead" email="info.customized.tech.lead@zenterio.com" >
+                    <email-policy fast-feedback="always" utility="always" slow-feedback="always" />
+                </techlead>
+                <watcher email="info.customized.watcher@zenterio.com"
+                    name="Customized product defined watcher"/>
+            </product>
+            <product name ="default">
+                <incremental />
+                <watcher name="Checking incrementals" email="incremental@example.com">
+                    <email-policy fast-feedback="failure" slow-feedback="never"/>
+                </watcher>
+            </product>
+        </origin>
+    </project>
+</projects>

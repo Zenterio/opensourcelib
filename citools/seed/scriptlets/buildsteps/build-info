@@ -1,0 +1,19 @@
+#!/bin/bash
+# Auto-generated from build step "build-info"
+# ORIGIN_NAME is a macro created in the scriptlet class
+# REPOSITORIES_DESCRIPTIONS is a multiline macro created in the scriptlet class
+BUILD_INFO_FILE="${ARTIFACTS_PATH}"/build-info.txt
+set -ex
+mkdir -p "${ARTIFACTS_PATH}"
+EXT_BUILD_NUMBER="${external_build_number-}"
+cd "${WORKSPACE}"
+(
+echo "Time:" "$(date --rfc-3339=seconds)"
+echo "Job:" "${JOB_NAME}"
+echo "Build:" "${BUILD_NUMBER}"
+echo "External build number:" "${EXT_BUILD_NUMBER}"
+echo "URL:" "${BUILD_URL}"
+echo "Build node:" "${NODE_NAME}"
+echo "Origin:" "${ORIGIN_NAME}"
+${REPOSITORIES_DESCRIPTIONS}
+)> "${BUILD_INFO_FILE}"

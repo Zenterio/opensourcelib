@@ -1,0 +1,160 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../../config/config.dtd">
+<projects>
+    <project name="Features">
+        <origin name="manual-trigger" tag-scm="false" configurable="true">
+            <coverity enabled="false"/>
+            <doc enabled="false"/>
+            <sw-upgrade offset="3" />
+            <sw-upgrade offset="5" />
+            <trigger periodic=""/>
+            <concurrent-builds enabled="true"/>
+            <description><![CDATA[
+                In this origin, we have a custom trigger that is never run.<br/>
+                This make it a manual trigger.
+
+                The origin is marked as being configurable, and it is hence possible
+                to specify from what branch or tag to build from.
+
+                The origin has also been configured not to tag the repository with jenkins build tags.
+
+                At the same time sw-upgrade offset is shown. In this case two extra
+                builds are done, with offsets of 3 and 5 in ZSYS_SW_UPGRADE_VERSION
+                (kfs OTA SwVersion number).
+                ]]>
+            </description>
+            <repository name="zids" dir="zids"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <product name="default">
+                <!-- The Feature PM already gets mail from the top level flow job, but wants to see the utility jobs. -->
+                <pm name="Feature PM" email="test.feature.pm@zenterio.com" >
+                    <email-policy utility="success" slow-feedback="never"/>
+                </pm>
+                <release/>
+                <production>
+                </production>
+            </product>
+        </origin>
+        <origin name="no-trigger">
+            <coverity enabled="false"/>
+            <doc enabled="false"/>
+            <sw-upgrade offset="47"/>
+            <trigger enabled="false"/>
+            <description><![CDATA[
+                In this origin, we have disabled the trigger job completely.<br/>
+                The incremental builds have been reenabled at the product level.<br/>
+                A publish over ssh build step has also been added to the default product.
+                ]]>
+            </description>
+            <make-root name="source"/>
+            <make-target name="DEBUG_ARGS=--disable-verify-repos bootimage"/>
+            <repository name="zids" dir="source"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <product name="default">
+                <publish-over-ssh server="ci-staging">
+                    <transfer-set><![CDATA[
+                        #!/usr/bin/env bash
+                        echo "Publish Over SSH, without copy, run from a compile job."
+                        ]]>
+                    </transfer-set>
+                </publish-over-ssh>
+                <sw-upgrade enabled="false"/>
+                <build-timeout policy="elastic" minutes="666" fail-build="true"/>
+                <description><![CDATA[
+                    A publish over ssh build step has been added to this product. <br/>
+                    A build timeout has been added to this product with fail-build="true" <br/>
+                    ]]>
+                    </description>
+                <incremental/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+            <product name="workspace-browsing">
+                <coverity enabled="true">
+                <workspace-browsing enabled="false"/>
+                </coverity>
+                <description><![CDATA[
+                    A property, Workspace browsing enable=false has been added to this product <br/>
+                    Workspace should not be visible when not logged in, only for logged in jenkins-administrators<br/>
+                    Coverity job also has a property explicitly set "workspace browsing enable=false" to make this coverity job to not be visible
+                    ]]>
+                </description>
+                <incremental/>
+                <workspace-browsing enabled="false"/>
+                <debug>
+                    <test-group name="enabled" stb-label="Kazam-stub-pvr" test-root="verification/kazamTests"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                        <description><![CDATA[
+                            In this test group Workspace browsing should be enabled<br/>
+                            All workspaces should be visable.<br/>
+                            ]]>
+                        </description>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="true" upstream="false">
+                            <description><![CDATA[
+                                Workspace should be visable <br/>
+                                ]]>
+                            </description>
+                            <test-suite path="Suite_Stability.xml"/>
+                        </test-context>
+                     </test-group>
+                    <test-group name="disabled" stb-label="Kazam-stub-pvr" test-root="verification/kazamTests"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                        <description><![CDATA[
+                            In this test group Workspace browsing should be disabled with Workspace browsing enable=false<br/>
+                            No workspaces should be visable.<br/>
+                            ]]>
+                        </description>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="true" upstream="false">
+                            <description><![CDATA[
+                                Workspace should not be visable <br/>
+                                ]]>
+                            </description>
+                            <test-suite path="Suite_Stability.xml"/>
+                        </test-context>
+                        <workspace-browsing enabled="false"/>
+                    </test-group>
+                </debug>
+            </product>
+        </origin>
+        <origin name="default-trigger">
+            <coverity enabled="false"/>
+            <doc enabled="false"/>
+            <sw-upgrade offset="47"/>
+            <description><![CDATA[
+                In this origin, we have not used the trigger tag.<br/>
+                This is equivalent with a manual trigger.
+                ]]>
+            </description>
+            <make-root name="source"/>
+            <make-target name="DEBUG_ARGS=--disable-verify-repos bootimage"/>
+            <repository name="zids" dir="source"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <product name="default">
+                <sw-upgrade enabled="false"/>
+                <debug>
+                    <build-timeout policy="absolute" configurable="true" minutes="333" />
+                </debug>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+        </origin>
+        <origin name="notify-commit-trigger">
+            <coverity enabled="false"/>
+            <doc enabled="false"/>
+            <trigger accept-notify-commit="true"/>
+            <repository name="zids" dir="source"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <product name="default">
+                <description><![CDATA[
+                    Accept notify commit trigger
+                    ]]>
+                </description>
+                <debug/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+        </origin>
+    </project>
+</projects>

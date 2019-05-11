@@ -1,0 +1,14 @@
+
+import com.zenterio.jenkins.application.XmlSeedDslApplication
+import com.zenterio.jenkins.logging.LogConfigurationLoader
+
+new LogConfigurationLoader()
+def seedProjectFilter = System.getenv("ZENTERIO_SEED_PROJECT_FILTER")?.tokenize(' ')
+def configFileFilter = System.getenv("ZENTERIO_SEED_CONFIG_FILE_FILTER")?.tokenize(' ')
+
+def app = new XmlSeedDslApplication("${WORKSPACE}/seed/scriptlets",
+                                     { name -> freeStyleJob(name) },
+                                     { name -> buildFlowJob(name) },
+                                     { name -> listView(name) })
+
+app.seedDirectory("${WORKSPACE}/seed/config", configFileFilter, seedProjectFilter)

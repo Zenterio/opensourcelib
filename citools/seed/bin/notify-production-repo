@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+repo="$1"
+branch="$2"
+curl https://ci-production.zenterio.lan/git/notifyCommit?url=git@git.zenterio.lan:${repo}\&branches=${branch}

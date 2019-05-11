@@ -1,0 +1,6 @@
+# files generated from buildinfo
+ref.json
+*csv
+
+# python build files
+__pycache__/

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#
+# Clears the jenkins workspace if there is a .clean_on_start file in it
+#
+#
+set -eux
+
+if [[ -e "${WORKSPACE}/.clean_on_start" ]]; then
+    cd "${WORKSPACE}"
+    find . -maxdepth 1 -mindepth 1 -print0 | xargs -0 rm -rf
+fi

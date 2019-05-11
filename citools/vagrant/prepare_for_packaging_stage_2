@@ -1,0 +1,174 @@
+#!/bin/bash
+
+set -eu
+
+TOTAL_NUM_ACTIONS=0
+NUM_ACTIONS_DONE=0
+
+action_start() {
+    echo ""
+    echo "$*"
+    echo "${*//?/-}"
+}
+
+action_done() {
+    NUM_ACTIONS_DONE=$(( NUM_ACTIONS_DONE + 1 ))
+    echo -e "${1:-Done (${NUM_ACTIONS_DONE} of ${TOTAL_NUM_ACTIONS})}"
+}
+
+inc_total_action_count() {
+    TOTAL_NUM_ACTIONS=$(( TOTAL_NUM_ACTIONS + 1 ))
+}
+
+inc_total_action_count
+shut_down_jenkins() {
+    action_start "Shutting down Jenkins service"
+    sudo service jenkins stop
+    action_done
+}
+
+inc_total_action_count
+clean_gitolite_repos() {
+    action_start "Deleting all repositories in gitolite"
+    sudo -u jenkins ssh git@localhost clean
+    action_done
+}
+
+inc_total_action_count
+clean_jobs() {
+    action_start "Deleting job history"
+    sudo rm -rf /var/lib/jenkins/builds/* || true
+    action_done
+}
+
+inc_total_action_count
+clean_disk_usage_statistics() {
+    action_start "Deleting disk-usage statistics"
+    sudo find /var/lib/jenkins/jobs -name disk-usage.xml -type f -delete
+    action_done
+}
+
+inc_total_action_count
+clean_workspace() {
+    action_start "Deleting workspaces"
+    sudo rm -rf /var/lib/jenkins/workspace/*  || true
+    sudo rm -rf /var/lib/jenkins/kazam-stub/*  || true
+    action_done
+}
+
+inc_total_action_count
+clean_config_history() {
+    action_start "Clean jenkins configuration history"
+    sudo rm -rf /var/lib/jenkins/config-history/jobs/*  || true
+    action_done
+}
+
+inc_total_action_count
+clean_finger_prints() {
+    action_start "Delete fingerprints database"
+    sudo rm -rf /var/lib/jenkins/fingerprints/*  || true
+    action_done
+}
+
+inc_total_action_count
+reset_next_build_number() {
+    action_start "Reset next buildnumber to 1"
+    sudo find /var/lib/jenkins/jobs -name nextBuildNumber -type f -exec bash -c "echo 1 > {}" \;
+    action_done
+}
+
+inc_total_action_count
+clean_monitoring_logs() {
+    action_start "Delete old monitoring logs"
+    sudo rm -f /var/lib/jenkins/monitoring/nodes/builds_*.ser.gz || true
+    action_done
+}
+
+inc_total_action_count
+clean_git_cache() {
+    action_start "Deleting git cache"
+    sudo rm -rf /var/lib/jenkins/git-cache/*  || true
+    action_done
+}
+
+inc_total_action_count
+clean_logs() {
+    action_start "Deleting rotated compressed logs"
+    sudo find /var/log/ -name '*.gz' -type f -delete
+    action_done
+}
+
+inc_total_action_count
+clean_apt_cache() {
+    action_start "Clean apt cache"
+    sudo apt-get clean
+    action_done
+}
+
+inc_total_action_count
+clean_apt_unused_packages() {
+    action_start "Remove unused packages"
+    sudo apt-get autoremove -y
+    action_done
+}
+
+inc_total_action_count
+clean_zign_server_database() {
+    action_start "Truncate log table in zign database"
+    mysql --user=root --database=zign --execute="truncate table log;"
+    action_done
+}
+
+inc_total_action_count
+clean_hdd() {
+    action_start "Filling empty disk with zeros"
+    sudo dd if=/dev/zero of=/EMPTY bs=1M || true; sudo rm -f /EMPTY
+    action_done
+}
+
+inc_total_action_count
+clean_docker() {
+    action_start "Docker cleanup"
+    docker system prune --all --force --volumes
+    sudo rm -rf /var/lib/docker/aufs || true
+    action_done
+}
+
+inc_total_action_count
+copy_changelog() {
+    action_start "Copying CHANGELOG to /home/vagrant/"
+    cp -f /vagrant/vagrant/CHANGELOG /home/vagrant/
+    action_done
+}
+
+action_start "PREPARE VM FOR PACKAGING - STAGE 2"
+
+# Shutting down jenkins service should always be done first
+shut_down_jenkins
+
+clean_apt_unused_packages
+
+clean_gitolite_repos
+clean_zign_server_database
+
+clean_jobs
+clean_disk_usage_statistics
+clean_workspace
+clean_config_history
+clean_finger_prints
+clean_monitoring_logs
+reset_next_build_number
+clean_git_cache
+
+clean_logs
+clean_apt_cache
+clean_docker
+
+copy_changelog
+
+# Clean HDD should always be done last
+clean_hdd
+
+action_done "\nPREPARATION STAGE 2 DONE"
+
+df -hT

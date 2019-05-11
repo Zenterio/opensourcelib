@@ -1,0 +1,122 @@
+<html><head>
+#NOTICE#
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+
+<!-- COPY TO JENKINS PAGE MARKUP HEADER -->
+<style>
+
+  img.zenterio-legend-icon
+  {
+    vertical-align: middle;
+    width: 24px;
+    height: 24px;
+  }
+
+  ul.zenterio-legend-wrapper,
+  ul.zenterio-legend-area
+  {
+    list-style: none;
+    padding: 2px;
+    margin: 0px;
+  }
+
+  li.zenterio-legend-button
+  {
+    display: block;
+    position: relative;
+    float: left;
+  }
+
+  li.zenterio-legend-button a
+  {
+    padding: 10px 10px 10px 10px;
+    text-decoration: none;
+    color: #FFFFFF;
+  }
+
+  li.zenterio-legend-button ul.zenterio-legend-area
+  {
+    display: none;
+  }
+
+  ul.zenterio-legend-area li.zenterio-legend-item
+  {
+    border-bottom-right-radius: 5px;
+  }
+
+  ul.zenterio-legend-area li.zenterio-legend-item a
+  {
+    display: block;
+    background: #444444;
+    padding: 10px 10px 10px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+    color: #FFFFFF;
+  }
+
+  li.zenterio-legend-button:hover ul.zenterio-legend-area
+  {
+    display: block;
+    position: absolute;
+    border: 1px solid #444444;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    box-shadow: 5px 5px 5px #888888;
+    background: #444444;
+    padding: 0px;
+    margin: 0px;
+  }
+
+  li.zenterio-legend-button:hover a
+  {
+    border: 1px solid #444444;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    box-shadow: 5px 5px 5px #888888;
+    background: #444444;
+    color: #FFFFFF;
+  }
+
+  li.zenterio-legend-button:hover a:hover
+  {
+    padding: 10px 10px 10px 10px;
+    background: #204A87;
+  }
+
+  li.zenterio-legend-button:hover ul.zenterio-legend-area li.zenterio-legend-item
+  {
+    float: none;
+  }
+
+  li.zenterio-legend-button:hover ul.zenterio-legend-area li.zenterio-legend-item a:hover
+  {
+    background: #204A87;
+  }
+
+  #zenterio-legend-nav li.zenterio-legend-button ul.zenterio-legend-area li.zenterio-legend-item
+  {
+    border-top: 0px;
+  }
+
+  </style>
+
+  <!-- END COPY -->
+
+</head>
+<body style="background: #AAAAAA">
+
+<!-- COPY TO JENKINS PAGE MARKUP HEADER -->
+<div style="position: absolute; top:26px; left: 300px; z-index: 99999;">
+<ul class="zenterio-legend-wrapper" id="zenterio-legend-nav">
+  <li class="zenterio-legend-button"><a href="#"><img class="zenterio-legend-icon" src="/userContent/customIcon/5be5f3fff0e6b4d185b76a2b5d27c532d625b0b0.png"/> Show legend</a>
+    <ul class="zenterio-legend-area">
+#LEGEND-DESCRIPTIONS#
+    </ul>
+  </li>
+</ul>
+</div>
+
+<!-- END COPY -->
+</body>
+</html>

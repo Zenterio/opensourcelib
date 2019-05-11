@@ -1,0 +1,12 @@
+<ul>
+    {{#each results}}
+        <li>
+            <a href="#method/{{clazz}}.{{name}}">
+                <div>
+                    {{name}} :
+                    <span class="simple-class-name">{{simpleClassName}}</span>
+                </div>
+            </a>
+        </li>
+    {{/each}}
+</ul>

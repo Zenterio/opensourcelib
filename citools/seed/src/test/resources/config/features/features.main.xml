@@ -1,0 +1,531 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../../config/config.dtd">
+<projects>
+    <project name="Features">
+        <origin name="Main">
+            <release-packaging>
+                <build-timeout policy="absolute" minutes="5"/>
+                <credential type="text" variable-name="SECRET_TEXT" id="text-test-credential"/>
+                <custom-build-step>
+                #!/usr/bin/env bash
+                {
+                    echo "Macros:"
+                    echo "PROJECT=${PROJECT}"
+                    echo "ORIGIN=${ORIGIN}"
+                    echo "PRODUCT=${PRODUCT} (not set)"
+                    echo "ARTIFACTS_DIR=${ARTIFACTS_DIR}"
+                    echo "ARTIFACTS_PATH=${ARTIFACTS_PATH}"
+                } > custom-build-step.txt
+                mv custom-build-step.txt "${ARTIFACTS_PATH}/"
+                </custom-build-step>
+                <custom-build-step>
+                    <![CDATA[
+                    #!/usr/bin/env bash
+                    # From custom build-step in features.xml
+                    set -eux
+                    test "${SECRET_TEXT}"
+                    ]]>
+                                    </custom-build-step>
+                                    <custom-build-step><![CDATA[
+                    #!/usr/bin/env bash
+                    # From custom build-step in featurees.xml
+                    # Testing interaction with release-packaging-script repositories
+                    set -eux
+                    # shellcheck disable=SC1090
+                    . "${WORKSPACE}/release-packaging/release-script/set-env.sh"
+                    test "${VARIABLE}" = "value"
+                    export PROJECT="${PROJECT}"
+                    export ORIGIN="${ORIGIN}"
+                    export ARTIFACTS_DIR="${ARTIFACTS_DIR}"
+                    export ARTIFACTS_PATH="${ARTIFACTS_PATH}"
+                    "${WORKSPACE}/release-packaging/release-script/test-env-export.sh"
+                    ]]>
+                </custom-build-step>
+                <description>Release packaging</description>
+                <publish-over-ssh server="ci-staging">
+                    <transfer-set>
+                    #!/usr/bin/env bash
+                    ls -la
+                    </transfer-set>
+                </publish-over-ssh>
+                <repository name="release-packaging" dir="release-packaging"
+                    branch="master" remote="git@git.zenterio.lan:product-stub"/>
+            </release-packaging>
+            <trigger />
+            <description>
+                <![CDATA[
+                In this origin, coverity, documentation is enabled using
+                default/simple values, inherited from the project level.<br/>
+                It also features multiple source code repositories, showing
+                the possibility to depend on more than one repo for building the
+                software. The associated trigger will poll both repos for changes.
+                ]]>
+            </description>
+            <priority level="high"/>
+            <repository name="zids" dir="zids"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <repository name="fs" dir="zids/externals/fs"
+                        remote="git@git.zenterio.lan:product-stub-fs" branch="master" />
+            <retention-policy duration="medium" save-artifacts="true"/>
+            <started-by enabled="true"/>
+            <variable name="origin-variable">variable-${origin}</variable>
+            <product name="default">
+                <description>
+                    This product shows the default result of enabled features.
+                </description>
+            </product>
+            <product name="customized">
+
+                <coverity upstream="async" stream="${origin}_${product}" >
+                    <!--
+                    TODO: Enable <description> for coverity
+                    Coverity upstream async example. Runs in the build flow, but without blocking or affecting the flow result.
+                    -->
+                    <custom-build-step><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        # General macros
+                        echo "ARTIFACTS_DIR = ${ARTIFACTS_DIR}"
+                        echo "ARTIFACTS_PATH = ${ARTIFACTS_PATH}"
+                        echo "PROJECT = ${PROJECT}"
+                        echo "ORIGIN = ${ORIGIN}"
+                        echo "PRODUCT = ${PRODUCT}"
+                        echo "JOB_TYPE = ${JOB_TYPE}"
+                        echo "BUILD_TYPE = ${BUILD_TYPE}"
+                        echo "BUILD_TYPE_OPT = ${BUILD_TYPE_OPT}"
+                        echo "MAKE_ROOT = ${MAKE_ROOT}"
+                        echo "MAKE_TARGET = ${MAKE_TARGET}"
+                        ]]>
+                    </custom-build-step>
+                    <custom-build-step mode="prepend"><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        echo "Custom build steps are not inherited if there are any"
+                        echo "custom build steps on a higher level."
+                        ]]>
+                    </custom-build-step>
+                    <custom-build-step><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        # Coverity specific macros
+                        echo "COVERITY_STREAM=${COVERITY_STREAM}"
+                        echo "COVERITY_WORK_DIR=${COVERITY_WORK_DIR}"
+                        echo "COVERITY_BUILD="${COVERITY_BUILD}
+                        echo "COVERITY_IMPORT_SCM="${COVERITY_IMPORT_SCM}
+                        echo "COVERITY_ANALYSIS="${COVERITY_ANALYSIS}
+                        echo "COVERITY_EXPORT_CVA="${COVERITY_EXPORT_CVA}
+                        echo "COVERITY_CVA_FILE=${COVERITY_CVA_FILE}"
+                        echo "COVERITY_COMMIT="
+                        cat << EOF
+                        ${COVERITY_COMMIT}
+                        EOF
+                        ]]>
+                    </custom-build-step>
+                    <custom-build-step><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        # Configuration variables
+                        set -ex
+                        test "${project-variable}" = "variable-features"
+                        test "${origin-variable}" = "variable-main"
+                        test "${product-variable}" = "variable-customized"
+                        test "${coverity-variable}" = "variable-coverity"
+                        ]]>
+                    </custom-build-step>
+                    <variable name="coverity-variable">variable-coverity</variable>
+                </coverity>
+                <doc enabled="false" />
+                <build-node label="default"/>
+                <build-node label="incremental"/>
+                <description><![CDATA[
+                    This product overrides the coverity tag with a new definition
+                    containing custom build steps. <br/>
+                    The documenation has been disabled for this product<br/>
+                    The product has also been specified to do clean builds on either
+                    default or incremental build nodes.
+                    ]]>
+                </description>
+                <variable name="product-variable">variable-${product}</variable>
+                <production>
+                    <publish-over-ssh server="ci-staging">
+                        <transfer-set>
+                            #!/usr/bin/env bash
+                            echo "Show that it can co-exist with other publishing."
+                        </transfer-set>
+                    </publish-over-ssh>
+                    <custom-build-step type="system-groovy" mode="append"><![CDATA[
+                        import hudson.FilePath
+                        def file = build.getWorkspace().child("#ARTIFACTS_DIR#/groovy-custom-build-step.txt").write()
+
+                        assert "#PROJECT#" == "Features"
+                        assert "#ORIGIN#" == "Main"
+                        assert "#PRODUCT#" == "customized"
+                        assert "#ARTIFACTS_DIR#" == "result"
+                    ]]>
+                    </custom-build-step>
+                    <description><![CDATA[
+                        ]]>
+                    </description>
+                </production>
+            </product>
+            <product name="tested">
+                <coverity upstream="true"/>
+                <!--
+                TODO: Enable <description> for coverity
+                Coverity true example. Runs in the build flow, blocking and affecting the flow result. (default)
+                -->
+                <doc enabled="false"/>
+                <description><![CDATA[
+                        This product uses the Kazam test framework to test builds.<br/>
+                        It also uses incremental builds on the production build variant, but on no other.
+                        ]]>
+                </description>
+                <debug>
+                    <publish-build-over-ssh server="ci-staging"
+                        name="tested"
+                        artifact-pattern="result/kfs.zmg"
+                        remove-prefix="result"
+                        root-dir="/mnt/netapp/build"
+                        number-of-builds-to-keep="2" />
+                    <publish-over-ssh server="ci-staging">
+                        <transfer-set>
+                            echo "Only purpose of this publish over ssh is to ensure that it can coexist with publish-build-over-ssh"
+                        </transfer-set>
+                    </publish-over-ssh>
+                    <test-group name="pvr" stb-label="Kazam-stub-pvr" test-root="verification/kazamTests"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                        <description><![CDATA[
+                            You can group your tests in one or more test groups, each using their own repositories,
+                            set top box and test root.
+                            <br/>
+                            TODO: More information text here.
+                            TODO: Actually show the description.
+                            TODO: Does a test group description make sense? Inherited?
+                            ]]>
+                        </description>
+                        <epg path="epg1.tar.gz"/>
+                        <epg path="epg2.tar.gz"/>
+                        <image artifact="result/kfs.zmg"/>
+                        <log-parsing config="${WORKSPACE}/verification/kazamTests/features/log_analyzer.yaml"/>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="jasmine" upstream="true">
+                            <publish-over-ssh server="ci-staging">
+                                <transfer-set>
+                                    #!/usr/bin/env bash
+                                    echo "The only purpose of this publish step is to ensure that it can coexist with publish-test-report-over-ssh"
+                                </transfer-set>
+                            </publish-over-ssh>
+                            <publish-test-report-over-ssh server="ci-staging"
+                                name="tested"
+                                report-file-pattern="result/Jasmine_${product}_*.xml"
+                                remove-prefix="result"
+                                suite-name="Jasmine"
+                                />
+                            <description><![CDATA[
+                                The Jasmine test is run on the debug version each time the tested product is built.
+                                <br>
+                                It is possible to override most of the information from the test-group configuration.
+                                ]]>
+                            </description>
+                            <epg path="DONT-UPGRADE"/>
+                            <jasmine repository="verification" config-file="test.pvr.json"/>
+                            <log-parsing enabled="false"/>
+                            <owner name='Feature Owner 1' email="test.feature.owner@zenterio.com" group='test_group_1'>
+                                <email-policy test="failure"/>
+                            </owner>
+                            <test-suite path="Suite_Jasmine.xml"/>
+                        </test-context>
+                        <test-context name="jasmine_url_override" upstream="true">
+                            <description><![CDATA[
+                                The Jasmine test is run on the debug version each time the tested product is built.
+                                <br>
+                                It is possible to override most of the information from the test-group configuration.
+                                ]]>
+                            </description>
+                            <epg path="DONT-UPGRADE"/>
+                            <jasmine repository="verification" config-file="test.pvr.json" url="http://linstest.zenterio.lan/jasmineTests/AutoTest.html"/>
+                            <owner name='Feature Owner 1' email="test.feature.owner@zenterio.com" group='test_group_1'>
+                                <email-policy test="failure"/>
+                            </owner>
+                            <test-suite path="Suite_Jasmine.xml"/>
+                        </test-context>
+                        <test-context name="disabled" enabled="false">
+                            <description>Disabled test job, should not be generated</description>
+                            <test-suite path="ignore"/>
+                        </test-context>
+                        <test-context name="without-coredump-handling" coredump-handling="false" enabled="true">
+                            <description>Test job with core dump handling disabled</description>
+                            <jasmine repository="verification" config-file="test.pvr.json"/>
+                            <log-parsing enabled="false"/>
+                            <owner name='Feature Owner 2' email="test.feature.owner2@zenterio.com" group='test_group_2'>
+                                <email-policy test="failure"/>
+                            </owner>
+                            <owner name='Feature Owner 3' email="test.feature.owner3@zenterio.com" group='test_group_2'>
+                                <email-policy test="failure"/>
+                            </owner>
+                            <test-suite path="Suite_Jasmine.xml"/>
+                        </test-context>
+                        <watcher name="C Urious" email="curious@example.com" >
+                            <email-policy test="failure"/>
+                        </watcher>
+                    </test-group>
+                    <test-group name="upstream" box-configuration="" product-configuration="" stb-label="Kazam" test-root="">
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="true" upstream="true">
+                            <test-suite path=""/>
+                        </test-context>
+                        <test-context name="false" upstream="false">
+                            <test-suite path=""/>
+                        </test-context>
+                        <test-context name="async" upstream="async">
+                            <test-suite path=""/>
+                        </test-context>
+                    </test-group>
+                    <test-group name="zap" stb-label="Kazam-stub-zap" test-root="verification/kazamTests"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                        <description><![CDATA[
+                            This second test group (zap) would normally have all the same tests ans the first (pvr)
+                            test, except different suites and another stb label.
+                            ]]>
+                        </description>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="kpi" polling="* * * * *">
+                            <csv-data-plot input="result/zaptime_sd.csv" group="Zap Time" title="Zap Time SD" scale="Time(ms)" style="line"/>
+                            <csv-data-plot input="result/zaptime_hd.csv" group="Zap Time" title="Zap Time HD" scale="Time(ms)" style="line3d"/>
+                            <xml-to-csv input="result/KazamTest.xml" output="result/zaptime_sd.csv">
+                                <xml-data caption="Avg" operation="avg" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                <xml-data caption="Min" operation="min" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                <xml-data caption="Max" operation="max" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                            </xml-to-csv>
+                            <xml-to-csv input="result/KazamTest.xml" output="result/zaptime_hd.csv">
+                                <xml-data caption="Avg" operation="avg" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                <xml-data caption="Min" operation="min" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                <xml-data caption="Max" operation="max" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                            </xml-to-csv>
+                            <description><![CDATA[
+                                The kpi test is run each time upstream is built, and also when there are changes to the
+                                verification repository.
+                                ]]>
+                            </description>
+                            <test-suite path="Suite_kpi.xml"/>
+                        </test-context>
+                    </test-group>
+                    <test-group name="k2" type="k2" test-root="verification" stb-label="Kazam-stub-zap">
+                        <custom-build-step mode="prepend"><![CDATA[${remove-coredump-dir}]]></custom-build-step>
+                        <custom-build-step mode="prepend"><![CDATA[
+                            #!/usr/bin/env bash
+                            set -eux
+                            cat <<EOT >> "${TEST_ROOT}/passed.py"
+                            def test_1():
+                                assert(True)
+
+                            def test_2():
+                                assert(True)
+
+                            EOT
+
+                            cat <<EOT >> "${TEST_ROOT}/passed.yaml"
+                            test.sources: [passed.py]
+
+                            EOT
+                            ]]>
+                        </custom-build-step>
+                        <description><![CDATA[
+                            Tests K2 test groups
+                            ]]>
+                        </description>
+                        <image artifact=""/>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="passing">
+                            <test-command-args value="${args}"/>
+                            <test-suite path="passed.yaml"/>
+                        </test-context>
+                        <test-context name="duration">
+                            <duration time="0:00:02"/>
+                            <test-command-args value="${args}"/>
+                            <test-suite path="passed.yaml"/>
+                        </test-context>
+                        <test-context name="timeout">
+                            <build-timeout minutes="20" policy="absolute"/>
+                            <test-command-args value="${args}"/>
+                            <test-suite path="passed.yaml"/>
+                        </test-context>
+                        <variable name="args">--ext-default-enabled false --ext-sut@enabled true --ext-logger@enabled true --ext-output@enabled true --ext-logdefaults@enabled true --ext-runcommand@enabled true --ext-testrunner@enabled true --ext-testfinder@enabled true --ext-testscheduler@enabled true --ext-looper@enabled true --ext-testresults@enabled true --ext-testngreport@enabled true --ext-textreport@enabled true --ext-signalhandler@enabled true --ext-z2report@enabled true --ext-commandtimeout@enabled true</variable>
+                        <variable name="remove-coredump-dir"><![CDATA[
+                            #!/usr/bin/env bash
+                            set -eux
+                            rm -rf "${COREDUMP_CONF_DESTINATION}"
+                            ]]>
+                        </variable>
+                    </test-group>
+
+                </debug>
+                <release enabled="false"/>
+                <production>
+                    <csv-data-plot input="result/data.csv" title="Title" group="Group" scale="Scale" style="bar3d" />
+                    <custom-build-step mode="append"><![CDATA[
+                        #!/usr/bin/env bash
+                        # create CSV file
+                        # shellcheck disable=SC2050
+                        if [ "${JOB_TYPE}" = "compile" ]; then
+                            echo "Caption-1,Caption-2" >> "${ARTIFACTS_PATH}/data.csv"
+                            echo "1, 0.5" >> "${ARTIFACTS_PATH}/data.csv"
+                        fi
+                        ]]>
+                    </custom-build-step>
+                    <incremental enabled="true">
+                        <test-group name="zap" stb-label="Kazam-stub-zap" test-root="verification/kazamTests"
+                                    box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                            <description><![CDATA[
+                                It is possible to run Kazam tests within an incremental flow.
+                                ]]>
+                            </description>
+                            <image artifact="result/kfs.zmg"/>
+                            <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                            <test-context name="kpi">
+                                <csv-data-plot input="result/zaptime_sd.csv" group="Zap Time" title="Zap Time SD" scale="Time(ms)" style="line"/>
+                                <csv-data-plot input="result/zaptime_hd.csv" group="Zap Time" title="Zap Time HD" scale="Time(ms)" style="line3d"/>
+                                <xml-to-csv input="result/KazamTest.xml" output="result/zaptime_sd.csv">
+                                    <xml-data caption="Avg" operation="avg" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                    <xml-data caption="Min" operation="min" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                    <xml-data caption="Max" operation="max" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                </xml-to-csv>
+                                <xml-to-csv input="result/KazamTest.xml" output="result/zaptime_hd.csv">
+                                    <xml-data caption="Avg" operation="avg" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                    <xml-data caption="Min" operation="min" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                    <xml-data caption="Max" operation="max" source="tests.yggdrasil.zen_navi.ygZap.YgZap.test_zapTimeSD2SD_Astra" field="KPI"/>
+                                </xml-to-csv>
+                                <test-suite path="Suite_kpi.xml"/>
+                            </test-context>
+                        </test-group>
+                    </incremental>
+                </production>
+            </product>
+            <product name="credential">
+                <coverity enabled="true">
+                    <credential type="text" variable-name="SECRET_TEXT" id="text-test-credential"/>
+                    <custom-build-step><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        set -eux
+                        test "${SECRET_TEXT}"
+                        ]]>
+                    </custom-build-step>
+                </coverity>
+                <doc enabled="true">
+                    <credential type="text" variable-name="SECRET_TEXT" id="text-test-credential"/>
+                    <custom-build-step><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        set -eux
+                        test "${SECRET_TEXT}"
+                        ]]>
+                    </custom-build-step>
+                </doc>
+                <description><![CDATA[
+                    This product tests the usage of credentials inside d
+                    ]]>
+                </description>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+            <product name="ccache-publish">
+                <cache ccache-publish="true" ccache-size="small"/>
+                <custom-build-step mode="append"><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        set -eux
+                        test -e "${CCACHE_DIR}"
+                        test "${CCACHE_SIZE}" = "3G"
+                        test "${CCACHE_PUBLISH}" = "yes"
+                        ]]>
+                </custom-build-step>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+            <product name="ccache-nopublish">
+                <!-- Note, ccache-size has no meaning here -->
+                <cache ccache-publish="false" ccache-size="large" ccache-storage="features-custom-storage"/>
+                <custom-build-step mode="append"><![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in features.xml
+                        set -eux
+                        test -e "${CCACHE_DIR}"
+                        test "${CCACHE_SIZE}" = "6G"
+                        test "${CCACHE_STORAGE}" = "/mnt/netapp/nfs_cache2/features-custom-storage"
+                        ]]>
+                </custom-build-step>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+            <product name="resource">
+                <coverity>
+                    <resources name="a1 a2"/>
+                </coverity>
+                <doc>
+                    <resources label="b"/>
+                </doc>
+                <resources name="a1"/>
+                <debug>
+                    <resources label="b" quantity="2"/>
+                </debug>
+                <release enabled="true"/>
+                <production enabled="true"/>
+            </product>
+            <product name="coredumps">
+                <coverity enabled="false"/>
+                <doc enabled="false"/>
+                <variable name="verify-coredump-functionality"><![CDATA[
+                    #!/usr/bin/env bash
+                    # From custom build-step in features.xml
+                    # triggers a core dump and checks that the core files
+                    # are produced as expected.
+                    set -eux
+
+                    echo "COREDUMP_CONF_DESTINATION=${COREDUMP_CONF_DESTINATION}"
+                    test "${COREDUMP_CONF_DESTINATION}" = "/mnt/coredumps/${PROJECT}/${JOB_NAME}/${BUILD_ID}"
+
+                    test "$(stat --format '%a' "${COREDUMP_CONF_DESTINATION}")" = "777"
+
+                    echo "COREDUMP_CONF_REL_DESTINATION=${COREDUMP_CONF_REL_DESTINATION}"
+                    test "${COREDUMP_CONF_REL_DESTINATION}" = "${PROJECT}/${JOB_NAME}/${BUILD_ID}"
+
+                    test "$(ulimit -c)" != "0"
+                    grep -q "/opt/zenterio/coredumps/zcdh" /proc/sys/kernel/core_pattern
+
+                    set +e
+                    bash -c '{ kill -6 $$; } '
+                    set -e
+
+                    # Give zcdh some time to finish
+                    sleep 2
+
+                    test -f "${COREDUMP_CONF_DESTINATION}"/core_bash.*
+                    test -f "${COREDUMP_CONF_DESTINATION}"/info.*
+                    test -f "${COREDUMP_CONF_DESTINATION}"/bash.*
+                    test -f "${COREDUMP_CONF_DESTINATION}"/backtrace.*
+                    cat "${COREDUMP_CONF_DESTINATION}"/info.*
+                    cat "${COREDUMP_CONF_DESTINATION}"/backtrace.*
+
+                ]]>
+                </variable>
+                <debug>
+                    <test-group name="core" stb-label="Kazam-stub" test-root="verification/kazamTests"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                                <image artifact="result/kfs.zmg"/>
+                                <log-parsing config="${WORKSPACE}/verification/kazamTests/features/log_analyzer.yaml"/>
+                                <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="dump">
+                            <custom-build-step mode="override">${verify-coredump-functionality}</custom-build-step>
+                            <description>Test job that produces a fake core dump to test the core dump functionality.</description>
+                            <test-suite path="Suite_Smoke.xml"/>
+                        </test-context>
+                    </test-group>
+                    <custom-build-step mode="override">${verify-coredump-functionality}</custom-build-step>
+                </debug>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+        </origin>
+    </project>
+</projects>

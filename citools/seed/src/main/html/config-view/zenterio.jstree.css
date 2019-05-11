@@ -1,0 +1,14 @@
+/* Multi line support */
+.jstree-anchor {
+    height:auto !important;
+    white-space:normal !important;
+}
+
+.zenterio-header {
+    font-family: monospace;
+    font-weight: bold;
+}
+.zenterio-content {
+    font-family: monospace;
+    white-space: pre;
+}

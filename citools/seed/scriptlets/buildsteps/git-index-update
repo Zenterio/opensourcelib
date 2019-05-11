@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Auto-generated from build-step "git-index-update"
+# Updates the git index cache so that git describe inside ABS isn't forced to read files
+# Macros:
+# REPOSITORY_DIRS=${REPOSITORY_DIRS}
+set -eux
+
+repository_dirs=(${REPOSITORY_DIRS})
+for dir in "${repository_dirs[@]}"; do
+    cd "${WORKSPACE}/${dir}"
+
+    if [ -d .git ]; then
+        sleep 1
+        ${BUILD_ENVIRONMENT}git describe --dirty || true
+    fi
+done
+

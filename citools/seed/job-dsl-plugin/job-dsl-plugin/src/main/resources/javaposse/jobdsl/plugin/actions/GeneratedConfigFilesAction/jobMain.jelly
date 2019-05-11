@@ -1,0 +1,20 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:t="/lib/hudson">
+    <j:set var="allConfigFiles" value="${it.findAllGeneratedObjects()}"/>
+    <j:if test="${!allConfigFiles.isEmpty()}">
+        <table style="margin-top: 1em; margin-left:1em;">
+            <t:summary icon="/plugin/job-dsl/images/48x48/directory.png">
+                Generated Config Files:
+                <ul class="folderList">
+                    <j:forEach items="${allConfigFiles}" var="configFile">
+                        <li>
+                            <a href="${rootURL}/configfiles/editConfig?id=${configFile.id}" class="tl-tr">
+                                ${configFile.name}
+                            </a>
+                        </li>
+                    </j:forEach>
+                </ul>
+            </t:summary>
+        </table>
+    </j:if>
+</j:jelly>

@@ -1,0 +1,17 @@
+*#
+.#*
+*~
+*.backup
+.gradle
+build
+*.pyc
+build.log
+.classpath
+.project
+.idea
+*.iml
+.settings
+seed/documentation
+out
+.vagrant
+.vscode

@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../../config/config.dtd">
+<projects>
+    <project name="Features">
+        <origin name="unstable_tests">
+            <coverity enabled="false"/>
+            <doc enabled="false"/>
+            <trigger />
+            <description>
+                <![CDATA[
+                In this origin, all test jobs are unstable.
+                ]]>
+            </description>
+            <priority level="high"/>
+            <repository name="zids" dir="zids"
+                        remote="git@git.zenterio.lan:product-stub" branch="master" />
+            <repository name="fs" dir="zids/externals/fs"
+                        remote="git@git.zenterio.lan:product-stub-fs" branch="master" />
+            <product name="tested" alt-name="unstable">
+                <description><![CDATA[
+                        This product uses the Kazam and K2 test framework to test builds.
+                        ]]>
+                </description>
+                <debug>
+                    <publish-build-over-ssh server="ci-staging"
+                        name="tested"
+                        artifact-pattern="result/kfs.zmg"
+                        remove-prefix="result"
+                        root-dir="/mnt/netapp/build"
+                        number-of-builds-to-keep="2" />
+                    <test-group name="pvr" stb-label="Kazam-stub-pvr" test-root="verification/kazamTests"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                        <description><![CDATA[
+                            You can group your tests in one or more test groups, each using their own repositories,
+                            set top box and test root.
+                            <br/>
+                            TODO: More information text here.
+                            TODO: Actually show the description.
+                            TODO: Does a test group description make sense? Inherited?
+                            ]]>
+                        </description>
+                        <epg path="epg1.tar.gz"/>
+                        <epg path="epg2.tar.gz"/>
+                        <image artifact="result/kfs.zmg"/>
+                        <log-parsing config="${WORKSPACE}/verification/kazamTests/features/log_analyzer.yaml"/>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="stability" upstream="false" periodic="@midnight" stb-label="Kazam-stub-pvr &amp;&amp; stability">
+                            <publish-test-report-over-ssh server="ci-staging"
+                                name="tested"
+                                report-file-pattern="result/KazamTest.xml"
+                                remove-prefix="result"
+                                suite-name="Stability"
+                                />
+                            <description><![CDATA[
+                                This stability test is normally run at midnight for 17 hours.
+                                <br/>
+                                It will flash the latest build before running the test.
+                                <br/>
+                                It can be run manually with a different duration, another suite and flashing from any
+                                available build.
+                                ]]>
+                            </description>
+                            <duration time="17:00:00"/>
+                            <test-suite path="Suite_Stability.xml"/>
+                            <test-suite path="Suite_Specific.xml"/>
+                        </test-context>
+                        <test-context name="manual" upstream="false">
+                            <description><![CDATA[
+                                The manual test can be used to triage an error by testing various combinations of
+                                 builds and epgs.
+                                ]]>
+                            </description>
+                            <duration time="00:05:00"/>
+                            <epg path="epg2.tar.gz"/>
+                            <epg path="epg3.tar.gz"/>
+                            <epg path="epg4.tar.gz"/>
+                            <test-job-input-parameter name="notes" default=""/>
+                            <test-suite path="Manual.xml"/>
+                            <test-suite path="AnotherManual.xml"/>
+                        </test-context>
+                        <test-context name="smoke" polling="* * * * *">
+                            <publish-test-report-over-ssh server="ci-staging"
+                                name="tested"
+                                report-file-pattern="result/KazamTest.xml"
+                                remove-prefix="result"
+                                suite-name="Smoke Test"
+                                />
+                            <description><![CDATA[
+                                The smoke test is run each time upstream is built, and also when there are changes to the
+                                verification repository.
+                                ]]>
+                            </description>
+                            <duration time="00:05:00"/>
+                            <epg path="smokey.tar.gz"/>
+                            <test-suite path="Suite_Smoke.xml"/>
+                        </test-context>
+                    </test-group>
+                    <test-group name="k2" type="k2" test-root="verification" stb-label="Kazam-stub-zap">
+                        <custom-build-step mode="prepend"><![CDATA[
+                            #!/usr/bin/env bash
+                            cat <<EOT >> "${TEST_ROOT}/mixed.py"
+                            def test_pass():
+                                assert True
+
+                            def test_fail():
+                                assert False
+
+                            def test_error():
+                                raise(Exception('This is an error'))
+
+                            EOT
+
+                            cat <<EOT >> "${TEST_ROOT}/mixed.yaml"
+                            test.sources: [mixed.py]
+
+                            EOT
+                            ]]>
+                        </custom-build-step>
+                        <description><![CDATA[
+                            Tests K2 test groups
+                            ]]>
+                        </description>
+                        <image artifact=""/>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="mixed_verdicts" coredump-handling="false">
+                            <test-command-args value="${args}"/>
+                            <test-suite path="mixed.yaml"/>
+                        </test-context>
+                        <variable name="args">--ext-default-enabled false --ext-sut@enabled true --ext-logger@enabled true --ext-output@enabled true --ext-logdefaults@enabled true --ext-runcommand@enabled true --ext-testrunner@enabled true --ext-testfinder@enabled true --ext-testscheduler@enabled true --ext-looper@enabled true --ext-testresults@enabled true --ext-testngreport@enabled true --ext-textreport@enabled true --ext-signalhandler@enabled true --ext-z2report@enabled true</variable>
+                    </test-group>
+                </debug>
+                <release enabled="false"/>
+                <production>
+                    <test-group name="blackbox" test-root="verification/releaseTests" stb-label="Kazam-stub-release"
+                                box-configuration="box_config_file.cfg" product-configuration="product_config_file.cfg">
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="manual" upstream="false">
+                            <description><![CDATA[
+                                It is possible to send custom arguments to kazam, both fixed using <test-command-args> and
+                                new parameters using <test-job-input-parameter>. Combining them is quite powerful.
+                                ]]>
+                            </description>
+                            <duration time="00:05:00"/>
+                            <epg path="epg2.tar.gz"/>
+                            <epg path="epg3.tar.gz"/>
+                            <epg path="epg4.tar.gz"/>
+                            <test-command-args value="--delaystart 60"/>
+                            <test-job-input-parameter name="notes" default=""/>
+                            <test-suite path="Manual.xml"/>
+                            <test-suite path="AnotherManual.xml"/>
+                        </test-context>
+                    </test-group>
+                </production>
+            </product>
+
+        </origin>
+    </project>
+</projects>

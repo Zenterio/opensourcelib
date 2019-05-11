@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../config/config.dtd">
+<projects>
+    <project-info name="repo-list-test-project">
+        <pm email="" name="" />
+        <techlead email="" name=""/>
+    </project-info>
+    <project name="repo-list-test-project">
+        <origin name="master">
+            <release-packaging>
+                <repository dir="DIR" name="RNAME" branch="BRANCH_A" remote="RREMOTE_I"/>
+                <repository dir="DIR2" name="RNAME" branch="BRANCH_B" remote="RREMOTE_I"/>
+                <repository dir="DIR3" name="RNAME3" branch="BRANCH_C" remote="RREMOTE_III"/>
+                <!-- This repo should not show up twice even though exact same as in origin standard repo -->
+                <repository dir="DIR" name="NAME" branch="BRANCH_A" remote="REMOTE_I"/>
+            </release-packaging>
+            <repository dir="DIR" name="NAME" branch="BRANCH_A" remote="REMOTE_I"/>
+            <repository dir="DIR2" name="NAME" branch="BRANCH_B" remote="REMOTE_I"/>
+            <repository dir="DIR3" name="NAME3" branch="BRANCH_C" remote="REMOTE_III"/>
+            <product name="">
+                <debug>
+                    <test-group product-configuration=""
+                        test-root="" stb-label="" name="" box-configuration="">
+                        <repository dir="DIR" name="TNAME" branch="BRANCH_A" remote="TREMOTE_I"/>
+                        <repository dir="DIR2" name="TNAME" branch="BRANCH_B" remote="TREMOTE_I"/>
+                        <repository dir="DIR3" name="TNAME3" branch="BRANCH_C" remote="TREMOTE_III"/>
+                        <test-context name="">
+                            <test-suite path=""/>
+                        </test-context>
+                    </test-group>
+                </debug>
+            </product>
+        </origin>
+    </project>
+</projects>

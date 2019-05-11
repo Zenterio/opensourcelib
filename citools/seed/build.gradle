@@ -1,0 +1,594 @@
+import groovy.io.FileType
+import org.xml.sax.ErrorHandler
+import org.xml.sax.SAXParseException
+
+/**
+ * LOGGING:
+ *
+ * These options apply to the execution of the seed framework on top of
+ * the job-dsl-plugin.
+ *
+ * The following parameters can be passed to gradle as a project property:
+ * logProfile=quiet|info|config|debug|all
+ *
+ * Use example:
+ * gradle -PlogProfile=debug
+ *
+ * If not set, "default" profile will be used.
+ *
+ * @see {@link com.zenterio.jenkins.logging}, for a description of the
+ * different profiles.
+ *
+ * Note! Changing log profile does not necessarily trigger a recompile
+ *       and rerun of jenkins configuration. You might need to run
+ *       clean in order to notice changes in log profile.
+ *
+ *
+ * DIFF BASELINE:
+ *
+ * The diff command used to compare the generated configuration with the
+ * baseline configuration, can be modified with the following project
+ * properties:
+ * diffIgnoreAllSpace|diffw
+ * diffArgs=<user specified argument such as -B>
+ *
+ * Use examples:
+ *
+ * Ignore all white-spaces
+ * gradle -PdiffIgnoreAllSpace
+ *
+ * Ignore all white-spaces, short form
+ * gradle -Pdiffw
+ *
+ * User specified argument.
+ * gradle -PdiffArgs='-Bw'
+ *
+ *
+ * CONFIG FILE FILTERING:
+ *
+ * The config file filter is applied to which config files should be parsed.
+ * The filename given is relative to the config folder it reside in, in the
+ * form of a space separated list.
+ * NOTE: Changing the filter will not rebuild a task already up to date.
+ *
+ * Usage:
+ * gradle -PconfigFile='<config-file-name> <other-config-file-name>'
+ *
+ * PROJECT FILTERING:
+ *
+ * The project filter is applied to the parsed config and deterimines what
+ * projects will actually be generated. However, since all config files will
+ * be parsed the time-saving is very limited. The value is a space separated
+ * list of projects to generate. If not used, all projects are generated.
+ * NOTE: Changing the filter will not rebuild a task already up to date.
+ *
+ * Usage:
+ * gradle -PseedProject='<project-name> <other-project-name>'
+ */
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+
+description = "Zenterio Job DSL Jenkins Libs"
+apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'eclipse'
+
+def pathGenConf = 'build/generated_config'
+def pathBaseline = 'src/test/resources/baseline'
+def pathJarJobDslCore = "job-dsl-plugin/job-dsl-core/build/libs/job-dsl-core-${version}.jar"
+
+def groovylogProfile = "default"
+if (project.hasProperty("logProfile")) {
+    groovylogProfile = logProfile
+    logger.info("Groovy Log Level set to ${groovylogProfile}")
+} else {
+    logger.info("Groovy Log Level not set, reverting to ${groovylogProfile}")
+}
+
+def groovyVersionInUse = "${groovyVersion}"
+if (project.hasProperty("overrideGroovyVersion")) {
+    groovyVersionInUse = overrideGroovyVersion
+}
+logger.info("Groovy version used: ${groovyVersionInUse}")
+
+def diffExtraArgs = ''
+if (project.hasProperty("diffIgnoreAllSpace") ||
+    project.hasProperty("diffw")) {
+    diffExtraArgs = '--ignore-all-space'
+}
+if (project.hasProperty('diffArgs')) {
+    diffExtraArgs = diffArgs
+}
+
+def configFileFilter = ""
+if (project.hasProperty("configFile")) {
+    configFileFilter = configFile
+}
+
+def seedProjectFilter = ""
+if (project.hasProperty("seedProject")) {
+    seedProjectFilter = seedProject
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:${groovyVersionInUse}"
+    testCompile 'junit:junit-dep:4.10'
+    compile files(pathJarJobDslCore)
+    //compile localGroovy()
+}
+
+compileGroovy {
+    it.dependsOn 'jarJobDslCore'
+}
+
+test {
+    useJUnit()
+    testLogging {
+        events "skipped", "failed"
+        showExceptions true
+        exceptionFormat "full"
+        showCauses true
+        showStackTraces true
+
+        afterSuite { desc, result ->
+            if (!desc.parent) { // will match the outermost suite
+                def output = "${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+                println('')
+                println('-' * output.length())
+                println(output)
+                println('-' * output.length())
+            }
+        }
+    }
+}
+
+check.dependsOn(['checkGeneratedProductionConfig',
+                 'checkGeneratedTestConfig',
+                 'generateProductionRepositoryList',
+                 'generateTestRepositoryList',
+                 'checkProductionShellScripts',
+                 'checkTestShellScripts'])
+
+task checkStaging {
+    it.dependsOn 'checkGeneratedStagingConfig'
+}
+
+clean {
+    it.dependsOn 'cleanGenerateConfig'
+}
+
+task cleanAll {
+    it.dependsOn 'clean', 'cleanJobDslCore'
+}
+
+task jarGroovySources(type:Jar){
+    from sourceSets.main.groovy
+    classifier = 'groovy-sources'
+}
+
+
+task jarGroovydocs(type: Jar, dependsOn: 'groovydoc') {
+    from project.groovydoc.destinationDir
+    classifier = 'groovydoc'
+}
+
+task jarAll(dependsOn: ['jarGroovydocs', 'jarGroovySources']){
+
+}
+
+task readMe(type: Exec) {
+    logging.captureStandardOutput LogLevel.INFO
+    logging.captureStandardError  LogLevel.ERROR
+
+    commandLine 'cat', 'README.md'
+}
+
+task jarJobDslCore(type: Exec) {
+    logging.captureStandardOutput LogLevel.INFO
+    logging.captureStandardError  LogLevel.ERROR
+
+    inputs.dir new File('job-dsl-plugin/job-dsl-core/src/main')
+    outputs.file new File(pathJarJobDslCore)
+
+    workingDir 'job-dsl-plugin'
+    commandLine './gradlew', 'job-dsl-core:jar'
+
+}
+
+task cleanJobDslCore(type: Exec) {
+    workingDir 'job-dsl-plugin'
+    commandLine './gradlew', 'clean'
+}
+
+def commonInputResources(t) {
+    t.with {
+        inputs.dir new File("scriptlets/")
+        inputs.dir new File("bin/")
+        inputs.dir new File('src/main/')
+    }
+}
+
+task generateTestConfig(type: Exec,
+                        dependsOn: ['jarJobDslCore', 'checkValidateTestConfig']) {
+    generateConfig(it, 'src/main/groovy/test.jdsl',
+        'src/test/resources/config/', groovylogProfile, pathGenConf, configFileFilter, seedProjectFilter)
+}
+
+task generateProductionConfig(type: Exec,
+                              dependsOn: ['jarJobDslCore', 'checkValidateProductionConfig']) {
+    generateConfig(it, 'src/main/groovy/production.jdsl',
+        'config/', groovylogProfile, pathGenConf, configFileFilter, seedProjectFilter)
+}
+
+task generateStagingProductionConfig(type: Exec,
+                                     dependsOn: ['jarJobDslCore', 'checkValidateProductionConfig']) {
+     generateConfig(it, 'src/main/groovy/staging.jdsl',
+         'config/', groovylogProfile, pathGenConf, configFileFilter, seedProjectFilter)
+    }
+
+ /**
+  * Generate configuration using the DSL plugin.
+  * @param context              context (task)
+  * @param pathDslFile          path to the dsl file that starts the seed application
+  * @param pathConfig           path to configuration folder
+  * @param groovylogProfile     log profile
+  * @param pathGenConf          root path to generated configuration
+  */
+def generateConfig(context, String pathDslFile, String pathConfig,
+                   String groovylogProfile, String pathGenConf,
+                   String configFileFilter, String seedProjectFilter) {
+   context.with {
+       logging.captureStandardOutput LogLevel.INFO
+       logging.captureStandardError  LogLevel.ERROR
+       commonInputResources(it)
+
+       def logProfileOpt = getlogProfileOpt(groovylogProfile)
+       inputs.file file(pathDslFile)
+       inputs.dir new File(pathConfig)
+       outputs.dir new File(pathGenConf)
+       outputs.file new File('job-dsl-plugin/job-dsl-core/com')
+       environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+       environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+       environment "ZENTERIO_SEED_CONFIG_DIR", pathConfig
+       commandLine './bin/run_locally', logProfileOpt, pathDslFile, "-o${pathGenConf}"
+   }
+}
+
+task cleanGenerateConfig(type: Exec) {
+    commandLine 'rm', '-f', 'job-dsl-plugin/job-dsl-core/com'
+}
+
+task checkGeneratedTestConfig(type: Exec, dependsOn: ['generateTestConfig']) {
+        checkGeneratedConfig(it, diffExtraArgs,
+            "${pathBaseline}/test", "${pathGenConf}/test")
+}
+
+task checkGeneratedProductionConfig(type: Exec, dependsOn: ['generateProductionConfig']) {
+    checkGeneratedConfig(it, diffExtraArgs,
+        "${pathBaseline}/production", "${pathGenConf}/production")
+}
+
+task checkGeneratedStagingConfig(type: Exec, dependsOn: ['generateStagingProductionConfig']) {
+    checkGeneratedConfig(it, diffExtraArgs,
+        "${pathBaseline}/production", "${pathGenConf}/staging")
+}
+
+/**
+ * Check that the generated configuration matches the established baseline
+ * @param context
+ * @param diffExtraArgs
+ * @param pathBaseline
+ * @param pathGenConf
+ * @return
+ */
+def checkGeneratedConfig(context, String diffExtraArgs,
+                         String pathBaseline, String pathGenConf) {
+    context.with {
+        if (gradle.startParameter.logLevel < LogLevel.QUIET) {
+            logging.captureStandardOutput LogLevel.LIFECYCLE
+            logging.captureStandardError  LogLevel.ERROR
+            if (diffExtraArgs == '') {
+                commandLine 'diff', '-r', pathBaseline, pathGenConf
+            } else {
+                commandLine 'diff', '-r', diffExtraArgs, pathBaseline, pathGenConf
+            }
+        } else {
+            logging.captureStandardError LogLevel.QUIET
+            commandLine 'diff', '-r', '--brief', pathBaseline, pathGenConf
+        }
+    }
+}
+
+task checkValidateTestConfig() {
+    checkValidateConfig(it, 'src/test/resources/config')
+}
+
+task checkValidateProductionConfig() {
+    checkValidateConfig(it, 'config')
+}
+
+/**
+ * Helper function for validating XML configuration files.
+ * @param context   context calling
+ * @param pathConf  path to configuration directory
+ * @return
+ */
+def checkValidateConfig(context, String pathConf) {
+    context.with {
+        logging.captureStandardOutput LogLevel.LIFECYCLE
+        logging.captureStandardError  LogLevel.ERROR
+
+        def confDir = new File(pathConf)
+
+        inputs.dir confDir
+
+        doLast {
+            confDir.eachFileRecurse (FileType.FILES) { confFile ->
+                if(confFile.name.endsWith('.xml')) {
+                    validateXmlFile(confFile)
+                }
+            }
+        }
+    }
+}
+
+task updateBaseline() {
+    it.dependsOn 'updateProductionBaseline', 'updateTestBaseline'
+}
+
+task updateProductionBaseline(type: Sync) {
+    from fileTree(dir: "${pathGenConf}/production")
+    into "${pathBaseline}/production"
+}
+
+task updateTestBaseline(type: Sync) {
+    from fileTree(dir: "${pathGenConf}/test")
+    into "${pathBaseline}/test"
+}
+
+
+task revertBaseline(type: Exec) {
+    logging.captureStandardOutput LogLevel.LIFECYCLE
+    logging.captureStandardError  LogLevel.ERROR
+    commandLine 'git', 'checkout', '--', "${pathBaseline}/."
+}
+
+artifacts {
+    archives jarGroovydocs
+    archives jarGroovySources
+}
+
+task testTagBuildStep(type: Exec) {
+    logging.captureStandardOutput LogLevel.LIFECYCLE
+    logging.captureStandardError  LogLevel.ERROR
+    commandLine './src/test/resources/tag_build_test.sh'
+}
+
+task generateProductionRepositoryList(type: JavaExec) {
+    description """\
+Parses the production configuration files and prints the repositories used
+by the compilation jobs.
+"""
+    def configDir = 'config'
+    def compilationRepoListFilePath = 'build/production/compilation_repolist.txt'
+    def testRepoListFilePath = 'build/production/test_repolist.txt'
+    generateRepoList(it, configDir, compilationRepoListFilePath, testRepoListFilePath)
+}
+
+task generateTestRepositoryList(type: JavaExec) {
+    description """\
+Parses the test configuration files and prints the repositories used
+by the compilation jobs.
+"""
+    def configDir = 'src/test/resources/config'
+    def compilationRepoListFilePath = 'build/test/compilation_repolist.txt'
+    def testRepoListFilePath = 'build/test/test_repolist.txt'
+    generateRepoList(it, configDir, compilationRepoListFilePath, testRepoListFilePath)
+}
+
+def generateRepoList(Task context, configDir, compilationRepoListFilePath, testRepoListFilePath) {
+    context.with {
+        inputs.dir new File(configDir)
+        outputs.file new File(compilationRepoListFilePath)
+        outputs.file new File(testRepoListFilePath)
+        args configDir, compilationRepoListFilePath, testRepoListFilePath
+        main = 'GenerateRepositoryList'
+        classpath = sourceSets.main.runtimeClasspath
+        doLast  {
+            assert file(compilationRepoListFilePath).exists()
+            assert file(testRepoListFilePath).exists()
+        }
+    }
+}
+
+task generateRepositoryStatistics(type: JavaExec) {
+    description """\
+Parses the production configuration files and prints basic stats about the
+repositories in use.
+"""
+    main = 'RepoStats'
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+
+
+task printModel(type: JavaExec) {
+    description """\
+Parses the production configuration file and prints a simplified tree
+structure of the model to stdout.
+"""
+    main = 'Model2Console'
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task printConfig(type: JavaExec) {
+    description """\
+Parses the production configuration file and prints a simplified tree
+structure of the configuration objects to stdout.
+"""
+    main = 'Config2Console'
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task generateConfigHtml(dependsOn: ['generateProductionConfigHtml', 'generateTestConfigHtml']) {
+    description """\
+Parses the configuration files and generates json files and packages HTML pages to view the configuration
+in a tree structure.
+    """
+}
+
+task generateProductionConfigHtml(type: JavaExec) {
+    description """\
+Parses the production configuration files and generates a json file and packages
+an HTML page to view the configuration in a tree structure.
+    """
+    main "Config2Json"
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    classpath = sourceSets.main.runtimeClasspath
+    args "config", "build/production/config/html/config-view/data.json"
+    doFirst {
+        copy {
+            from 'src/main/html/'
+            into 'build/production/config/html/'
+            include '**'
+        }
+    }
+}
+
+task generateTestConfigHtml(type: JavaExec) {
+    description """\
+Parses the test configuration files and generates a json file and packages
+an HTML page to view the configuration in a tree structure.
+    """
+    main "Config2Json"
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    classpath = sourceSets.main.runtimeClasspath
+    args "src/test/resources/config", "build/test/config/html/config-view/data.json"
+    doFirst {
+        copy {
+            from 'src/main/html/'
+            into 'build/test/config/html/'
+            include '**'
+        }
+    }
+}
+
+task generateProductionShellScripts(type: JavaExec) {
+    description """\
+Parses the production configuration and saves the expanded version of every shell script.
+"""
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    generateShellScripts(it, "config", "build/production/shellscripts")
+}
+
+task generateTestShellScripts(type: JavaExec) {
+    description """\
+Parses the test configuration and saves the expanded version of every shell script.
+"""
+    environment "ZENTERIO_SEED_CONFIG_FILE_FILTER", configFileFilter
+    environment "ZENTERIO_SEED_PROJECT_FILTER", seedProjectFilter
+    generateShellScripts(it, "src/test/resources/config", "build/test/shellscripts")
+}
+
+def generateShellScripts(Task context, String configDir, String outputDir) {
+    context.with {
+        main = 'GenerateShellScriptList'
+        commonInputResources(it)
+        inputs.dir new File(configDir)
+        outputs.dir new File(outputDir)
+        args configDir, outputDir
+        classpath = sourceSets.main.runtimeClasspath
+        doFirst {
+            delete outputDir
+        }
+    }
+}
+
+task checkProductionShellScripts(type: Exec, dependsOn: ['generateProductionShellScripts']) {
+    description """\
+Runs shellcheck on all shellscripts from the production configuration.
+"""
+    checkShellScripts(it, 'build/production/shellscripts', 'build/production/scriptsChecked')
+}
+
+task checkTestShellScripts(type: Exec, dependsOn: ['generateTestShellScripts']) {
+    description """\
+Runs shellcheck on all shellscripts from the test configuration.
+"""
+    checkShellScripts(it, 'build/test/shellscripts', 'build/test/scriptsChecked')
+}
+
+
+def checkShellScripts(Task context, String shellScriptDirectoryPath, String tempFile) {
+    context.with {
+        inputs.files fileTree(shellScriptDirectoryPath)
+        outputs.file new File(tempFile)
+        commandLine 'bash', '-c', 'find \''+shellScriptDirectoryPath+'\' -type f -print0 | xargs -0 -P8 -L 100 zshellcheck'
+    }
+}
+
+task generateJobIconFiles(type: JavaExec) {
+    description """\
+Generates the file com.zenterio.jenkins.JobIcon.groovy
+based on the content of icons directory and the configuration
+of GenerateJobIconFile.groovy.
+"""
+    main 'GenerateJobIconFiles'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task restoreJobIconFiles(type: Exec) {
+    logging.captureStandardOutput LogLevel.LIFECYCLE
+    logging.captureStandardError  LogLevel.ERROR
+    commandLine 'git', 'checkout', '--', 'src/main/groovy/com/zenterio/jenkins/JobIcon.groovy'
+    commandLine 'git', 'checkout', '--', '../icons/legend.html'
+}
+
+def validateXmlFile(xmlFile) {
+    XmlParser xp = new XmlParser(true, true)
+    xp.setErrorHandler(new XmlErrorHandler())
+    xp.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
+    xp.setProperty("http://javax.xml.XMLConstants/property/accessExternalDTD", "all")
+    xp.parse(xmlFile)
+}
+
+def getlogProfileOpt(groovylogProfile) {
+    return "--groovy-log-profile=$groovylogProfile"
+}
+
+/*
+ * Error handler for the XML Parser to generate an exception on failed
+ * validation of the XML file.
+ */
+class XmlErrorHandler implements ErrorHandler {
+
+    public void warning(SAXParseException exception) throws SAXParseException {
+        throw exception
+    }
+
+    public void error(SAXParseException exception) throws SAXParseException {
+        throw exception
+    }
+
+    public void fatalError(SAXParseException exception) throws SAXParseException {
+        throw exception
+    }
+}

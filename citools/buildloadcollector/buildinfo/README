@@ -1,0 +1,16 @@
+Installation:
+install pyenv (https://github.com/yyuu/pyenv-installer)
+run:
+    pyenv install 3.4.3
+    pyenv virtualenv 3.4.3 buildinfo
+    pip install -Ur requirements.txt
+    cat /usr/local/share/ca-certificates/Zenterio_Issuing_CA.crt >> ~/.pyenv/versions/buildinfo/lib/python3.4/site-packages/certifi/cacert.pem
+    cat /usr/local/share/ca-certificates/Zenterio_AD_Root_CA.crt >> ~/.pyenv/versions/buildinfo/lib/python3.4/site-packages/certifi/cacert.pem
+
+Usage:
+    ./buildinfo.py [jenkins url]
+    ./buildinfo.py -h for help output
+
+Cron settings on ci-production:
+
+30 8 * * * /home/mtadmin/buildinfo/buildinfo.sh

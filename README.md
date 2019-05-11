@@ -14,6 +14,7 @@ Each component/tool has its own license.
 Components/Tools
 ----------------
 
+* citools
 * git-project
 * K2
 * ZAF

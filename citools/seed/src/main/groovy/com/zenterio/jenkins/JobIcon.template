@@ -1,0 +1,144 @@
+#NOTICE#
+package com.zenterio.jenkins
+
+import com.zenterio.jenkins.buildtype.*
+import com.zenterio.jenkins.jobtype.*
+
+/**
+ * The file name is the SHA1sum of the original image file with the file
+ * extension. That is how they are identified and selected by the jenkins plugin.
+ * The renaming is done by the plugin when uploaded using the upload
+ * function on jenkins system management page.
+ * You can also use the install script install/configure-icons to do the
+ * installation of all icons at once.
+ * <p>
+ * Use:
+<code><pre><blockquote>
+install/incofigure-icons --list
+</blockquote></pre></code>
+ * <p>
+ * to get a list of all icon files and their install names.
+ */
+public enum JobIcon {
+
+#ICON_DECLARATION#
+
+    private String icon
+
+    private JobIcon(String icon) {
+        this.icon = icon
+    }
+
+    public String getIcon() {
+        return this.icon
+    }
+
+    public String getPath() {
+        return "/userContent/customIcon/${this.icon}"
+    }
+
+    public static JobIcon getCompile(BuildType buildType) {
+        return COMPILE;
+    }
+
+    public static JobIcon getCompile(BuildTypeDebug debug) {
+        return DCOMPILE
+    }
+
+    public static JobIcon getCompile(BuildTypeRelease release) {
+        return RCOMPILE
+    }
+
+    public static JobIcon getCompile(BuildTypeProduction production) {
+        return PCOMPILE
+    }
+
+    public static JobIcon getIncCompile(BuildType buildType) {
+        return COMPILE_INC
+    }
+
+    public static JobIcon getIncCompile(BuildTypeDebug debug) {
+        return DCOMPILE_INC
+    }
+
+    public static JobIcon getIncCompile(BuildTypeRelease release) {
+        return RCOMPILE_INC
+    }
+
+    public static JobIcon getIncCompile(BuildTypeProduction production) {
+        return PCOMPILE_INC
+    }
+
+    public static JobIcon getIcon(JobTypeCompile jt, BuildType bt) {
+        return getCompile(bt)
+    }
+
+    public static JobIcon getIcon(JobTypeIncrementalCompile jt, BuildType bt) {
+        return getIncCompile(bt)
+    }
+
+    public static JobIcon getIcon(JobTypeUnitTest jt, BuildType bt) {
+        return UNIT_TEST
+    }
+
+    public static JobIcon getIcon(JobTypeIncrementalUnitTest jt, BuildType bt) {
+        return UNIT_TEST_INC
+    }
+
+    public static JobIcon getIcon(JobTypeCoverity jt, BuildType bt) {
+        return COVERITY
+    }
+
+    public static JobIcon getIcon(JobTypeDocumentation jt, BuildType bt) {
+        return DOCUMENTATION
+    }
+
+    public static JobIcon getIcon(JobTypeFlash jt) {
+        return FLASH
+    }
+
+    public static JobIcon getIcon(JobTypeSignBuild jt, BuildType bt) {
+        return SIGN
+    }
+
+    public static JobIcon getIcon(JobTypeTagBuild jt) {
+        return TAG
+    }
+
+    public static JobIcon getIcon(JobTypePromoteBuildChain jt) {
+        return PROMOTION
+    }
+
+    public static JobIcon getIcon(JobTypeAnnotateBuildChain jt) {
+        return ANNOTATE
+    }
+
+    public static JobIcon getIcon(JobTypeReleasePackaging jt) {
+        return PACKAGE
+    }
+
+    public static JobIcon getIcon(JobTypeCollectArtifacts jt) {
+        return PACKAGE
+    }
+
+    public static JobIcon getTestBuild(BuildTypeProduction buildType) {
+        return TEST_PRODUCT
+    }
+
+    public static JobIcon getTestBuild(BuildTypeDebug debug) {
+        return TEST_DEBUG
+    }
+
+    public static JobIcon getTestBuild(BuildTypeRelease release) {
+        return TEST_RELEASE
+    }
+
+    public static JobIcon getIcon(JobTypeTestBuild jt, BuildType bt) {
+        return getTestBuild(bt)
+    }
+
+    public static JobIcon getIcon(JobTypeIncrementalTestBuild jt, BuildType bt) {
+        return getTestBuild(bt)
+    }
+
+}

@@ -1,0 +1,6 @@
+[
+    { "id" : "n1", "parent" : "#", "text" : "<span class='zenterio-header'>header</span>","state" : { "opened" : "true" } },
+    { "id" : "n2", "parent" : "n1",
+      "text" : "<div class='zenterio-content'>line 1<br/>line 2\nline 3\nline 4\nline 5<div>",
+      "state" : { "opened" : "true" } }
+]

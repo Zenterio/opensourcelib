@@ -1,0 +1,17 @@
+Custom
+MavenSettings
+GlobalMavenSettings
+ManagedScript
+change
+json
+text
+xml
+NewWindow
+ThisWindow
+Lightbox
+status
+etag
+lastModified
+DoNothing
+MarkUnstable
+MarkFailed

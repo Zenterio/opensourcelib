@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+run_check=${1:-true}
+userid=admin
+apitoken=b84e0f9e9ac45bbb5529ed91582b5c38
+
+if ${run_check}; then
+    url=http://localhost:8080/job/seed/build
+else
+    url=http://localhost:8080/job/seed-test-configuration/build
+fi
+
+curl -X POST ${url} --user ${userid}:${apitoken}

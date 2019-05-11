@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+curl https://ci-staging.zenterio.lan/git/notifyCommit?url=git@git.zenterio.lan:citools\&branches=staging

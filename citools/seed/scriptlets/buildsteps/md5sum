@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Auto-generated from build-step "md5sum"
+set -eux
+(cd "${ARTIFACTS_PATH}" && find . -type f \( -not -name "md5sum.txt" \) -print0 | sort -z | xargs -r0 md5sum > md5sum.txt) || true

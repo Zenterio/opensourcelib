@@ -1,0 +1,144 @@
+CHANGE LOG CI-STAGING VAGRANT
+=============================
+
+24 (laros)
+----------
+* Updated Jenkins to 2.150.2
+* Updated all plugins
+* Forked badge plugin 1.4 to work with Javascript
+  This enables new Groovy postbuild.
+* Plugins with custom versions:
+  - Badge plugin 1.4-ZENTERIO
+  - Build Flow plugin 0.21-SNAPSHOT (private-a845a26e-peboh)
+  - buildgraph-view 1.9-SNAPSHOT (private-6c4c549c-annil)
+  - Console Log To Workspace 1.2-SNAPSHOT (private-ce87fad9-peboh)
+  - Custom Job Icon plugin 1.0-SNAPSHOT (private-10/10/2015 20:47-peboh)
+  - Distinguishable Gray Balls 0.12-SNAPSHOT (private-07/07/2016 09:23-peboh)
+  - Git plugin 3.9.1-JENKINS-42487
+  - Job DSL 1.70-ZENTERIO
+  - Manage Groovy Script Security 1.0-SNAPSHOT (private-d9f4bfe8-peboh)
+
+23 (joisa)
+----------
+* Add zchangelog. Add jenkins-jira-credentials
+
+22 (annil)
+----------
+* Adds the seed build flow
+
+21 (peboh)
+----------
+* Renamed unstable test job and therefore updated systest view.
+* Dist-upgrade that required manual configuration.
+
+20 (peboh)
+----------
+* Additional docker cleanup
+
+19 (peboh)
+----------
+* Systest tab, to make it easier to verify jenkins status.
+* Updated Jenkins to 2.121.2
+* Updated all plugins except Groovy Postbuild
+* IMPORTANT! At this time, Groovy Postbuild must be 2.3.1 due to breaking changes in 2.4.1
+* Plugins with custom versions:
+  - Build Flow plugin 0.21-SNAPSHOT (private-a845a26e-peboh)
+  - buildgraph-view 1.9-SNAPSHOT (private-6c4c549c-annil)
+  - Console Log To Workspace 1.2-SNAPSHOT (private-ce87fad9-peboh)
+  - Custom Job Icon plugin 1.0-SNAPSHOT (private-10/10/2015 20:47-peboh)
+  - Distinguishable Gray Balls 0.12-SNAPSHOT (private-07/07/2016 09:23-peboh)
+  - Git plugin 3.9.1-JENKINS-42487
+  - Job DSL 1.70-ZENTERIO
+  - Manage Groovy Script Security 1.0-SNAPSHOT (private-d9f4bfe8-peboh)
+
+18 (laros)
+----------
+* Created /home/jenkins/.ssh/id_rsa and /etc/ssh/ssh_known_hosts
+  because they are mounted by zebra in the jenkins jobs
+
+17 (laros)
+----------
+* New docker-ce version because docker containers were hanging
+  on removal.
+
+16 (laros)
+----------
+* Added docker and zebra
+* Configured docker with userns-remap
+* Configured Jenkins user in the same way as in puppet
+  with subuid and subgid to be able to run docker with
+  userns-remap
+
+15 (peboh)
+----------
+* Added STB_ID to kazam stub node
+* Changed seed rsync to exclude part of the build directory
+* Added deploy-debs job that runs on startup
+
+14 (peboh)
+----------
+* Added Flash-icons and mock-flash-script
+* Added Seed-icons job for installing custom icons.
+  Legend still need to be updated manually.
+
+13 (unknown)
+------------
+* Unknown
+
+12 (laros)
+----------
+* Installed K2 package to support testing of K2 Jenkins jobs
+
+11 (laros)
+----------
+* Add testng plugin (1.10)
+* Simplified version numbering scheme
+
+1.0.15 (joisa)
+--------------
+* Updated zcdh script
+* Updated ssh slaves plugin (1.21)
+* Updated build-graph-view plugin (1.9-SNAPSHOT (private-6c4c549c-annil))
+* Upgraded jenkins to 2.73.2
+
+1.0.14 (peboh)
+--------------
+* Added new tab "unit-test"
+* Added new icon legend (unit-test) in jenkins system settings
+* Updated /var/www/html/index.html: target="_top" for SMTP dump to make
+  it open outside the iframe in the links-tab in jenkins. It did not fit the
+  iframe.
+
+1.0.13 (joisa)
+--------------
+* Added new version of core-handling script (opt/zenterio/coredumps/zcdh)
+* Updated zenterio-zloganalyzer deb package to get new configuration files in
+  /etc/zenterio-zloganalyzer/
+
+1.0.12 (peboh)
+--------------
+* Misc updates
+
+1.0.11 (peboh)
+--------------
+* Misc updates
+
+1.0.10 (peboh)
+--------------
+* Misc updates
+
+1.0.09 (peboh)
+--------------
+* Misc updates
+
+1.0.8 (peboh)
+--------------
+* Misc updates
+
+1.0.7 (peboh)
+--------------
+* Misc updates
+
+1.0.0-1.0.6 (?)
+--------------
+* Misc updates

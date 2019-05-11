@@ -1,0 +1,165 @@
+#!/bin/bash
+#
+# CONFIGURE-ICONS
+#
+# Description:
+# Run this as the jenkins user or with sudo on jenkins master to configure the custom
+# icons and help legend.
+# It requires that sha1sum is available in path for installation.
+#
+
+set -eu
+
+SCRIPT=`basename $0`
+VERSION=1.1
+DEBUG=0
+ECHO=echo
+EXEC=
+
+JENKINS_HOME=$(cd ~jenkins 2> /dev/null; pwd)
+JENKINS_USER="jenkins"
+JENKINS_ICON_DIR=${JENKINS_HOME}/userContent/customIcon
+
+SUDO="sudo -u ${JENKINS_USER}"
+if [ "$USER" = "${JENKINS_USER}" ]; then
+    SUDO=
+fi
+
+REPO_DIR=$(cd "$(dirname "$0")"; cd ..; pwd)
+ICON_DIR=${REPO_DIR}/icons
+ICON_EXTENSIONS="png"
+
+ACTION=
+
+GLOBALS="SCRIPT VERSION DEBUG ECHO EXEC JENKINS_HOME JENKINS_USER JENKINS_ICON_DIR REPO_DIR ICON_DIR ICON_EXTENSIONS ACTION"
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [-h|--help] [--version] [-i|--install] [-u|--uninstall]"
+    echo ""
+    echo "options:"
+    echo " -h, --help        Output this small usage guide and exit"
+    echo " --version         Output version information and exit"
+    echo " -i, --install     Install icons in icons directory with extensions:"
+    echo "                   ${ICON_EXTENSIONS}"
+    echo " -u, --uninstall   Delete all installed icons"
+    echo " -l, --list        List files in the icon directory and their install names."
+    echo ""
+    echo "This script requires to be run as the jenkins user or "
+    echo "with sudo privileges and should be run on the Jenkins master."
+    echo ""
+}
+
+version() {
+    echo "$SCRIPT -- version $VERSION"
+    echo "Zenterio AB 2014, 2018"
+}
+
+print_var_list() {
+    # shellcheck disable=SC2068
+    for var in "$@"; do
+        echo "$var=${!var}"
+    done
+}
+
+ARGS=$(getopt -o hviul -l "help,version,debug,install,uninstall,list" -n "$SCRIPT" -- "$@");
+
+if [ $? -ne 0 ]; then
+    usage
+    exit 2
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h|--help)
+            shift;
+            usage;
+            exit 0;
+            ;;
+        --version)
+            shift;
+            version;
+            exit 0;
+            ;;
+        --debug)
+            shift;
+            DEBUG=1;
+            ;;
+        -i|--install)
+            shift;
+            ACTION=I;
+            ;;
+        -u|--uninstall)
+            shift;
+            ACTION=U;
+            ;;
+        -l|--list)
+            shift;
+            ACTION=L;
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $DEBUG -ne 0 ]; then
+    print_var_list "$GLOBALS"
+fi
+
+install_icons() {
+  create_icon_dir
+  copy_icons
+}
+
+uninstall_icons() {
+  $EXEC $SUDO rm -f $JENKINS_ICON_DIR/* || true
+}
+
+create_icon_dir() {
+  $EXEC $SUDO mkdir -p $JENKINS_ICON_DIR
+}
+
+copy_icons() {
+    for ext in $ICON_EXTENSIONS
+    do
+        for f in ${ICON_DIR}/*.${ext}
+        do
+            local sha; sha=$(sha1sum "$f" | awk '{print $1}')
+            $EXEC $SUDO cp $f ${JENKINS_ICON_DIR}/${sha}.${ext}
+        done
+    done
+}
+
+list_icons() {
+    for ext in $ICON_EXTENSIONS
+    do
+        for f in ${ICON_DIR}/*.${ext}
+        do
+            local sha; sha=$(sha1sum "$f" | awk '{print $1}')
+            $EXEC echo "$(basename "$f")" ${sha}.${ext}
+        done
+    done
+}
+
+case ${ACTION} in
+    "I")
+        install_icons
+        exit 0
+        ;;
+    "U")
+        uninstall_icons
+        exit 0
+        ;;
+    "L")
+        list_icons
+        exit 0
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac

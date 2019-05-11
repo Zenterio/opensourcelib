@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Auto-generated from build-step "repo-job-parameters-check"
+#
+# Macros:
+# REPOSITORY_PARAMETERS=${REPOSITORY_PARAMETERS}
+set -x
+repositories=(${REPOSITORY_PARAMETERS})
+for repo in "${repositories[@]}"; do
+    test -z "${!repo}" && exit 1
+done
+exit 0

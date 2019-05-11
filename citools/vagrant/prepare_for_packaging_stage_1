@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -eu
+
+action_start() {
+    echo ""
+    echo "$*"
+    echo "${*//?/-}"
+}
+
+action_done() {
+    echo "${1:-Done}"
+}
+
+action_start "PREPARE VM FOR PACKAGING - STAGE 1"
+
+export DEBIAN_FRONTEND noninteractive
+sudo apt-get update
+sudo apt-get --yes -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
+
+action_done "PREPARATION STAGE 1 DONE"

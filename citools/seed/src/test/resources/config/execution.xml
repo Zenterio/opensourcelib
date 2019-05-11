@@ -1,0 +1,393 @@
+<?xml version="1.0"?>
+<!DOCTYPE projects SYSTEM "../../../../config/config.dtd">
+<projects>
+    <project-info name="Execution">
+        <trigger periodic="" polling=""/>
+        <credential type="text" id="text-test-credential"/>
+        <description>
+            <![CDATA[
+                The <i>Execution</i> project illustrates different ways of using
+                the properties and structures available for configuring build
+                execution.
+            ]]>
+        </description>
+        <incremental enabled="false"/>
+        <pm name="Execution PM" email="test.execution.pm@zenterio.com" />
+        <techlead name="Execution Tech lead" email="test.execution.tech.lead@zenterio.com" />
+
+        <debug>
+             <custom-build-step mode="override">
+                <![CDATA[
+                #!/usr/bin/env bash
+                set -e
+                echo "From custom build-step in execution.xml"
+                echo "This custom build-step is defined on project level but only for DEBUG"
+                echo "and has mode override and will therefore replaces the defaults."
+                echo "General macros:"
+                echo "---------------"
+                echo "ARTIFACTS_PATH = ${ARTIFACTS_PATH}"
+                echo "PRODUCT = ${PRODUCT}"
+                echo "JOB_TYPE = ${JOB_TYPE}"
+                echo "BUILD_TYPE = ${BUILD_TYPE}"
+                echo "BUILD_TYPE_OPT = ${BUILD_TYPE_OPT}"
+                echo "MAKE_PREFIX = ${MAKE_PREFIX}"
+                echo "MAKE_ROOT = ${MAKE_ROOT}"
+                echo "MAKE_TARGET = ${MAKE_TARGET}"
+
+                # Sanity check
+                # shellcheck disable=SC2050
+                if [ "${BUILD_TYPE}" != "debug" ]; then
+                    echo "This configuration is for debug builds only. Something is wrong!"
+                    exit 1
+                fi
+                ]]>
+            </custom-build-step>
+            <description>
+            <![CDATA[
+            This custom DEBUG configuration is declared on project level
+            in the configuration file. It has custom build-steps,
+            declared in <i>override</i> mode, meaining that the default build-steps
+            will be overriden by the ones declared here.<br/>
+            ]]>
+            </description>
+        </debug>
+    </project-info>
+    <project name="Execution">
+        <origin name="Main">
+            <credential enabled="false"/>
+            <description>
+                <![CDATA[
+                ]]>
+            </description>
+
+            <repository name="zids" dir="zids"
+                remote="git@git.zenterio.lan:product-stub" branch="master" />
+
+            <product name="default">
+                <description>
+                    <![CDATA[Default <i>execution</i> configuration.]]>
+                </description>
+                <debug>
+                    <custom-build-step enabled="false" >
+                    If you can read this in the generated configuration, disabling custom build step failed.
+                    </custom-build-step>
+                    <description>
+                     <![CDATA[
+                    By setting custom-build-step enabled to false, previous
+                    declared custom build steps will be disabled and the
+                    default build step will be used instead.<br/>
+                    This has been done for the debug configuration in this
+                    product, otherwise it would have been affected by the
+                    project level debug configuration which effects can be seen
+                    in <I>product_make_target</I> in the <I>Extra</I> origin.
+                    ]]>
+                    </description>
+                </debug>
+            </product>
+        </origin>
+        <origin name="Extra">
+            <custom-build-step><![CDATA[
+                #!/usr/bin/env bash
+                set -e
+                echo "From custom build-step in execution.xml"
+                echo "This custom build-step is defined on origin (Extra) level and has no mode specified"
+                echo "and will therefore implicit have mode override, which replaces the defaults."
+
+                echo "General macros:"
+                echo "---------------"
+                echo "ARTIFACTS_PATH = ${ARTIFACTS_PATH}"
+                echo "PRODUCT = ${PRODUCT}"
+                echo "JOB_TYPE = ${JOB_TYPE}"
+                echo "BUILD_TYPE = ${BUILD_TYPE}"
+                echo "BUILD_TYPE_OPT = ${BUILD_TYPE_OPT}"
+                echo "MAKE_PREFIX = ${MAKE_PREFIX}"
+                echo "MAKE_ROOT = ${MAKE_ROOT}"
+                echo "MAKE_TARGET = ${MAKE_TARGET}"
+            ]]>
+            </custom-build-step>
+            <description>
+                <![CDATA[
+                This origin has extra custom build-steps defined.<br/>
+                It also has a new build-step configuration for release builds.
+                ]]>
+            </description>
+            <repository name="zids" dir="zids"
+                remote="git@git.zenterio.lan:product-stub" branch="master" />
+
+            <release>
+                 <custom-build-step mode="override">
+                    <![CDATA[
+                    #!/usr/bin/env bash
+                    set -e
+                    echo "From custom build-step in execution.xml"
+                    echo "This custom build-step is defined on origin (Extra) level but only for RELEASE"
+                    echo "and has mode override and will therefore replaces the defaults."
+                    echo "General macros:"
+                    echo "---------------"
+                    echo "ARTIFACTS_PATH = ${ARTIFACTS_PATH}"
+                    echo "PRODUCT = ${PRODUCT}"
+                    echo "JOB_TYPE = ${JOB_TYPE}"
+                    echo "BUILD_TYPE = ${BUILD_TYPE}"
+                    echo "BUILD_TYPE_OPT = ${BUILD_TYPE_OPT}"
+                    echo "MAKE_PREFIX = ${MAKE_PREFIX}"
+                    echo "MAKE_ROOT = ${MAKE_ROOT}"
+                    echo "MAKE_TARGET = ${MAKE_TARGET}"
+
+                    # Sanity check
+                    # shellcheck disable=SC2050
+                    if [ "${BUILD_TYPE}" != "release" ]; then
+                        echo "This configuration is for release builds only. Something is wrong!"
+                        exit 1
+                    fi
+                    ]]>
+                </custom-build-step>
+                <description>
+                    <![CDATA[
+                    This custom RELEASE configuration is declared on origin
+                    level in the configuration file.<br/>
+                    ]]>
+                </description>
+            </release>
+
+            <product name="default">
+                <credential enabled="false"/>
+                <debug>
+                    <description>
+                        <![CDATA[
+                        Any build-variant declaration will override all properties
+                        and feature declared in any previous build-variant declaration. <br/>
+                        Hence, this description that are declared for debug on
+                        the default product will prevent the custom build-steps <br/>
+                        and description declared for debug on project level to take effect. <br/>
+                        However, the custom build-steps declared on origin level
+                        that is not declared in the context of a specific product variant <br/>
+                        will still be inherited to the general product and on to
+                        this product variant. <br/>
+                        ]]>
+                    </description>
+                </debug>
+            </product>
+
+            <product name="product_make_mods">
+                <doc>
+                    <custom-build-step mode="override">
+                    #!/usr/bin/env bash
+                    set -eux
+                    test "${MAKE_PREFIX}" = "doc-prefix"
+                    test "${MAKE_ROOT}" = "doc-root"
+                    test "${MAKE_TARGET}" = "doc-target"
+                    </custom-build-step>
+                    <make-prefix value="doc-prefix"/>
+                    <make-root name="doc-root"/>
+                    <make-target name="doc-target"/>
+                </doc>
+                <credential enabled="false"/>
+                <custom-build-step mode="override">
+                #!/usr/bin/env bash
+                set -eux
+                test "${MAKE_PREFIX}" = "prefix"
+                test "${MAKE_ROOT}" = "root"
+                test "${MAKE_TARGET}" = "target"
+                </custom-build-step>
+                <make-prefix value="prefix"/>
+                <make-root name="root"/>
+                <make-target name="target"/>
+                <debug>
+                    <description>
+                    <![CDATA[
+                    This job illustrates the use of make-prefix, make-root, and make-target.<br/>
+                    make-root is used to set the working directory for the make command.<br/>
+                    make-target defines the target run.<br/>
+                    make-prefix is inserted just before the make command on the same line.
+                    ]]>
+                    </description>
+                </debug>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+            <product name="product_build_steps">
+                <credential enabled="false"/>
+                <custom-build-step mode="prepend">
+                    #!/usr/bin/env bash
+                    echo "This build-step is prepended to the default build using mode prepend."
+                </custom-build-step>
+                <custom-build-step mode="append">
+                    #!/usr/bin/env bash
+                    echo "This build-step is appended to the default build using mode append."
+                </custom-build-step>
+                <description>
+                    <![CDATA[
+                    The purpose of this product is to show that you can specify
+                    build-steps on product level. <br/>
+                    It also illustrates how you can make use of the default
+                    configuration together with prepended and appended custom
+                    build-steps.
+                    ]]>
+                </description>
+            </product>
+            <product name="product_override_named_build_steps">
+                <credential enabled="false"/>
+                <custom-build-step mode="override-named" override-name="abs-target">
+                    #!/usr/bin/env bash
+                    echo "This build-step is overrides the default abs-target build step."
+                </custom-build-step>
+                <description>
+                    <![CDATA[
+                    The purpose of this product is to show that you override a
+                    single named build step.<br>
+                    This should lead to the
+                    ]]>
+                </description>
+                <debug enabled="false"/>
+                <release enabled="false"/>
+            </product>
+            <product name="override_product_name_with_variable">
+                <variable name="PRODUCT">overriden_product_name</variable>
+                <debug enabled="true"/>
+                <release enabled="false"/>
+                <production enabled="false"/>
+            </product>
+            <product name="production_only_product">
+                <credential enabled="false"/>
+                <description>
+                    <![CDATA[
+                    The purpose of this product is to show that you can turn off
+                    specific build types if needed, and that you can
+                    have custom configurations of product variants on product level.
+                    ]]>
+                </description>
+                <debug enabled="false"/>
+                <release enabled="false"/>
+                <production>
+                    <custom-build-step>
+                        <![CDATA[
+                        #!/usr/bin/env bash
+                        set -e
+                        echo "From custom build-step in execution.xml"
+                        echo "This custom build-step is defined on product level (production_only_product)"
+                        echo "but only for PRODUCTION and has mode override and will therefore replaces the defaults."
+                        echo "General macros:"
+                        echo "---------------"
+                        echo "ARTIFACTS_PATH = ${ARTIFACTS_PATH}"
+                        echo "PRODUCT = ${PRODUCT}"
+                        echo "JOB_TYPE = ${JOB_TYPE}"
+                        echo "BUILD_TYPE = ${BUILD_TYPE}"
+                        echo "BUILD_TYPE_OPT = ${BUILD_TYPE_OPT}"
+                        echo "MAKE_PREFIX = ${MAKE_PREFIX}"
+                        echo "MAKE_ROOT = ${MAKE_ROOT}"
+                        echo "MAKE_TARGET = ${MAKE_TARGET}"
+
+                        # Sanity check
+                        # shellcheck disable=SC2050
+                        if [ "${BUILD_TYPE}" != "production" ]; then
+                            echo "This configuration is for production builds only. Something is wrong!"
+                            exit 1
+                        fi
+                        ]]>
+                    </custom-build-step>
+                </production>
+            </product>
+            <product name="credentials">
+                <coverity upstream="async" >
+                    <custom-build-step>
+                      <![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in execution.xml
+                        set -ex
+                        test -z "${CREDENTIAL_FILE}"
+                        test -z "${CREDENTIAL_TEXT}"
+                        test -z "${CREDENTIAL_USERNAME}"
+                        test -z "${CREDENTIAL_PASSWORD}"
+                        ]]>
+                    </custom-build-step>
+                </coverity>
+                <description>
+                    <![CDATA[
+                    This product contains some tests for credential bindings and illustrates its usage.<br/>
+                    ]]>
+                </description>
+                <debug enabled="true">
+                    <custom-build-step>
+                        <![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in execution.xml
+                        set -eux
+                        ! test -z "${CREDENTIAL_TEXT}"
+                        ]]>
+                    </custom-build-step>
+                </debug>
+                <release enabled="true">
+                    <credential type="file" variable-name="SECRET_FILE" id="file-test-credential"/>
+                    <credential type="file" variable-name="OTHER_SECRET_FILE" id="other-file-test-credential"/>
+                    <credential type="username-password" variable-name="SECRET" id="username-password-test-credential"/>
+                    <custom-build-step>
+                        <![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in execution.xml
+                        set -eux
+                        ! test -z "${SECRET_FILE}"
+                        test -f "${SECRET_FILE}"
+                        ! test -z "${OTHER_SECRET_FILE}"
+                        test -f "${OTHER_SECRET_FILE}"
+                        ! test -z "${SECRET_USERNAME}"
+                        ! test -z "${SECRET_PASSWORD}"
+                        ]]>
+                    </custom-build-step>
+                </release>
+                <production enabled="true">
+                    <credential enabled="false"/>
+                    <custom-build-step>
+                        <![CDATA[
+                        #!/usr/bin/env bash
+                        # From custom build-step in execution.xml
+                        set -ex
+                        test -z "${CREDENTIAL_FILE:-}"
+                        test -z "${CREDENTIAL_TEXT:-}"
+                        test -z "${CREDENTIAL_USERNAME:-}"
+                        test -z "${CREDENTIAL_PASSWORD:-}"
+                        ]]>
+                    </custom-build-step>
+                </production>
+            </product>
+            <product name="test-build-steps">
+                <debug>
+                    <test-group name="inherit-build-steps" box-configuration="" product-configuration="" stb-label="Kazam" test-root="">
+                        <custom-build-step mode="override">
+                            #!/usr/bin/env bash
+                            echo "override"
+                        </custom-build-step>
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="">
+                            <test-suite path=""/>
+                        </test-context>
+                    </test-group>
+                    <test-group name="build-steps-order" box-configuration="" product-configuration="" stb-label="Kazam" test-root="">
+                        <repository name="verification" branch="master" dir="verification" remote="git@git.zenterio.lan:verification-stub"/>
+                        <test-context name="prepend">
+                            <custom-build-step mode="prepend">
+                                #!/usr/bin/env bash
+                                echo "prepend"
+                            </custom-build-step>
+                            <custom-build-step mode="override">
+                                #!/usr/bin/env bash
+                                echo "append"
+                            </custom-build-step>
+                            <test-suite path=""/>
+                        </test-context>
+                        <test-context name="append">
+                            <custom-build-step mode="append">
+                                #!/usr/bin/env bash
+                                echo "append"
+                            </custom-build-step>
+                            <custom-build-step mode="override">
+                                #!/usr/bin/env bash
+                                echo "override"
+                            </custom-build-step>
+                            <test-suite path=""/>
+                        </test-context>
+                    </test-group>
+                </debug>
+            </product>
+        </origin>
+    </project>
+</projects>

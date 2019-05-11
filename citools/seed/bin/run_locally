@@ -1,0 +1,236 @@
+#!/bin/bash
+#
+# run_locally
+#
+# Description:
+# Run a seed job dsl scripts locally and put the resulting files in output
+#
+
+set -eu -o pipefail
+
+SCRIPT=`basename $0`
+VERSION=1.1
+DEBUG=0
+ECHO=echo
+OUTPUT=$PWD/output
+RUNFROM=$PWD
+CITOOLS_ROOT=$(cd "$(dirname "$0")"; cd ..; pwd)
+GROOVY_LOG_PROFILE=
+GRADLE_FLAGS=
+ZENTERIO_SEED_CONFIG_DIR_ABS=$(cd "${ZENTERIO_SEED_CONFIG_DIR}"; pwd)
+PARALLEL_PROCS=1
+MIN_NUM_ARGS=8
+
+GLOBALS=(SCRIPT VERSION SILENT DEBUG ECHO OUTPUT RUNFROM CITOOLS_ROOT)
+GLOBALS+=(GROOVY_LOG_PROFILE GRADLE_FLAGS ZENTERIO_SEED_CONFIG_DIR_ABS PARALLEL_PROCS)
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [-h|--help] [--version] [-o|--output]"
+    echo "         [-v|--verbose] [-i|--info] [--groovy-log-profile] [--gradle-opt]"
+    echo ""
+    echo "options:"
+    echo " -h, --help        Output this small usage guide and exit".
+    echo " --version         Output version information and exit".
+    echo " -o, --output=     Set output directory for created xml files."
+    echo "                   This directory will be created if it does not exist."
+    echo "                   Defaults to $PWD/output"
+    echo " -v, --verbose     Execute Gradle on debug level (--debug)."
+    echo " -i, --info        Execute Gradle on info level (--info)."
+    echo " --gradle-opt=     Send arbitrary command string to job-dsl-plugin Gradle invocation."
+    echo " --groovy-log-profile="
+    echo "                   Log profile of the job-dsl-plugin execution."
+    echo "                   Will be exported as environmental variable:"
+    echo "                   COM_ZENTERIO_JENKINS_LOGGING_PROFILE"
+
+}
+
+version() {
+    echo "$SCRIPT from Zenterio -- version $VERSION"
+}
+
+print_var_list() {
+    for var in "$@"; do
+        echo "$var=${!var}"
+    done
+}
+
+ARGS=$(getopt -o ho:vi -l "help,version,debug,output:,verbose,info,groovy-log-profile:,gradle-opt:" -n "$SCRIPT" -- "$@");
+
+if [ $? -ne 0 ]; then
+    usage
+    exit 2
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h|--help)
+            shift;
+            usage;
+            exit 0;
+            ;;
+        -v|--version)
+            shift;
+            version;
+            exit 0;
+            ;;
+        --debug)
+            shift;
+            DEBUG=1;
+            ;;
+        -o|--output)
+            shift;
+            OUTPUT=$1;
+            shift;
+            ;;
+        -v|--verbose)
+            shift;
+            GRADLE_FLAGS+=" --debug";
+            ;;
+        -i| --info)
+            shift;
+            GRADLE_FLAGS+=" --info";
+            ;;
+        --groovy-log-profile)
+            shift;
+            GROOVY_LOG_PROFILE="$1";
+            shift;
+            ;;
+        --gradle-opt)
+            shift;
+            GRADLE_FLAGS+=" $1";
+            shift;
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $DEBUG -ne 0 ]; then
+    print_var_list "${GLOBALS[@]}"
+    exit 0
+fi
+
+prepare_output() {
+    mkdir -p $OUTPUT
+    pushd $OUTPUT >/dev/null
+    OUTPUT=$PWD
+    popd >/dev/null
+}
+
+# $1 - numerator
+# $2 - divisor
+# Ceiling (rounded up) division.
+ceildiv() {
+    local num=$1
+    local div=$2
+    echo $(( (num + div -1) / div ))
+}
+
+# $1 - number of files
+get_num_of_args() {
+    local num_of_files=$1
+    local result
+    if [ ${num_of_files} -lt ${MIN_NUM_ARGS} ]; then
+        result=${MIN_NUM_ARGS}
+    else
+        result=$(ceildiv ${num_of_files} ${PARALLEL_PROCS})
+    fi
+    echo $result
+}
+
+get_config_files_to_use() {
+    local f
+    local fname
+    declare -a config_files_to_use
+    config_files_to_use=()
+    for f in ${ZENTERIO_SEED_CONFIG_DIR_ABS}/*.xml $(find ${ZENTERIO_SEED_CONFIG_DIR_ABS}/ ! -path ${ZENTERIO_SEED_CONFIG_DIR_ABS}/ -type d) ; do
+        fname=$(basename "$f")
+        if [ -z "${ZENTERIO_SEED_CONFIG_FILE_FILTER}" ] || (echo ${ZENTERIO_SEED_CONFIG_FILE_FILTER} | grep -q $fname ); then
+            config_files_to_use+=($fname)
+        fi
+    done
+    echo "${config_files_to_use[@]}"
+}
+
+# $1 - dsl file path
+# $@ - config files to use
+run_jdsl_plugin() {
+    local dslfilepath=$1; shift
+    declare -a config_files_to_use
+    config_files_to_use=($@)
+
+    local num_of_files_to_use=${#config_files_to_use[@]}
+    if [ ${num_of_files_to_use} -gt 0 ]; then
+        $ECHO "Config files to use: ${config_files_to_use[*]}"
+        local num_of_args; num_of_args=$(get_num_of_args $num_of_files_to_use)
+        (echo -n "${config_files_to_use[@]}" | xargs -d " " -n ${num_of_args} | xargs -P ${PARALLEL_PROCS} -I % bash -c "ZENTERIO_SEED_CONFIG_FILE_FILTER='%' ./gradlew --no-daemon run -Pargs=\"${dslfilepath}\"")
+    else
+        $ECHO "Config files to use: EMPTY"
+    fi
+}
+
+# $1 - target folder
+copy_outputed_files() {
+    local targetfolder=$1
+    mkdir -p $targetfolder
+    if [ -z "${ZENTERIO_SEED_PROJECT_FILTER}" ] && [ -z "${ZENTERIO_SEED_CONFIG_FILE_FILTER}" ]; then
+        rm $targetfolder/*.xml 2>/dev/null || true
+        mv job-dsl-core/*.xml "$targetfolder"
+    else
+        mv job-dsl-core/*.xml "$targetfolder" 2>/dev/null || (>&2 echo "No Jenkins XML config generated")
+    fi
+}
+
+# $1 - dsl file
+gen_from_dsl_file() {
+    local dslfile=$1
+    dslfilepath="${RUNFROM}/${dslfile}"
+    targetfolder=${OUTPUT}/$(basename ${dslfile} .jdsl)
+
+    export GRADLE_OPTS="${GRADLE_FLAGS}"
+    export COM_ZENTERIO_JENKINS_LOGGING_PROFILE="${GROOVY_LOG_PROFILE}"
+
+    $ECHO "pwd=$PWD"
+    $ECHO "GRADLE_OPTS=${GRADLE_OPTS}"
+    $ECHO "ZENTERIO_SEED_CONFIG_FILE_FILTER=${ZENTERIO_SEED_CONFIG_FILE_FILTER}"
+    $ECHO "ZENTERIO_SEED_CONFIG_DIR_ABS=${ZENTERIO_SEED_CONFIG_DIR_ABS}"
+    $ECHO "ZENTERIO_SEED_PROJECT_FILTER=${ZENTERIO_SEED_PROJECT_FILTER}"
+    $ECHO "COM_ZENTERIO_JENKINS_LOGGING_PROFILE=${COM_ZENTERIO_JENKINS_LOGGING_PROFILE}"
+    $ECHO "command=./gradlew run -Pargs=\"$dslfilepath\""
+
+    declare -a config_files_to_use
+    config_files_to_use=($(get_config_files_to_use))
+    run_jdsl_plugin "${dslfilepath}" "${config_files_to_use[@]}"
+    copy_outputed_files "${targetfolder}"
+}
+
+generate() {
+
+    pushd ${CITOOLS_ROOT}/job-dsl-plugin/ >/dev/null
+    rm job-dsl-core/*.xml 2>/dev/null || true
+    rm -f ${CITOOLS_ROOT}/job-dsl-plugin/job-dsl-core/com
+
+    export WORKSPACE=${CITOOLS_ROOT}/..
+
+    ln -sf ${CITOOLS_ROOT}/src/main/groovy/com ${CITOOLS_ROOT}/job-dsl-plugin/job-dsl-core/com
+
+    for f in "$@"
+    do
+        gen_from_dsl_file "$f"
+    done
+
+    rm ${CITOOLS_ROOT}/job-dsl-plugin/job-dsl-core/com
+
+    popd >/dev/null
+}
+
+
+prepare_output
+generate "$@"
+
+exit 0

@@ -1,0 +1,33 @@
+# sudo apt-get install python-git
+# python2
+>>> repo=git.Repo.clone_from('git@git:user-torax-public-zids','zids')
+>>> git=repo.git
+>>> git.checkout('TEST_DEVELOP_1')
+>>> repo.create_tag("my_tag")
+>>> 
+
+Job for testing:
+linsci01:8080 product-develop-compile-ZEN_NAVI_BCM7356 2
+http://linsci01:8080/job/product-develop-compile-ZEN_NAVI_BCM7356/2/api/python
+>>> import requests
+>>> r=requests.get('http://linsci01:8080/job/product-develop-compile-ZEN_NAVI_BCM7356/2/api/python')
+>>> r.text
+
+Program flow:
+
+= create a request from web
+
+= initialize a Build object from request text
++ fail on malformed text
++ return list of all arguments
++ return one named argument
++ return all git repositories
+
+= figure out what to tag using data from job object.
+X verify that there is exactly one tag parameter (not implemented)
++ verify that there is at leas one tag parameter and use that (KeyError if missing)
++ verify that there is at least one git repository
+
+tag
+
+

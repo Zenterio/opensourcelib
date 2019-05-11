@@ -1,0 +1,6 @@
+--trusted-host pip.zenterio.lan
+coloredlogs==10.0
+fastentrypoints==0.10
+glob2==0.6
+invoke==0.22.1
+jinja2==2.9.6

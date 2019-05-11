@@ -1,0 +1,179 @@
+znake:
+    info:
+        package: maximal
+        maintainer: Engineering Services
+        maintainer_email: engineering-services@zenterio.com
+        short_description: Maximal project used to test Znake
+        long_description: |
+            Project to the test as much overriding as possible
+            of the default behavior.
+        changelog:
+          - version: 3.14.15
+            changes:
+              - "ZMT-1234: A very good version"
+            date: Tue, 14 Mar 2017 12:00:00 +0000
+          - version: 0.1.0
+            changes:
+              - "ZMT-1234: Initial release"
+            date: Mon, 19 Dec 2016 12:00:00 +0000
+    license: '© 2018 Zenterio AB All rights reserved'
+    classifiers:
+      - 'Development Status :: 3 - Alpha'
+      - 'Intended Audience :: Developers'
+      - 'Topic :: Software Development :: Build Tools'
+      - 'License :: Other/Proprietary License'
+      - 'Programming Language :: Python :: 3.4'
+      - 'Programming Language :: Python :: 3.5'
+      - 'Programming Language :: Python :: 3.6'
+    keywords:
+      - test
+      - python
+    entry_points:
+        console_scripts:
+          - maxmimal = maxmimal.__main__:main
+    requirements: []
+    requirements_dev:
+      - nose==1.3.7
+      - coverage==4.3.4
+      - wheel==0.31.1
+    static:
+        flake8:
+            flags:
+              - --benchmark
+              - --exclude '*/version.py'
+        pydocstyle:
+            flags:
+              - --count
+              - --ignore=D1,D202,D203,D204,D212,D301
+              - --match-dir='^((?!generated|syntaxerror).)*$'
+        yapf:
+            flags:
+              - --exclude '*/version.py'
+        isort:
+            flags:
+              - --parallel
+              - --version-number
+        packages:
+          - maximal
+          - systest
+    doc:
+        pre:
+          - echo PRE_DOC
+        targets:
+          - guide: user_guide
+        html_command_pattern: >
+            echo custom html command &&
+            mkdir -p {doc_dir}/{target}/html &&
+            touch {doc_dir}/{target}/html/index.html
+        pdf_command_pattern: >
+            echo custom pdf command &&
+            mkdir -p {doc_dir}/{target}/pdf &&
+            touch {doc_dir}/{target}/pdf/user_guide.pdf
+    deb:
+        package: zenterio-zmaximal
+        dependencies:
+          - cowsay-off
+        doc:
+          - user_guide
+        include:
+          - source: znaketools/a_file_to_include
+            target: /etc/maximal/included_file
+          - source: znaketools/a_script.sh
+            target: /opt/zenterio/bin/a_script.sh
+        targets:
+          - name: u18
+            codename: bionic
+            image: debbuilder.u18
+            architecture: amd64
+            test_image: pythontest.u18
+          - name: u16
+            codename: xenial
+            image: debbuilder.u16
+            architecture: amd64
+        links:
+          - link: /usr/bin/a_script
+            target: /opt/zenterio/bin/a_script.sh
+    debtest:
+        command_pattern: echo Running debtests with {var1} and {var2} {coverage_flags}
+        vars:
+            var1: var1
+            var2: var2
+        coverage_flags: coverage_flags
+        packages:
+          - maximal
+        install_packages:
+          - rxvt-unicode
+    test:
+        packages:
+          - maximal
+        targets:
+          - name: local
+            image: local
+          - name: u16
+            image: pythontest.u16
+        coverage_flags: --with-coverage
+        command_pattern: COVERAGE_FILE=.coverage python3 .venv/bin/nosetests {verbose} {coverage_flags} {packages}
+        vars:
+            verbose: -v
+    systest:
+        targets:
+          - name: local
+            image: local
+          - name: u16
+            image: k2runner.u16
+        coverage_flags: coverage
+        command_pattern: mkdir -p build/baseline && echo baseline {coverage_flags} {tests_flags} > build/baseline/baseline.txt
+        tests_flags: tests_flags {tests}
+        vars: {}
+        packages:
+            - maximal.systest
+    docker:
+        run:
+            flags:
+              - --mount type=bind,source=/etc/passwd,target=/etc/passwd,readonly
+              - --mount type=bind,source=/etc/group,target=/etc/group,readonly
+              - --mount type=bind,source=$(echo $HOME),target=$(echo $HOME)
+              - --tmpfs $(pwd)/..:uid=$(id -u),exec
+              - --mount type=bind,source=$(pwd),target=$(pwd)
+              - --mount type=volume,source=$(echo ${VENV_VOLUME_NAME}),target=$(pwd)/.venv
+              - --tmpfs $(pwd)/debian:uid=$(id -u),exec
+              - -e LANG=en_US.UTF-8 -e LC_ALL=en_US.UTF-8
+              - --workdir $(pwd)
+              - --rm
+    baseline:
+      - source: build/baseline/*
+        target: build/baseline2/
+dependencies:
+    .venv/bin/activate:
+      - "{requirements_dir}/requirements.txt"
+      - "{requirements_dir}/requirements-dev.txt"
+      - setup.py
+    "{package}/version.py":
+      - znake.yaml
+    "{requirements_dir}/requirements.txt":
+      - znake.yaml
+    "{requirements_dir}/requirements-dev.txt":
+      - znake.yaml
+    "{dist_dir}/bionic":
+      - "{package}/**"
+      - doc/**
+      - "{package}/version.py"
+      - .venv/bin/activate
+    "{dist_dir}/trusty":
+      - "{package}/**"
+      - doc/**
+      - "{package}/version.py"
+      - .venv/bin/activate
+    "{dist_dir}/xenial":
+      - "{package}/**"
+      - doc/**
+      - "{package}/version.py"
+      - .venv/bin/activate
+    "{pypi_dir}/sdist":
+      - "{package}/**"
+      - "{package}/version.py"
+      - "setup.py"
+    "{pypi_dir}/wheel":
+      - "{package}/**"
+      - "{package}/version.py"
+      - "setup.py"

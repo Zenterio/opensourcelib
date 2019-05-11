@@ -1,0 +1,241 @@
+import unittest
+from collections import OrderedDict
+from textwrap import dedent
+from unittest.mock import Mock
+
+from znake.setupgen import _render_entry_points, _render_install_requirements, \
+    _render_package_data, _render_setup_py_data
+
+
+class TestRenderInstallRequires(unittest.TestCase):
+
+    def test_render_install_requires_with_single_entry(self):
+        ctx = Mock()
+        ctx.znake.requirements = ['a==1']
+        self.assertEqual(
+            _render_install_requirements(ctx),
+            dedent("""\
+        install_requires=[
+            'a',
+        ]"""))
+
+    def test_render_install_requires_with_multiple_entires(self):
+        ctx = Mock()
+        ctx.znake.requirements = ['a==1', 'b', 'c==5']
+        self.assertEqual(
+            _render_install_requirements(ctx),
+            dedent(
+                """\
+        install_requires=[
+            'a',
+            'b',
+            'c',
+        ]"""))
+
+    def test_render_install_requires_with_non_equal_version_specfications(self):
+        ctx = Mock()
+        ctx.znake.requirements = ['a<1', 'b>2', 'c<=3', 'd>=4', 'e>=5,<6']
+        self.assertEqual(
+            _render_install_requirements(ctx),
+            dedent(
+                """\
+        install_requires=[
+            'a<1',
+            'b>2',
+            'c<=3',
+            'd>=4',
+            'e>=5,<6',
+        ]"""))
+
+
+class TestRenderEntryPoints(unittest.TestCase):
+
+    def test_render_entry_points_with_singly_entry(self):
+        ctx = Mock()
+        ctx.znake.entry_points = {'console_scripts': ['a = b']}
+
+        self.assertEqual(
+            _render_entry_points(ctx),
+            dedent(
+                """\
+        entry_points={
+            'console_scripts': [
+                'a = b',
+            ],
+        }"""))
+
+    def test_render_entry_points_with_multiple_entires(self):
+        ctx = Mock()
+        ctx.znake.entry_points = OrderedDict(
+            [
+                ('console_scripts', ['a = b']),
+                ('non_console_scripts', ['b = c', 'c = d']),
+            ])
+
+        self.assertEqual(
+            _render_entry_points(ctx),
+            dedent(
+                """\
+        entry_points={
+            'console_scripts': [
+                'a = b',
+            ],
+            'non_console_scripts': [
+                'b = c',
+                'c = d',
+            ],
+        }"""))
+
+
+class TestRenderPackageData(unittest.TestCase):
+
+    def test_render_package_data_with_single_entry(self):
+        ctx = Mock()
+
+        mock_data = Mock()
+        mock_data.package = 'a'
+        mock_data.include = ['b/*']
+
+        ctx.znake.package_data = [mock_data]
+
+        self.assertEqual(
+            _render_package_data(ctx),
+            dedent("""\
+        package_data={
+            'a': ['b/*'],
+        }"""))
+
+    def test_render_package_data_with_multiple_entries(self):
+        ctx = Mock()
+
+        mock_data_a = Mock()
+        mock_data_a.package = 'a'
+        mock_data_a.include = ['b/*']
+
+        mock_data_b = Mock()
+        mock_data_b.package = 'b'
+        mock_data_b.include = ['c/*', 'd/**/*.txt']
+
+        ctx.znake.package_data = [mock_data_a, mock_data_b]
+
+        self.assertEqual(
+            _render_package_data(ctx),
+            dedent(
+                """\
+        package_data={
+            'a': ['b/*'],
+            'b': ['c/*', 'd/**/*.txt'],
+        }"""))
+
+
+class TestRenderSetupPyFile(unittest.TestCase):
+
+    def test_render_setup_py_file(self):
+        ctx = Mock()
+        self.maxDiff = None
+
+        ctx.znake.info.package = 'my_package'
+        ctx.znake.license = '© 2018 Zenterio AB All rights reserved'
+        ctx.znake.classifiers = [
+            'Development Status :: 3 - Alpha', 'Intended Audience :: Developers',
+            'Topic :: Software Development :: Build Tools', 'License :: Other/Proprietary License',
+            'Programming Language :: Python :: 3.4', 'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6'
+        ]
+        ctx.znake.keywords = ['znake', 'python']
+        ctx.znake.requirements = [
+            'Sphinx==1.5.3', 'fastentrypoints==0.10', 'flake8==3.3.0', 'invoke==0.22.1',
+            'isort==4.3.0', 'jinja2==2.9.6', 'pydocstyle==2.1.1', 'sphinx-rtd-theme==0.2.4',
+            'sphinxcontrib-plantuml==0.8.1', 'sphinxprettysearchresults==0.3.4', 'yapf==0.20.0'
+        ]
+        ctx.znake.find_packages.exclude = [
+            '*.test', '*.test.*', 'test.*', 'systest', 'systest.*', 'example', 'example.*'
+        ]
+
+        ctx.znake.entry_points = {
+            'console_scripts': ['znake = znake.__main__:main'],
+        }
+
+        mock_package_data = Mock()
+        mock_package_data.package = 'a'
+        mock_package_data.include = ['b/*']
+        ctx.znake.package_data = [mock_package_data]
+
+        self.assertMultiLineEqual(
+            _render_setup_py_data(ctx),
+            dedent(
+                """\
+        # This file was automatically generated by Znake
+        try:
+            import fastentrypoints
+        except ImportError as e:
+            pass
+        from setuptools import setup, find_packages
+
+        try:
+            from my_package.version import (
+                __version__,
+                deb_package_name,
+                description,
+                long_description,
+                maintainer,
+                maintainer_email)
+        except ImportError:
+            __version__ = '0.0.0'
+            deb_package_name = 'unknown'
+            description = 'unknown'
+            long_description = 'unknown'
+            maintainer = 'unknown'
+            maintainer_email = 'unknown'
+
+        setup(
+            name=deb_package_name,
+            version=__version__,
+
+            description=description,
+            long_description=long_description,
+
+            maintainer=maintainer,
+            maintainer_email=maintainer_email,
+
+            license='© 2018 Zenterio AB All rights reserved',
+
+            classifiers=[
+                'Development Status :: 3 - Alpha',
+                'Intended Audience :: Developers',
+                'Topic :: Software Development :: Build Tools',
+                'License :: Other/Proprietary License',
+                'Programming Language :: Python :: 3.4',
+                'Programming Language :: Python :: 3.5',
+                'Programming Language :: Python :: 3.6',
+            ],
+
+            keywords='znake python',
+
+            packages=find_packages(exclude=['*.test', '*.test.*', 'test.*', 'systest', 'systest.*', 'example', 'example.*', ]),
+
+            install_requires=[
+                'Sphinx',
+                'fastentrypoints',
+                'flake8',
+                'invoke',
+                'isort',
+                'jinja2',
+                'pydocstyle',
+                'sphinx-rtd-theme',
+                'sphinxcontrib-plantuml',
+                'sphinxprettysearchresults',
+                'yapf',
+            ],
+
+            entry_points={
+                'console_scripts': [
+                    'znake = znake.__main__:main',
+                ],
+            },
+
+            package_data={
+                'a': ['b/*'],
+            },
+
+        )"""))  # noqa

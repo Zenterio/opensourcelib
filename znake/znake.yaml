@@ -1,0 +1,98 @@
+znake:
+  info:
+    package: znake
+    maintainer: Engineering Services
+    maintainer_email: engineering-services@zenterio.com
+    short_description: Build system for Python projects.
+    long_description: |
+      Znake is Zenterios build system for Python projects.
+      The goal is to standardize the way of working in different projects.
+    changelog:
+      - version: 1.0.0
+        changes:
+        - "First open source version."
+        date: Sat, 11 May 2019 06:00:00 +0000
+  license: '© 2018-2019 Zenterio AB All rights reserved'
+  classifiers:
+    - 'Development Status :: 3 - Alpha'
+    - 'Intended Audience :: Developers'
+    - 'Topic :: Software Development :: Build Tools'
+    - 'License :: Other/Proprietary License'
+    - 'Programming Language :: Python :: 3.4'
+    - 'Programming Language :: Python :: 3.5'
+    - 'Programming Language :: Python :: 3.6'
+  keywords:
+    - znake
+    - python
+  entry_points:
+    console_scripts:
+      - znake = znake.__main__:main
+  package_data:
+    - package: znake
+      include:
+        - 'data/*'
+  requirements:
+    - coloredlogs==10.0
+    - fastentrypoints==0.10
+    - flake8-blind-except==0.1.1
+    - flake8-class-newline==1.6.0
+    - flake8-comprehensions==2.0.0
+    - flake8-deprecated==1.3
+    - flake8-pep3101==1.2.1
+    - flake8-quotes==1.0.0
+    - flake8-string-format==0.2.3
+    - flake8==3.7.6
+    - flake8_tuple==0.2.13
+    - glob2==0.6
+    - invoke==0.22.1
+    - isort==4.3.0
+    - jinja2==2.9.6
+    - pydocstyle==2.1.1
+    - sphinx-rtd-theme==0.2.4
+    - Sphinx==1.5.3
+    - sphinxcontrib-plantuml==0.8.1
+    - sphinxprettysearchresults==0.3.4
+    - yapf==0.20.0
+  requirements_dev:
+    - nose==1.3.7
+    - coverage==4.3.4
+    - wheel==0.31.1
+  static:
+    packages:
+      - znake
+  doc:
+    targets:
+      - guide: user_guide
+  deb:
+    package: zenterio-znake
+    dependencies:
+      - zenterio-zet-reporter
+    doc:
+      - user_guide
+    links:
+      - target: /opt/venvs/zenterio-znake/bin/znake
+        link: /usr/bin/znake
+    include:
+      - source: znaketools/zenterio-znake-bash-completion.sh
+        target: /etc/bash_completion.d/
+  test:
+    packages:
+      - znake
+  systest:
+    packages:
+      - systest.tests
+      - systest.localtests
+    vars:
+      config_file: systest/systest_config.yaml
+  debtest:
+    packages:
+      - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml
+dependencies:
+  "{build_dir}/doc/user_guide/html/index.html":
+    - doc/user_guide/**
+    - znake/**
+  "{build_dir}/doc/user_guide/pdf/user_guide.pdf":
+    - doc/user_guide/**
+    - znake/**

@@ -1,0 +1,163 @@
+znake:
+  license: '© 2018 Zenterio AB All rights reserved'
+  classifiers:
+    - 'Intended Audience :: Developers'
+    - 'License :: Other/Proprietary License'
+    - 'Programming Language :: Python :: 3.6'
+    - 'Programming Language :: Python :: 3.7'
+  find_packages:
+    exclude:
+      - '*.test'
+      - '*.test.*'
+      - 'test.*'
+      - 'systest'
+      - 'systest.*'
+      - 'example'
+      - 'example.*'
+  package_data: []
+  requirements: []
+  requirements_dev:
+  - coverage==4.5.1
+  - nose==1.3.7
+  - fastentrypoints==0.10
+  - wheel==0.31.1
+  static:
+    flake8:
+      flags:
+        - --exclude '*/version.py'
+    pydocstyle:
+      flags:
+        - --explain
+        - --ignore=D1,D202,D203,D204,D212,D301
+        - --match-dir='^((?!generated|syntaxerror).)*$'
+    yapf:
+      flags:
+        - --exclude '*generated*'
+        - --exclude '*syntaxerror*'
+        - --exclude '*/version.py'
+    isort:
+      flags:
+        - --multi-line 2
+        - --line-width 100
+        - --skip-glob generated
+  doc:
+    pre: []
+    targets: []
+    html_command_pattern: >
+        {sphinx_build} -E -a -b html doc/{target} {doc_dir}/{target}/html &&
+        touch {doc_dir}/{target}/html
+
+    pdf_command_pattern: >
+        {sphinx_build} -E -a -b latex doc/{target} {doc_dir}/{target}/pdf &&
+        pushd {doc_dir}/{target}/pdf &&
+        make PDFLATEX="pdflatex -interaction=batchmode" all-pdf &&
+        popd &&
+        touch {doc_dir}/{target}/pdf
+  deb:
+    dependencies:
+    doc: []
+    include: []
+    targets:
+      - name: u14
+        codename: trusty
+        image: debbuilder.u14
+        architecture: amd64
+        test_image: k2runner.u14
+      - name: u16
+        codename: xenial
+        image: debbuilder.u16
+        architecture: amd64
+        test_image: k2runner.u16
+      - name: u18
+        codename: bionic
+        image: debbuilder.u18
+        architecture: amd64
+        test_image: k2runner.u18
+    links: []
+    install: []
+  debtest:
+    command_pattern: zk2 --output-dir {output_dir} --config-file-pattern {config_file} run --reports-testng true --exitcode-from-verdict true {packages} {tests_flags} --suite-name debtest.{image}
+    vars: {}
+    coverage_flags: ""
+    tests_flags: --tests-include-regex {tests}
+    install_packages: []
+  test:
+    targets:
+      - name: local
+        image: local
+      - name: u14
+        image: pythontest.u14
+        intepreter: python3.6
+      - name: u16
+        image: pythontest.u16
+        intepreter: python3.6
+      - name: u18
+        image: pythontest.u18
+    coverage_flags: --with-coverage --cover-package {packages} --cover-inclusive --cover-erase --cover-xml --cover-xml-file {coverage_dir_abs}/coverage-{image}.xml
+    command_pattern: COVERAGE_FILE={coverage_dir_abs}/.coverage-{image} python3 .venv/bin/nosetests {coverage_flags} {packages}
+    vars: {}
+  systest:
+    targets:
+      - name: local
+        image: local
+      - name: u14
+        image: k2runner.u14
+        intepreter: python3.6
+      - name: u16
+        image: k2runner.u16
+        intepreter: python3.6
+      - name: u18
+        image: k2runner.u18
+    coverage_flags: --coverage-enabled --coverage-config-file .coveragerc --coverage-report {coverage_dir_abs}/.coverage-systest-{image}
+    tests_flags: --tests-include-regex {tests}
+    command_pattern: zk2 --output-dir {output_dir} --config-file-pattern {config_file} run {coverage_flags} --reports-testng true --exitcode-from-verdict true {packages} {tests_flags} --suite-name systest.{image}
+    vars: {}
+  docker:
+    run:
+      flags:
+        - --mount type=bind,source=/etc/passwd,target=/etc/passwd,readonly
+        - --mount type=bind,source=/etc/group,target=/etc/group,readonly
+        - --mount type=bind,source=$(echo $HOME),target=$(echo $HOME)
+        - --tmpfs $(pwd)/..:uid=$(id -u),exec
+        - --mount type=bind,source=$(pwd),target=$(pwd)
+        - --mount type=volume,source=$(echo ${VENV_VOLUME_NAME}),target=$(pwd)/.venv
+        - --tmpfs $(pwd)/debian:uid=$(id -u),exec
+        - -e LANG=en_US.UTF-8 -e LC_ALL=en_US.UTF-8
+        - -e PYTHONDONTWRITEBYTECODE=true
+        - --workdir $(pwd)
+        - --rm
+  baseline: []
+dependencies:
+  .venv/bin/activate:
+    - "{requirements_dir}/requirements.txt"
+    - "{requirements_dir}/requirements-dev.txt"
+    - "setup.py"
+  "{package}/version.py":
+    - znake.yaml
+  "setup.py":
+    - znake.yaml
+  "{requirements_dir}/requirements.txt":
+    - znake.yaml
+  "{requirements_dir}/requirements-dev.txt":
+    - znake.yaml
+  "{dist_dir}/bionic":
+    - "{package}/**"
+    - doc/**
+    - "{package}/version.py"
+    - .venv/bin/activate
+  "{dist_dir}/trusty":
+    - "{package}/**"
+    - doc/**
+    - "{package}/version.py"
+    - .venv/bin/activate
+  "{dist_dir}/xenial":
+    - "{package}/**"
+    - doc/**
+    - "{package}/version.py"
+    - .venv/bin/activate
+  "{pypi_dir}/sdist":
+    - "{package}/**"
+    - "{package}/version.py"
+  "{pypi_dir}/wheel":
+    - "{package}/**"
+    - "{package}/version.py"

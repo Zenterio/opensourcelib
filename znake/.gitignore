@@ -1,0 +1,13 @@
+*~
+\#*\#
+.\#*
+/build/
+*.egg-info/
+.idea
+*.pyc
+.python-version
+__pycache__
+/.venv/
+znake/version.py
+setup.py
+.vscode/

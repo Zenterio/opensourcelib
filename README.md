@@ -14,5 +14,6 @@ Each component/tool has its own license.
 Components/Tools
 ----------------
 
-* ZAF
 * git-project
+* ZAF
+* Znake

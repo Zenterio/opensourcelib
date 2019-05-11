@@ -1,0 +1,54 @@
+znake:
+    info:
+      package: minimal
+      maintainer: Engineering Services
+      maintainer_email: engineering-services@zenterio.com
+      short_description: Minimal project used to test Znake
+      long_description: |
+          Minimal project
+          used to test Znake
+      changelog:
+        - version: 0.1.1
+          changes:
+            - "ZMT-1234: A change"
+          date: Tue, 14 Mar 2017 12:00:00 +0000
+        - version: 0.1.0
+          changes:
+            - "ZMT-1234: Initial release"
+          date: Mon, 19 Dec 2016 12:00:00 +0000
+    license: '© 2018 Zenterio AB All rights reserved'
+    classifiers:
+      - 'Development Status :: 3 - Alpha'
+      - 'Intended Audience :: Developers'
+      - 'Topic :: Software Development :: Build Tools'
+      - 'License :: Other/Proprietary License'
+      - 'Programming Language :: Python :: 3.4'
+      - 'Programming Language :: Python :: 3.5'
+      - 'Programming Language :: Python :: 3.6'
+    keywords:
+      - test
+      - python
+    entry_points:
+        console_scripts:
+          - minimal = minimal.__main__:main
+    static:
+        packages:
+          - minimal
+    deb:
+        package: zenterio-zminimal
+    doc:
+        targets:
+          - guide: user_guide
+    test:
+        packages:
+          - minimal
+    systest:
+        packages:
+          - systest.tests
+        vars:
+            config_file: systest/systest_config.yaml
+    debtest:
+        packages:
+          - systest
+        vars:
+            config_file: systest/systest_config.yaml

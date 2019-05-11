@@ -1,0 +1,3 @@
+Plant UML, downloaded from http://plantuml.com/download#asl
+Version: asl-1.2019.5
+License: See COPYING in this directory

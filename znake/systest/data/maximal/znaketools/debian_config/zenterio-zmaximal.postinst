@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -eu
+
+chmod 755 /opt/zenterio/bin/a_script.sh

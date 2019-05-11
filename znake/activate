@@ -1,0 +1,9 @@
+# Source this file to create and activate a Znake virtual environment
+python3.6 -m venv .venv
+source .venv/bin/activate
+pip3 install pip==19.0.3
+pip3 install -r requirements-bootstrap.txt
+python3.6 -m znake venv
+pip3 install -e .
+echo
+echo .venv created and activated

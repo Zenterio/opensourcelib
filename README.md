@@ -19,9 +19,10 @@ Components/Tools
 * deb-packer, tool for simplifying creation of debian packages
 * docker, various images and build-system
 * git-project, makes it easier to work with submodules
-* Hydra, web-application for running git-repo content on a web-server.
+* Hydra, web-application for running git-repo content on a web-server
 * K2, test framework
-* Log-Analyzer, tool for identifying patterns in text logs.
+* Log-Analyzer, tool for identifying patterns in text logs
 * ZAF, python application framework
+* zftrace, file tracing utility
 * Znake, python build-system
 * Zpider, document generation tool

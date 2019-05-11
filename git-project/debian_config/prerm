@@ -1,0 +1,4 @@
+ #!/usr/bin/env bash
+set -e
+git config --system --remove-section project > /dev/null 2>&1 || true
+git config --system --remove-section project.install > /dev/null 2>&1 || true

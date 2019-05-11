@@ -1,0 +1,88 @@
+#
+# Test git-project-submodule
+#
+
+test_description='git project submodule'
+. ./test.sh
+
+clone_full_project_repo() {
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/full_project\""
+    git project clone "$FULL_PROJECT_PATH" full_project &>/dev/null
+}
+
+test_exec create_full_project_repo
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project submodule --invalid-option
+'
+
+test_expect_success '-h' '
+    git project submodule -h
+'
+
+test_expect_success '--help' '
+    git project submodule --help
+'
+
+test_expect_success 'no arguments, lists usage and exits with 129' '
+    test_expect_code 129 git project submodule
+'
+
+test_expect_success 'no components listed, lists usage and exits with 129' '
+    clone_full_project_repo &&
+    cd full_project &&
+    test_expect_code 129 git project submodule -b branch -u &&
+    [ -z "$(git status --porcelain)" ]
+'
+
+test_expect_success '--branch for one submodule with update' '
+    clone_full_project_repo &&
+    cd full_project &&
+    git project submodule -u --branch second_branch component &&
+    [ -f component/second_branch.txt ] &&
+    [ -d component/subcomponent ] &&
+    [ ! -e component/subcomponent/second_branch.txt ]
+'
+
+test_expect_success '-b for two submodules with update' '
+    clone_full_project_repo &&
+    cd "full_project" &&
+    git project submodule -b second_branch  -u component "space component" &&
+    [ -f "space component/second_branch.txt" ] &&
+    [ -f component/second_branch.txt ] &&
+    [ -d component/subcomponent ] &&
+    [ ! -e component/subcomponent/second_branch.txt ]
+'
+
+test_expect_success '-b for one submodule without update' '
+    clone_full_project_repo &&
+    cd full_project &&
+    git project submodule -b second_branch  component &&
+    test_equal "$(git diff --name-only)" ".gitmodules"
+'
+
+test_expect_success '-b for non existant submodule' '
+    clone_full_project_repo &&
+    cd full_project &&
+    test_expect_code 129 git project submodule -b second_branch not_existing &&
+    [ -z "$(git status --porcelain)" ]
+'
+
+test_expect_success '-b -u where branch does not exist upstream' '
+    clone_full_project_repo &&
+    cd full_project &&
+    test_expect_code 1 git project submodule -u -b not_a_branch component &&
+    [ -z "$(git status --porcelain)" ]
+'
+
+test_expect_success '-u alone to upgrade' '
+    clone_full_project_repo &&
+    cd full_project &&
+    git project submodule -b second_branch  component &&
+    git project submodule -u component &&
+    [ -f component/second_branch.txt ] &&
+    [ -d component/subcomponent ] &&
+    [ ! -e component/subcomponent/second_branch.txt ]
+'
+
+test_done

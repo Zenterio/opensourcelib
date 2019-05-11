@@ -1,0 +1,213 @@
+#
+# Test git-project-topic-checkout
+#
+
+test_description='git project topic checkout'
+. ./test.sh
+
+# Create the template repositories
+# master branch
+# topic-branch with content in "space component"
+create_full_project_topic_repo() {
+    create_remote_repo "${FULL_PROJECT_PATH}"
+    create_remote_repo "${COMPONENT_PATH}"
+    create_remote_repo "${SPACE_COMPONENT_PATH}"
+    add_submodule_to_remote_repo "${FULL_PROJECT_PATH}" "${COMPONENT_PATH}" "component"
+    add_submodule_to_remote_repo "${FULL_PROJECT_PATH}" "${SPACE_COMPONENT_PATH}" "space component"
+    local repo_path; repo_path="$(mktemp -d)"
+    pushd "${repo_path}" >/dev/null
+    git project clone -q "${FULL_PROJECT_PATH}"
+    cd full_project
+    set_config_recursive .
+    git project topic begin branch "space component"
+    cd "space component"
+    touch "topic branch file.txt"
+    git add .
+    git commit -q -m "Creating topic branch"
+    git push -q origin topic-branch
+    cd ..
+    git add .
+    git commit -q -m "Creating topic branch"
+    git push -q origin topic-branch
+    rm -rf "${repo_path}"
+    popd >/dev/null
+}
+
+# After any aborted action there should be no changes
+verify_no_changes() {
+    on_branch "" "component" "space component" &&
+    on_branch "master" . &&
+    cd .. &&
+    compare_all_refs before.git HEAD full_project/.git HEAD &&
+    test -f full_project.git/refs/heads/topic-branch &&
+    test -f "space component.git/refs/heads/topic-branch" &&
+    test ! -f component.git/refs/heads/topic-branch
+}
+
+# Verify that the correct branches are checked out
+verify_checkout_ok() {
+    on_branch "" "component" &&
+    on_branch "topic-branch" .  "space component"
+}
+
+test_exec create_full_project_topic_repo
+
+
+# Clone the remote repository
+setup_full_project() {
+    git project clone "${FULL_PROJECT_PATH}" full_project >/dev/null &&
+    test_when_finished "rm -rf \"$(pwd)/full_project\"" &&
+    cd full_project &&
+    store_state
+}
+
+# Check that the topic-branch was checked out ok
+checkout_ok() {
+    on_branch "" "component" &&
+    on_branch "topic-branch" "space component" .
+}
+
+# Add staged changes to a subrepo and store new state
+# $1 - repository/sundir
+add_staged_changes() {
+    pushd "$1" &>/dev/null
+    touch "A new file" &&
+    git add "A new file" &&
+    popd &>/dev/null &&
+    store_state
+}
+
+# Check that setup is ok
+test_expect_success 'setup is correct' '
+    setup_full_project &&
+    verify_no_changes
+'
+
+test_expect_success 'invalid option exits with 129 (usage)' '
+    output="$(test_expect_code 129 git project topic checkout --invalid-option)" &&
+    test -z "${output##Usage:*git-project-topic-checkout*}"
+'
+
+test_expect_success 'No arguments exits with 129 (usage)' '
+    output="$(test_expect_code 129 git project topic checkout)" &&
+    test -z "${output##Usage:*git-project-topic-checkout*}"
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git project topic checkout -h)" &&
+    test -z "${output##Usage:*git-project-topic-checkout*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git project topic checkout --help)" &&
+    test -z "${output##GIT-PROJECT-TOPIC-CHECKOUT(1)*}"
+'
+
+# This makes used of the fact that topic- should be added
+# we know that master exists, so the test will fail if we
+# can checkout master.
+test_expect_success 'Checking out master (which becomes topic-master) should exit with code 1' '
+    setup_full_project &&
+    test_expect_code 1 git project topic checkout master &&
+    verify_no_changes
+'
+
+test_expect_success 'check out the topic branch without using topic- prefix' '
+    setup_full_project &&
+    git project topic checkout branch &&
+    verify_checkout_ok
+'
+
+test_expect_success 'check out the topic branch using topic- prefix' '
+    setup_full_project &&
+    git project topic checkout topic-branch &&
+    verify_checkout_ok
+'
+
+# Working with staged changes
+test_expect_success 'Checking out with staged changes in top repo should fail' '
+    setup_full_project &&
+    add_staged_changes &&
+    test_expect_code 1 git project topic checkout topic-branch &&
+    verify_no_changes
+'
+
+test_expect_success 'Checking out with staged changes in sub repo should fail' '
+    setup_full_project &&
+    add_staged_changes &&
+    test_expect_code 1 git project topic checkout topic-branch &&
+    verify_no_changes
+'
+# Repeat test cases with --force flag
+test_expect_success 'With --force, checking out master (which becomes topic-master) should exit with code 1' '
+    setup_full_project &&
+    test_expect_code 1 git project topic checkout --force master &&
+    verify_no_changes
+'
+
+test_expect_success 'With --force, check out the topic branch without using topic- prefix' '
+    setup_full_project &&
+    git project topic checkout --force branch &&
+    verify_checkout_ok
+'
+
+test_expect_success 'With --force, check out the topic branch using topic- prefix' '
+    setup_full_project &&
+    git project topic checkout --force topic-branch &&
+    verify_checkout_ok
+'
+
+# Working with staged changes
+test_expect_success 'With  --force, check out with staged changes in top repo' '
+    setup_full_project &&
+    add_staged_changes &&
+    git project topic checkout --force topic-branch &&
+    verify_checkout_ok
+'
+
+test_expect_success 'With  --force, check out with staged changes in sub repo' '
+    setup_full_project &&
+    add_staged_changes &&
+    git project topic checkout  --force topic-branch &&
+    verify_checkout_ok
+'
+
+test_expect_success 'With  -f, check out with staged changes in sub repo' '
+    setup_full_project &&
+    add_staged_changes &&
+    git project topic checkout  -f topic-branch &&
+    verify_checkout_ok
+'
+
+# Checking the quiet flag
+
+test_expect_success 'Set --quiet flag when checking out topic-branch' '
+    setup_full_project &&
+    output="$(git project topic checkout --quiet topic-branch)" &&
+    echo ${output} &&
+    test -z "$output" &&
+    verify_checkout_ok
+'
+
+test_expect_success 'Set --quiet flag when checking out topic-branch' '
+    setup_full_project &&
+    output="$(git project topic checkout -q topic-branch)" &&
+    echo ${output} &&
+    test -z "$output" &&
+    verify_checkout_ok
+'
+
+test_expect_success 'a topic in a repo without sub-modules can be checked out' '
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo" &&
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch &&
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git project topic checkout topic-branch &&
+    on_branch "topic-branch" . &&
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo"
+'
+
+test_done

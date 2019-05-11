@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [-h] [--help] [-n,--no-hooks] [-o,--origin]"
+    echo "    [-p,--print-template] [-t,--template=TEMPLATE] [<DIRECTORY>]"
+    echo ""
+    echo "options:"
+    echo " -h                   Print this usage"
+    echo " --help               Show man page"
+    echo " -n,--no-hooks        Do not install hooks for local repository"
+    echo " -o, --origin         Path to the remote origin repository"
+    echo " -p, --print-template Prints the template used and exits"
+    echo " -t, --template       Override default template"
+    echo ""
+}
+
+##git-hooks-install##
+
+project-init(){
+    local directory="."
+    if [ ${#@} -gt 0 ] && [ ! -z "$1" ]; then
+        directory="$1"
+    fi
+    local template="${TEMPLATE}"
+    if [ -n "${TEMPLATE}" ] && [ -d "${TEMPLATE}" ]; then
+        template="$(readlink -f "${TEMPLATE}")"
+    fi
+    local origin="${ORIGIN}"
+    if [ -n "${ORIGIN}" ] && [ -d "${ORIGIN}" ]; then
+        origin="$(readlink -f "${ORIGIN}")"
+    fi
+
+    echo "Creating git-project"
+    mkdir -p "${directory}" && cd "${directory}"
+    if [ -n "${TEMPLATE}" ]; then
+        echo "template: ${TEMPLATE}"
+        git clone "${template}" .
+        git remote remove origin
+        git submodule update --init --recursive
+    else
+        echo "No template, initing empty git repo"
+        git init .
+    fi
+    if [ -n "${ORIGIN}" ]; then
+        echo "origin: ${ORIGIN}"
+        git remote add origin "${origin}"
+    fi
+
+    if $INSTALL_HOOKS; then
+        git_hooks_install
+    fi
+}
+
+cleanup() {
+    return
+}
+trap cleanup EXIT
+
+SCRIPT=$(basename "$0")
+TEMPLATE=$(git config project.template || true)
+ORIGIN=
+INSTALL_HOOKS=true
+
+if ! ARGS=$(getopt -o hno:pt: -l "help,no-hooks,origin:,print-template,template:" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-init "$@"
+            exit $?
+            ;;
+        -n|--no-hooks)
+            shift
+            INSTALL_HOOKS=false
+            ;;
+        -o|--origin)
+            shift
+            ORIGIN="$1"
+            shift
+            ;;
+        -p|--print-template)
+            shift
+            echo "${TEMPLATE}"
+            exit 0
+            ;;
+        -t|--template)
+            shift
+            TEMPLATE="$1"
+            shift
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+project-init "$@"
+exit $?

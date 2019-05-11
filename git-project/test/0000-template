@@ -1,0 +1,10 @@
+#
+# Long Description
+#
+
+test_description='MY TEST'
+. ./test.sh
+
+test_expect_success '' ''
+
+test_done

@@ -1,0 +1,261 @@
+#
+# Test git-project-topic-end
+#
+
+test_description='git project topic end'
+. ./test.sh
+
+clone_local_repo() {
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo >/dev/null &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/local_repo\"" &&
+    cd local_repo 
+}
+
+setup_topic_branch_with_content() {
+    git project branch topic-branch 'space component' component component2 &>/dev/null
+    for repo in 'space component' component component2 .
+    do
+        add_to_repo "$repo" 'Adding topic content' 'echo topic-branch-content >topic-branch-file' >/dev/null
+    done
+    for repo in 'space component' component component2 .
+    do
+        (cd "$repo"; git checkout -q master)
+    done
+}
+
+verify_topic_branch_file() {
+    for i in "$@"
+    do
+        if ! (cd "$i" &&
+                [ -f topic-branch-file ] &&
+                test_equal topic-branch-file topic-branch-content)
+        then
+            echo "verify_topic_branch_file() failed in $i"
+            return 1
+        fi
+    done
+    return 0
+}
+
+setup_master_and_topic_branch_for_merge() {
+    clone_local_repo
+    setup_topic_branch_with_content
+    for repo in 'space component' component component2 .
+    do
+        add_to_repo "$repo" 'Adding master content' 'echo master-branch-content >master-branch-file' >/dev/null
+    done
+    # We need to do this to get to get detached head in subrepos
+    git project checkout -q topic-branch
+    git project checkout -q master
+}
+
+verify_master_branch_file() {
+    for i in "$@"
+    do
+        if ! (cd "$i" &&
+                [ -f master-branch-file ] &&
+                test_equal master-branch-file master-branch-content)
+        then
+            echo "verify_master_branch_file() failed in $i"
+            return 1
+        fi
+    done
+    return 0
+}
+
+check_finished() {
+    local result
+    local repo; repo="${SHARNESS_TRASH_DIRECTORY}/local_repo/.git"
+    ! file_exists_anywhere MERGE_HEAD "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_MERGE_HEAD "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_ORIG_HEAD "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_MERGE_SOURCE "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_MERGE_MESSAGE "$repo"
+    result=$?
+    if [ ! $result ] ; then echo "Check finished failed"; fi
+    return $result
+}
+
+# After any aborted action there should be no changes
+verify_nochanges() {
+    cd .. &&
+    compare_all_refs before.git HEAD local_repo/.git HEAD &&
+    check_finished
+}
+
+test_exec create_full_project_repo
+
+test_expect_success 'ending topic wile on topic should abort with code 1 and no changes' '
+    setup_master_and_topic_branch_for_merge &&
+    git project checkout -q topic-branch &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end topic-branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    verify_nochanges
+'
+
+test_expect_success 'Ending nonexisting topic should abort with code 1 and no changes' '
+    setup_master_and_topic_branch_for_merge &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end not-a-branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    verify_nochanges
+'
+
+test_expect_success 'top repo in detached HEAD is not valid, abort with code 1 and no changes' '
+    setup_master_and_topic_branch_for_merge &&
+    git checkout -q $(git rev-parse HEAD) &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end topic-branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    verify_nochanges
+'
+
+test_expect_success 'a topic without sub-modules can be ended' '
+    clone_local_repo &&
+    git checkout -q -b topic-top &&
+    add_to_repo . "Adding topic content" "echo top-only-content >top-only-file" &&
+    git checkout -q master &&
+    add_to_repo . "Adding master content" "echo master-branch-content >master-branch-file" &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    git project topic end topic-top "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    test_equal top-only-content top-only-file &&
+    test_equal master-branch-content master-branch-file &&
+    check_ancestry HEAD ORIG_HEAD  refs/heads/topic-top
+'
+
+test_expect_success 'a topic in a repo without sub-modules can be ended' '
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo" &&
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch &&
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git project topic end topic-branch "Simple merge" &&
+    verify_commit . HEAD "Simple merge" "branch_file" &&
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo"
+'
+
+test_expect_success 'fast forward merge of topic-branch' '
+    clone_local_repo &&
+    setup_topic_branch_with_content &&
+    git project checkout -q topic-branch &&
+    git project checkout -q master &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    git project topic end topic-branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    check_ancestry HEAD ORIG_HEAD  refs/heads/topic-branch &&
+    verify_topic_branch_file "space component" component component2 . &&
+    cd "${SHARNESS_TRASH_DIRECTORY}" &&
+    diff -q "before.git/modules/thirdparty component/refs/heads/master" \
+       "local_repo/.git/modules/thirdparty component/refs/heads/master" &&
+    compare_all_refs before.git refs/heads/master local_repo/.git ORIG_HEAD "thirdparty component" &&
+    compare_all_refs before.git refs/heads/topic-branch local_repo/.git  refs/heads/topic-branch "thirdparty component" &&
+    check_finished
+'
+
+test_expect_success 'End topic-branch using the full name' '
+    setup_master_and_topic_branch_for_merge &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    git project topic end topic-branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    [ -z "$(git status --porcelain)" ] &&
+    check_ancestry_recursive "space component" component component2 -- HEAD ORIG_HEAD  refs/heads/topic-branch &&
+    verify_commit_message "merging message" master &&
+    verify_topic_branch_file "space component" component component2 . &&
+    verify_master_branch_file "space component" component component2 . &&
+    cd "${SHARNESS_TRASH_DIRECTORY}" &&
+    diff -q "before.git/modules/thirdparty component/refs/heads/master" \
+       "local_repo/.git/modules/thirdparty component/refs/heads/master" &&
+    compare_all_refs before.git refs/heads/master local_repo/.git ORIG_HEAD "thirdparty component" &&
+    compare_all_refs before.git refs/heads/topic-branch local_repo/.git refs/heads/topic-branch "thirdparty component" &&
+    check_finished
+'
+
+test_expect_success 'Successfully end a topic-branch when topic- is left out' '
+    setup_master_and_topic_branch_for_merge &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    git project topic end branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    [ -z "$(git status --porcelain)" ] &&
+    check_ancestry_recursive "space component" component component2 -- HEAD ORIG_HEAD  refs/heads/topic-branch &&
+    verify_commit_message "merging message" master &&
+    verify_topic_branch_file "space component" component component2 . &&
+    verify_master_branch_file "space component" component component2 . &&
+    cd "${SHARNESS_TRASH_DIRECTORY}" &&
+    diff -q "before.git/modules/thirdparty component/refs/heads/master" \
+       "local_repo/.git/modules/thirdparty component/refs/heads/master" &&
+    compare_all_refs before.git refs/heads/master local_repo/.git ORIG_HEAD "thirdparty component" &&
+    compare_all_refs before.git refs/heads/topic-branch local_repo/.git refs/heads/topic-branch "thirdparty component" &&
+    check_finished
+'
+
+test_expect_success 'abort with code 1 if there are local changes' '
+    setup_master_and_topic_branch_for_merge &&
+    touch "space component/new file" &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    check_finished
+'
+
+test_expect_success 'abort witch code 1 if sub-module is on branch' '
+    setup_master_and_topic_branch_for_merge &&
+    git project checkout -q master &&
+    cd "space component" &&
+    git checkout -q master &&
+    cd .. &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    check_finished
+'
+
+test_expect_success 'abort witch code 1 if branch renaming fails' '
+    setup_master_and_topic_branch_for_merge &&
+    set_config_recursive . &&
+    git config -f .gitmodules --unset "submodule.space component.branch" &&
+    git commit -a -m "removed branch info from space component" &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    check_finished
+'
+
+# These tests have side effect on the upstream repositories
+# When run sequentially, they are not defeating eachothers purpose however.
+test_expect_success 'abort if sub repo is not up to date with upstream' '
+    setup_master_and_topic_branch_for_merge &&
+    add_to_remote_repo "${COMPONENT2_PATH}" \
+    "Adding upstream content" "touch upstream_contents" &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    check_finished
+'
+
+test_expect_success 'abort if top repo is not up to date with upstream' '
+    setup_master_and_topic_branch_for_merge &&
+    add_to_remote_repo "${FULL_PROJECT_PATH}" \
+    "Adding upstream content" "touch upstream_contents" &&
+    store_state &&
+    echo "************************ TOPIC END BEGINS *****************" &&
+    test_expect_code 1 git project topic end branch "merging message" &&
+    echo "************************ TOPIC END DONE *******************" &&
+    check_finished
+'
+
+test_done

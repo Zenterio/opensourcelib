@@ -1,0 +1,5 @@
+zenterio-git-project (VERSION) unstable; urgency=low
+
+  * First debian package release
+
+ -- Per Böhlin <per.bohlin@zenterio.com>  Fri, 7 Apr 2017 15:00:00 +0000

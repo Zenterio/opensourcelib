@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+test_description="git project init"
+
+. ./test.sh
+
+test_exec create_template
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project init --invalid-option
+'
+
+test_expect_success '-h' '
+    git project init -h
+'
+
+test_expect_success '--help' '
+    git project init --help
+'
+
+test_expect_success '--print-template' '
+    test_equal "$(git project init --print-template)" "${TEMPLATE_PATH}"
+'
+
+test_expect_success '--template=<TEMPLATE> --print-template' '
+    test_equal "$(git project init --template=TEMPLATE --print-template)" "TEMPLATE"
+'
+
+test_expect_success '-t <TEMPLATE> -p' '
+    test_equal "$(git project init -t TEMPLATE -p)" "TEMPLATE"
+'
+
+test_expect_success 'invalid template exits with 128 (fails to clone template)' '
+    mkdir proj_invalid_template &&
+    test_when_finished "rm -rf proj_invalid_template" &&
+    cd proj_invalid_template &&
+    test_expect_code 128 git project init -t invalid-template
+'
+
+test_expect_success 'non-empty directory exits with 128 (fails to clone template)' '
+    mkdir proj_non_empty &&
+    test_when_finished "rm -rf proj_non_empty" &&
+    cd proj_non_empty &&
+    touch file.txt &&
+    test_expect_code 128 git project init
+'
+
+test_expect_success 'non-empty directory is allowed if no template (-t "")' '
+    mkdir proj_no_template &&
+    test_when_finished "rm -rf proj_no_template" &&
+    cd proj_no_template &&
+    touch file.txt &&
+    git project init -t "" -n &&
+    ls .git
+'
+
+test_expect_success 'init current directory' '
+    mkdir proj_no_args &&
+    test_when_finished "rm -rf proj_no_args" &&
+    cd proj_no_args &&
+    git project init &&
+    cd .. &&
+    test_equal "proj_no_args/repo.info" "${TEMPLATE_PATH}" &&
+    ls proj_no_args/src/src.info &&
+    test_equal "proj_no_args/src/src.info" "src"
+'
+
+test_expect_success 'init existing-directory' '
+    mkdir proj_existing_directory &&
+    test_when_finished "rm -rf proj_existing_directory" &&
+    git project init proj_existing_directory &&
+    test_equal "proj_existing_directory/repo.info" "${TEMPLATE_PATH}" &&
+    ls proj_existing_directory/src/src.info &&
+    test_equal "proj_existing_directory/src/src.info" "src"
+'
+
+test_expect_success 'init non-existing-directory' '
+    test_when_finished "rm -rf proj_nonexisting_directory" &&
+    git project init proj_nonexisting_directory &&
+    test_equal "proj_nonexisting_directory/repo.info" "${TEMPLATE_PATH}" &&
+    ls proj_nonexisting_directory/src/src.info &&
+    test_equal "proj_nonexisting_directory/src/src.info" "src"
+'
+
+test_expect_success '--origin <PATH>' '
+    test_when_finished "rm -rf proj_origin; rm -rf ${ORIGIN_PROJECT_PATH}; rm -rf origin" &&
+    create_project_origin_repo &&
+    mkdir proj_origin &&
+    cd proj_origin &&
+    git project init --origin "${ORIGIN_PROJECT_PATH}" &&
+    git push origin master:master &&
+    cd .. &&
+    git clone "${ORIGIN_PROJECT_PATH}" origin &&
+    test_equal "origin/repo.info" "${TEMPLATE_PATH}"
+'
+
+test_expect_success 'init non-existing directory and template with relative path' '
+    test_when_finished "rm -rf proj_relative_template" &&
+    git project init -t "${TEMPLATE_NAME}" proj_relative_template &&
+    test_equal "proj_relative_template/src/src.info" "src"
+'
+
+test_done

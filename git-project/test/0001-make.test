@@ -1,0 +1,98 @@
+
+test_description='make'
+
+. ./test.sh
+
+export GIT_CONFIG="${SHARNESS_TRASH_DIRECTORY}/gitconfig.install"
+
+verify_install() {
+    local dest=$(test -z "$1" || echo "/${1}") &&
+    ls ${INSTALL_DIR}${dest}/local/bin/git-project &&
+    ls ${INSTALL_DIR}${dest}/local/share/man/man1/git-project.1 &&
+    ls ${INSTALL_DIR}${dest}/local/share/man/man7/gitproject-roadmap.7 &&
+    ls ${INSTALL_DIR}${dest}/html/git-project.html &&
+    ls ${INSTALL_DIR}${dest}/bash/git_project*.sh &&
+
+    test_equal $(git config --get project.install.destdir) "${INSTALL_DIR}${dest}" &&
+    test_equal $(git config --get project.install.prefix) "/local" &&
+    test_equal $(git config --get project.install.htmlprefix) "/html" &&
+    test_equal $(git config --get project.install.completionprefix) "/bash"
+}
+
+verify_uninstall() {
+    local dest=$(test -z "$1" || echo "/${1}") &&
+    test_must_fail ls ${INSTALL_DIR}${dest}/local/bin/git-project
+}
+
+test_expect_success 'make help' '
+    run_make help
+'
+
+test_expect_success 'make readme' '
+    run_make readme
+'
+
+test_expect_success 'make dev-help' '
+    run_make dev-help
+'
+
+test_expect_success 'make dev-readme' '
+    run_make dev-readme
+'
+
+test_expect_success 'custom install, user installation' '
+    create_user_installation_using_variables "user" &&
+    verify_install "user"
+'
+
+test_expect_success 'reinstall ontop of existing installation using saved config' '
+    create_user_installation_using_variables "config" &&
+    create_user_installation_using_config "config" &&
+    verify_install "config"
+'
+
+test_expect_success 'uninstall using saved config' '
+    create_user_installation_using_variables "remove" &&
+    remove_user_installation_using_config "remove" &&
+    verify_uninstall "remove"
+'
+
+test_expect_success 'install with html folder preexisting replaces it with symlink, keeping old contents' '
+    DEST="htmlfolder" &&
+    cd ${SUT_DIR}/ &&
+    mkdir -p "${DEST}/html" &&
+    touch "${DEST}/html/preexistingfile" &&
+    ! test -h "${DEST}/html" &&
+    create_user_installation_using_variables "${DEST}" &&
+    verify_install "${DEST}" &&
+    cd "${SUT_DIR}/${DEST}" &&
+    test -h html &&
+    ls html/preexistingfile
+'
+
+test_expect_success 'install with html target existing, but not a folder, fails' '
+    DEST="htmlfile" &&
+    cd ${SUT_DIR}/ &&
+    mkdir "${DEST}" &&
+    touch "${DEST}/html" &&
+    test_expect_code 2 create_user_installation_using_variables "${DEST}"
+'
+
+test_expect_success 'install with html symlink already existing ignores it, even if pointing elsewhere' '
+    DEST="htmllink" &&
+    cd ${SUT_DIR}/ &&
+    mkdir -p "${DEST}/linkedfolder" &&
+    cd "${DEST}" &&
+    ln -s linkedfolder html &&
+    test_equal $(readlink html) "linkedfolder" &&
+    create_user_installation_using_variables "${DEST}" &&
+    cd "${SUT_DIR}/${DEST}" &&
+    test_equal $(readlink html) "linkedfolder"
+'
+
+cleanup '
+    rm -f "${SHARNESS_TRASH_DIRECTORY}/gitconfig.install"
+    rm -rf "${INSTALL_DIR}"
+'
+
+test_done

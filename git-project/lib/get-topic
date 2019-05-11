@@ -1,0 +1,12 @@
+# Parse command line argument to make sure it starts with topic-
+# $1 - topic-branch (possibly without topic- prefix)
+# Usage:
+# BRANCH=$(get_topic "$1")
+get_topic() {
+    local branch; branch="$1"
+    if [ ${branch:0:6} != "topic-" ]
+    then
+        branch="topic-${branch}"
+    fi
+    echo "$branch"
+}

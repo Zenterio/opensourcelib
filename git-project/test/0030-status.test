@@ -1,0 +1,60 @@
+#
+# Test git-project-status
+#
+
+test_description='git project status'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project status --invalid-option
+'
+
+test_expect_success '-h' '
+    git project status -h
+'
+
+test_expect_success '--help' '
+    git project status --help
+'
+
+test_expect_success 'no arguments, no changes' '
+    git project clone "${FULL_PROJECT_PATH}" proj_no_changes &&
+    cd proj_no_changes &&
+    git project status &&
+    cd component &&
+    git project status &&
+    cd subcomponent &&
+    git project status
+'
+
+test_expect_success 'no arguments, no changes, tags' '
+    git project clone "${FULL_PROJECT_PATH}" proj_no_changes_tags &&
+    cd proj_no_changes_tags &&
+    git tag ONE &&
+    git tag TWO &&
+    git project status &&
+    cd component &&
+    git tag COMPONENT
+    git project status &&
+    cd subcomponent &&
+    git tag SUB_COMPONENT &&
+    git project status
+'
+
+test_expect_success 'works on new repos without commits.' '
+    git init new_proj &&
+    cd new_proj &&
+    git project status
+'
+
+# This test setup is not a complete merge.
+test_expect_success 'no arguments, git project merge in progress' '
+    git project clone "${FULL_PROJECT_PATH}" proj_merge_in_progress &&
+    cd proj_merge_in_progress &&
+    echo "merge-source-branch" >.git/GIT_PROJECT_MERGE_SOURCE &&
+    git project status | grep "git project merge merge-source-branch"
+'
+
+test_done

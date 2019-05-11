@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [-h] [--help] [-p,--print-repo]"
+    echo "    [-r,--repo=REPO] [-u,--user-install]"
+    echo ""
+    echo "options:"
+    echo " -h                   Print this usage"
+    echo " --help               Show man page"
+    echo " -p, --print-repo     Prints the update repo used and exits"
+    echo " -r, --repo           Override default update repository"
+    echo " -u, --user-install   Use this option if it is a user installation (no sudo)."
+    echo ""
+}
+
+##echoerr##
+
+cleanup() {
+    if [ -d "${INSTALL_TEMP}" ]; then
+        rm -rf "${INSTALL_TEMP}"
+    fi
+
+    if [ -f "${TEMP_INSTALL_FILE}" ]; then
+        rm -f "${TEMP_INSTALL_FILE}"
+    fi
+}
+trap cleanup EXIT
+
+# Work-around for problem with updated sw-update file
+# Since bash is doing a line by line interpretation and re-reads the file if
+# it calls an external program, we have to copy the original file to a place
+# with write access (tmp) and execute it from there.
+# We can't simply move the file since this script doesn't have write access to
+# itself and can't modify the original in case of a system install.
+# Only make install with sudo can do that.
+launch-install() {
+    set +u
+    if [ -z "${GIT_PROJECT_LAUNCH_INSTALL}" ]; then
+        set -u
+        TEMP_INSTALL_FILE="$(mktemp -t $(basename $0)-XXXXX)"
+        cp "$0" "${TEMP_INSTALL_FILE}"
+        chmod a+x "${TEMP_INSTALL_FILE}"
+        GIT_PROJECT_LAUNCH_INSTALL=y "${TEMP_INSTALL_FILE}" ${ORIGINAL_ARGS}; exit $?
+    else
+        set -u
+        sw-update "${SUDO}"; exit $?
+    fi
+}
+
+# $1 - sudo
+sw-update() {
+    check-for-config-path-mismatch
+
+    local dosudo=$1; shift
+    local version=$(git project -v)
+
+    echo "Updating git-project installation using:"
+    echo ${REPO}
+
+    INSTALL_TEMP=$(mktemp -d -t git-project-repo-XXXXX)
+    (cd ${INSTALL_TEMP} \
+        && git clone --depth 1 "$REPO" git-project\
+        && cd git-project \
+        && ${dosudo} make --no-print-directory install FROM_CONFIG=y GITCONFIG= \
+        && echo "... updated git-project $version -> $(git project -v)")
+}
+
+check-for-config-path-mismatch() {
+    local bin=$(dirname $(which git-project))
+    local conf=$(git config project.install.bin)
+    if [ "${bin}" != "${conf}" ]; then
+        echoerr "ERROR: The applicable configuration and git-project in path do not match."
+        exit 4
+    fi
+}
+
+no-repo() {
+    echoerr "ERROR: No update repository specified, can not perform update."
+    exit 1
+}
+
+SCRIPT=$(basename "$0")
+REPO=$(git config project.update-repo || true)
+ORIGINAL_ARGS="$@"
+INSTALL_TEMP=
+SUDO=sudo
+TEMP_INSTALL_FILE=
+
+set +e
+ARGS=$(getopt -o hpr:u -l "help,print-repo,repo:,user-install" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-sw-update "$@"
+            exit $?
+            ;;
+        -r|--repo)
+            shift
+            REPO=$1
+            shift
+            ;;
+        -p|--print-repo)
+            shift
+            echo ${REPO}
+            exit 0
+            ;;
+        -u|--user-install)
+            shift
+            SUDO=
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ -z "${REPO}" ]; then
+    no-repo
+fi
+
+launch-install

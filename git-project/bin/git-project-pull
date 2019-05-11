@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h] [--help]"
+    echo "  $SCRIPT -m <message>"
+    echo "  $SCRIPT --rebase"
+    echo ""
+    echo "Fetch and merge (or rebase) tracked remote branch into currently checked out"
+    echo "local branch for top repo and all active submodules. Commit message is"
+    echo "necessary for non-fastforward merges."
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage"
+    echo "  --help               Show man page"
+    echo "  -m <message>         Use <message> for merge commits"
+    echo "  --rebase             Update with rebase"
+    echo ""
+}
+
+##can-fastforward##
+
+##echoerr##
+
+##in-detached-head##
+
+##proj-top-dir##
+
+##submodule-branch-name##
+
+##submodules-in-topic##
+
+cleanup() {
+    return
+}
+trap cleanup EXIT
+
+# depends on global REMOTEBRANCH, MESSAGE
+do_pull_with_merge() {
+    local fastforward;
+    if can_fastforward . "${REMOTEBRANCH}"; then
+        fastforward=true
+    else
+        fastforward=false
+    fi
+    local branch;
+    branch=$(git rev-parse --abbrev-ref HEAD)
+    local modules;
+    mapfile -t modules < <(submodules_in_topic "${branch}")
+
+    if ${fastforward}; then
+        if [ ${#modules[@]} -ne 0 ]
+        then
+            for repo in "${modules[@]}"
+            do
+                if ! can_fastforward "${repo}" "${REMOTEBRANCH}"; then
+                    fastforward=false
+                    break
+                fi
+            done
+        fi
+    fi
+
+    if ${fastforward}; then
+        if [ ${#modules[@]} -ne 0 ]
+        then
+            for repo in "${modules[@]}"
+            do
+                pushd "${repo}" > /dev/null
+                if ! in_detached_head
+                then
+                    git pull
+                fi
+                popd > /dev/null
+            done
+        fi
+        git pull
+    else
+        if [ -z "${MESSAGE}" ]; then
+            echo "ERROR: Please supply a commit message using -m"
+            exit 1
+        fi
+        git project merge "${REMOTEBRANCH}" "${MESSAGE}"
+    fi
+}
+
+SCRIPT=$(basename "$0")
+
+set +e
+ARGS=$(getopt -o hm: -l "help,rebase" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+REBASE=false
+MESSAGE=""
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-pull
+            exit $?
+            ;;
+        -m)
+            shift
+            MESSAGE="$1"
+            shift
+            ;;
+        --rebase)
+            shift
+            REBASE=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if ${REBASE} && [ "${MESSAGE}" != "" ]
+then
+    echo "-m and --rebase is not a valid combination of arguments"
+    usage
+    exit 2
+fi
+
+TOP="$(proj_top_dir)"
+cd "${TOP}"
+
+if in_detached_head
+then
+    echoerr "You are not currently on a branch. Please checkout"
+    echoerr "a branch before continuing. See git-project-pull(1)"
+    echoerr "for details."
+    exit 1
+fi
+
+REMOTEBRANCH=$(git for-each-ref --format='%(upstream:short)' $(git symbolic-ref -q HEAD))
+if [ -z "${REMOTEBRANCH}" ]
+then
+    echo "There is no tracking information for the current branch."
+    echo "Please set tracking information using 'git branch --set-upstream-to='"
+    exit
+fi
+git fetch --recurse-submodules
+if ${REBASE}; then
+    git project rebase "${REMOTEBRANCH}"
+else
+    do_pull_with_merge
+fi

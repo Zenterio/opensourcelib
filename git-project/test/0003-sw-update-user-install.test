@@ -1,0 +1,24 @@
+#
+# Test git-project-sw-update
+#
+# NOTE!
+# Since we are doing a software update from the repository currently tested from,
+# make sure the committed version is stable enough.
+#
+# Conflicts between the version under test and the committed version might cause
+# errors in the git-project-sw-update file since it is overwritten by the update
+# while executing.
+#
+
+test_description='git project sw-update'
+. ./test.sh
+
+test_exec create_update_repo
+
+# This test must be in its own suite since it changes the SUT installation.
+# Can not be run in parallel with other tests in same suite!
+test_expect_success DEV_TEST 'update user installation' '
+    git project sw-update --user-install
+'
+
+test_done

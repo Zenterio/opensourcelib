@@ -1,0 +1,6 @@
+# returns 0 if the pointed to repository does not have any modifications of
+# tracked content, otherwise 1.
+# $1 - path to repository
+has_modified_content() {
+    (cd "$1" && ! git diff --name-only --exit-code > /dev/null)
+}

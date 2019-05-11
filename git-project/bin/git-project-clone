@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [-h] [--help] [-n,--no-hooks] [OPTIONS]"
+    echo ""
+    echo "options:"
+    echo " -h                   Print this usage"
+    echo " --help               Show man page"
+    echo " -n,--no-hooks        Do not install hooks for repository"
+    echo ""
+    echo " supports the same options as git clone"
+    echo ""
+}
+
+##dir-from-clone-output##
+##git-hooks-install##
+
+install-hooks()
+{
+    local checkout_dir; checkout_dir="$*"
+    (cd "${checkout_dir}" && git_hooks_install)
+}
+
+SCRIPT=$(basename "$0")
+INSTALL_HOOKS=true
+DO_HELP=false
+CLONE_ARGS=()
+BARE_REPO=false
+QUIET=false
+
+set +u
+if [ $# -lt 1 ]; then
+    usage
+    exit 129
+fi
+set -u
+
+for arg in "$@"; do
+    case "$arg" in
+        -h)
+            usage
+            exit 0
+            ;;
+        --help)
+            DO_HELP=true
+            ;;
+        -n|--no-hooks)
+            INSTALL_HOOKS=false
+            ;;
+        --bare)
+            BARE_REPO=true
+            CLONE_ARGS+=( "$arg" )
+            ;;
+        -q|--quiet)
+            QUIET=true
+            ;;
+        *)
+            CLONE_ARGS+=( "$arg" )
+            ;;
+    esac
+done
+
+if ${DO_HELP}; then
+    set +u
+    git help project-clone "${CLONE_ARGS[@]}"
+    exit $?
+fi
+
+if ${QUIET}; then
+    CLONE_OUTPUT=$(git clone --recurse-submodules "${CLONE_ARGS[@]}" 2>&1)
+else
+    exec 5>&1
+    CLONE_OUTPUT=$(git clone --recurse-submodules "${CLONE_ARGS[@]}" |& tee >(cat - >&5); exit "${PIPESTATUS[0]}")
+fi
+
+if $INSTALL_HOOKS && ! ${BARE_REPO}; then
+    CLONE_DIR=$(dir_from_clone_output "${CLONE_OUTPUT}")
+    install-hooks "${CLONE_DIR}"
+fi

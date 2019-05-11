@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [-a|--all]"
+    echo "  $SCRIPT [-r|--remote]"
+    echo ""
+    echo "options:"
+    echo "  -h           Print this usage."
+    echo "  --help       Show man page."
+    echo "  -a, --all    List both local and remote topics."
+    echo "  -r, --remote List only remote topics."
+    echo ""
+}
+
+##echoerr##
+
+##proj-top-dir##
+
+##submodule-branch-name##
+
+##submodules-in-topic##
+
+# Prints the topic and a comma separated list of the related modules.
+# Ex: my-topic (module-a, module-b)
+# $1 - topic
+print_submodule_list() {
+    local modules
+    local result
+    local topic; topic="$1"
+    mapfile -t modules < <(submodules_in_topic "$topic")
+    echo -n "$topic ("
+    if [ ${#modules[@]} -ne 0 ]; then
+        result=""
+        for module in "${modules[@]}"; do
+            result="${result}'${module}', "
+        done
+        echo -n ${result%, }
+    fi
+    echo ")"
+}
+
+SCRIPT=$(basename "$0")
+
+if [ $# -gt 1 ]; then
+    set -e
+    usage
+    exit 129
+fi
+
+set +e
+ARGS=$(getopt -o ahr -l "all,help,remote" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+LIST_LOCAL=true
+LIST_REMOTE=false
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-topic-list "$@"
+            exit $?
+            ;;
+        -a|--all)
+            LIST_LOCAL=true
+            LIST_REMOTE=true
+            shift
+            ;;
+        -r|--remote)
+            LIST_LOCAL=false
+            LIST_REMOTE=true
+            shift
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+cd "$(proj_top_dir)"
+
+if $LIST_LOCAL; then
+    mapfile -t LOCAL_TOPICS < <(git for-each-ref --format='%(refname)' refs/heads | grep 'refs/heads/topic-' | sed sIrefs/heads/IIg )
+else
+    declare -a LOCAL_TOPICS=( )
+fi
+
+if $LIST_REMOTE; then
+    mapfile -t REMOTE_TOPICS < <(git for-each-ref --format='%(refname)' refs/remotes/origin | grep 'refs/remotes/origin/topic-' | sed 's:refs/remotes/::g' )
+else
+    declare -a REMOTE_TOPICS=( )
+fi
+
+if [ ${#LOCAL_TOPICS[@]} -eq 0 ] && [ ${#REMOTE_TOPICS[@]} -eq 0 ]; then
+    exit 1
+fi
+
+TOPIC=()
+if [ ${#LOCAL_TOPICS[@]} -ne 0 ]; then
+    TOPICS+=("${LOCAL_TOPICS[@]}")
+fi
+if [ ${#REMOTE_TOPICS[@]} -ne 0 ]; then
+    TOPICS+=("${REMOTE_TOPICS[@]}")
+fi
+
+for topic in "${TOPICS[@]}"
+do
+    print_submodule_list "$topic"
+done

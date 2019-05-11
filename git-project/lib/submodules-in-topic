@@ -1,0 +1,31 @@
+# List the submodules that are in the topic branch given as argument.
+#
+# This is defined as following a branch with the same name as the top module.
+#
+# It will print the submodules one per line the same way as
+# git project --submodules
+#
+# Example usage:
+# mapfile -t MODULES_IN_TOPIC < <(submodules_in_topic topic-branch)
+#
+# Other library files used (have to be included in main script):
+# ##echoerr##
+# ##submodule-branch-name##
+submodules_in_topic() {
+    if [ $# -ne 1 ] ; then echoerr "ERROR: Wrong number of arguments to submodules_in_topic"; exit 99; fi
+    local branch; branch="$1"
+    local submodule_branch
+    local submodules; mapfile -t submodules < <( git project --submodules)
+    local module
+    if [ ${#submodules[@]} -gt 0 ]
+    then
+        for module in "${submodules[@]}"
+        do
+            submodule_branch=$(submodule_branch_name "${module}" "${branch}")
+            if [ "${submodule_branch}" = "${branch}" ]
+            then
+                echo "$module"
+            fi
+        done
+    fi
+}

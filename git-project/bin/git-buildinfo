@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [--commands] [-h] [--help] [<command>]"
+    echo ""
+    echo "options:"
+    echo " --commands           Print list of available commands"
+    echo " -h                   Print this usage"
+    echo " --help               Show man page"
+    echo ""
+}
+
+##array-contains##
+
+##proj-top-dir##
+
+run-command() {
+    local command="$1"
+    shift
+    git buildinfo-"${command}" "$@"
+}
+
+print-commands() {
+    echo "${COMMANDS[@]}"
+}
+
+SCRIPT=$(basename "$0")
+INSTALL_DIR=$(dirname "$0")
+
+# Assume all files in the install directory matching pattern are sub-commands to
+# git-buildinfo
+declare -a COMMANDS
+mapfile -t COMMANDS < <(cd "$INSTALL_DIR" && ls -1 git-buildinfo-*)
+# Remove git-buildinfo- from the file names to get the name of the commands.
+COMMANDS=("${COMMANDS[@]/#git-buildinfo-/}")
+
+# Delegate to sub commands
+set +u
+if array-contains "$1" "${COMMANDS[@]}"; then
+    run-command "$@"
+    exit $?
+fi
+set -u
+
+# Options to git-buildinfo
+if ! ARGS=$(getopt -o h -l "help,commands" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project topic "$@"
+            exit 0
+            ;;
+        --commands)
+            shift
+            print-commands
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+usage
+exit 2

@@ -1,0 +1,6 @@
+# Parses the output from a clone operation and returns the dir name cloned into.
+dir_from_clone_output()
+{
+    local output; output="$1"
+    echo "${output}" | awk -F\' '/Cloning into/ {print $2; exit}'
+}

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage."
+    echo "  --help               Show man page."
+    echo ""
+}
+
+##echoerr##
+
+cleanup() {
+    return
+}
+trap cleanup EXIT
+
+SCRIPT=$(basename "$0")
+
+if ! ARGS=$(getopt -o h -l "help" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-COMMAND "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done

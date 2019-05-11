@@ -1,0 +1,407 @@
+#
+# Test git-project-topic-delete
+#
+
+test_description='git project topic delete'
+. ./test.sh
+
+# Create the template repositories
+# master branch
+# topic-branch with content in "space component"
+create_full_project_topic_repo() {
+    create_remote_repo "${FULL_PROJECT_PATH}"
+    create_remote_repo "${COMPONENT_PATH}"
+    create_remote_repo "${SPACE_COMPONENT_PATH}"
+    add_submodule_to_remote_repo "${FULL_PROJECT_PATH}" "${COMPONENT_PATH}" "component"
+    add_submodule_to_remote_repo "${FULL_PROJECT_PATH}" "${SPACE_COMPONENT_PATH}" "space component"
+    local repo_path; repo_path="$(mktemp -d)"
+    pushd "${repo_path}" >/dev/null
+    git project clone -q "${FULL_PROJECT_PATH}"
+    cd full_project
+    set_config_recursive .
+    git project topic begin branch "space component"
+    cd "space component"
+    touch "topic branch file.txt"
+    git add .
+    git commit -q -m "Creating topic branch"
+    git push -q origin topic-branch
+    cd ..
+    git add .
+    git commit -q -m "Creating topic branch"
+    git push -q origin topic-branch
+    rm -rf "${repo_path}"
+    popd >/dev/null
+    rsync -a "${FULL_PROJECT_PATH}/" "${FULL_PROJECT_PATH}.backup"
+    rsync -a "${COMPONENT_PATH}/" "${COMPONENT_PATH}.backup"
+    rsync -a "${SPACE_COMPONENT_PATH}/" "${SPACE_COMPONENT_PATH}.backup"
+}
+
+restore_full_project_topic_repo() {
+    rsync -a --del "${FULL_PROJECT_PATH}.backup/" "${FULL_PROJECT_PATH}"
+    rsync -a --del "${COMPONENT_PATH}.backup/" "${COMPONENT_PATH}"
+    rsync -a --del "${SPACE_COMPONENT_PATH}.backup/" "${SPACE_COMPONENT_PATH}"
+}
+
+verify_no_remote_changes() {
+    diff -qr "${FULL_PROJECT_PATH}" "${FULL_PROJECT_PATH}.backup" &&
+    diff -qr "${COMPONENT_PATH}" "${COMPONENT_PATH}.backup" &&
+    diff -qr "${SPACE_COMPONENT_PATH}" "${SPACE_COMPONENT_PATH}.backup"
+}
+
+# After any aborted action there should be no changes
+verify_nochanges() {
+    cd .. &&
+    compare_all_refs before.git HEAD full_project/.git HEAD &&
+    test -f full_project.git/refs/heads/topic-branch &&
+    test -f "space component.git/refs/heads/topic-branch" &&
+    test ! -f component.git/refs/heads/topic-branch &&
+    verify_no_remote_changes
+}
+
+# Verify that the remote branch was deleted and no other changes happened.
+# Assumes the remote repo has a backup named $1.backup
+# $1 - path to remote repo
+verify_remote_topic_deleted() {
+    local diffs
+    diffs=$(diff -qr "$1" "$1.backup")
+    test -n "${diffs}" &&
+    test -z "${diffs##Only in * topic-branch}"
+}
+
+# Verify that the remote branches were deleted
+# Full project and space component should have them deleted
+# No change to component.
+# There should be no other changes than branch deletion.
+verify_remote_branches_deleted() {
+    verify_remote_topic_deleted "${FULL_PROJECT_PATH}" &&
+    verify_remote_topic_deleted "${SPACE_COMPONENT_PATH}" &&
+    diff -qr "${COMPONENT_PATH}" "${COMPONENT_PATH}.backup"
+}
+
+# Verify that the local branches were deleted
+# verify that no other changes have happened.
+# packed-ref is modified if locel and remote branches were deleted, so ignore that.
+verify_local_branches_deleted() {
+    local result; result=$(diff -qr .git ../before.git|grep -v packed-refs)
+    local template; template=$(cat <<EOF
+Files .git/config and ../before.git/config differ
+Only in ../before.git/logs/refs/heads: topic-branch
+Files .git/modules/space component/config and ../before.git/modules/space component/config differ
+Only in ../before.git/modules/space component/logs/refs/heads: topic-branch
+Only in ../before.git/modules/space component/refs/heads: topic-branch
+Only in ../before.git/refs/heads: topic-branch
+EOF
+)
+    test "$result" = "$template"
+}
+
+# Merge the sub repository on its own
+# This will single out and unmerged topic in the top repo.
+merge_sub_repo() {
+    cd "space component" &&
+    git checkout -q master &&
+    git merge -q origin/topic-branch -m "merging topic in sub-repo" &&
+    cd ..
+}
+
+test_exec create_full_project_topic_repo
+
+#
+# This will simulate
+# git project clone
+# git project topic checkout topic-branch
+# So the topic-branch is checked out where applicable and
+# sub repositories not on topic will be in detached head.
+#
+# It also restores the remote repositories (if they were affected by previous tests).
+# and set up git config so we can create commit messages correctly.
+#
+# Checking out topic-branch creates the local topic-branch.
+# This is necessary for a realistic test case.
+#
+# TODO: Use git project topic checkout when available
+setup_full_project() {
+    restore_full_project_topic_repo &&
+    git project clone "${FULL_PROJECT_PATH}" full_project >/dev/null &&
+    test_when_finished "rm -rf \"$(pwd)/full_project\"" &&
+    cd full_project
+    set_config_recursive .
+    git checkout -q topic-branch
+    git checkout -q master
+    cd "space component"
+    git checkout -q topic-branch
+    git checkout -q $(git rev-parse master)
+    cd ..
+}
+
+#
+# This will setup the local repository in a state where the topic is
+# finished correctly.
+#
+setup_topic_finished() {
+    setup_full_project &&
+    git project topic end branch "close topic" >/dev/null
+}
+
+test_expect_success 'invalid option exits with 129 (usage)' '
+    output="$(test_expect_code 129 git project topic delete --invalid-option)" &&
+    test -z "${output##Usage:*git-project-topic-delete*}"
+'
+
+test_expect_success 'No arguments exits with 129 (usage)' '
+    output="$(test_expect_code 129 git project topic delete)" &&
+    test -z "${output##Usage:*git-project-topic-delete*}"
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git project topic delete -h)" &&
+    test -z "${output##Usage:*git-project-topic-delete*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git project topic delete --help)" &&
+    test -z "${output##GIT-PROJECT-TOPIC-DELETE(1)*}"
+'
+
+test_expect_success 'when top repo is on the branch to delete, exit with code 1 and do nothing' '
+    setup_topic_finished &&
+    git project checkout -q topic-branch &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'when sub repo is on the branch to delete, exit with code 1 and do nothing' '
+    setup_topic_finished &&
+    (cd "space component" && git checkout -q topic-branch) &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+# This puts both repos on the branch and should print both
+# we would need to parse stderr to verify this.
+test_expect_success 'when any repo is on the branch to delete, exit with code 1 and do nothing' '
+    setup_topic_finished &&
+    (cd "space component" && git checkout -q topic-branch) &&
+    git checkout -q topic-branch &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'when branch does not exist in top repo, exit code 1 and do nothing' '
+    setup_topic_finished &&
+    git branch -q -D topic-branch &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'when branch does not exist in sub-repo, exit code 1 and do nothing' '
+    setup_topic_finished &&
+    (cd "space component" && git branch -q -D topic-branch) &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'topic branch not merged in local top repo, exit with code 1 and do nothing' '
+    setup_full_project &&
+    merge_sub_repo &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'topic branch not merged in sub-repo, exit with code 1 and do nothing' '
+    setup_full_project &&
+    git merge -q origin/topic-branch -m "merging topic in top-repo" &&
+    store_state &&
+    test_expect_code 1 git project topic delete topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'when topic is ended, delete the topic branch locally and remotely' '
+    setup_topic_finished &&
+    store_state &&
+    git project topic delete topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'with top repo in detached HEAD and topic ended, delete topic branch locally and remotely' '
+    setup_full_project &>/dev/null &&
+    git project topic end branch "close topic" >/dev/null &&
+    git checkout -q origin/HEAD &&
+    store_state &&
+    git project topic delete topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'when using --local and topic is ended, delete the topic branch locally only' '
+    setup_topic_finished &&
+    store_state &&
+    git project topic delete --local topic-branch &&
+    verify_no_remote_changes &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'when using --l and topic is ended, delete the topic branch locally only' '
+    setup_topic_finished &&
+    store_state &&
+    git project topic delete --l topic-branch &&
+    verify_no_remote_changes &&
+    verify_local_branches_deleted
+'
+
+# Check that the tests are not bypassed for --local
+test_expect_success 'topic branch not merged in sub-repo, using --local exit with code 1 and do nothing' '
+    setup_full_project &&
+    git merge -q origin/topic-branch -m "merging topic in top-repo" &&
+    store_state &&
+    test_expect_code 1 git project topic delete --local topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'even with --force, if top repo is on topic-branch, exit code 1 and do nothing' '
+    setup_topic_finished &&
+    git project checkout -q topic-branch &&
+    store_state &&
+    test_expect_code 1 git project topic delete --force topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'even with --force, if sub repo is on the branch to delete, exit with code 1 and do nothing' '
+    setup_topic_finished &&
+    (cd "space component" && git checkout -q topic-branch) &&
+    store_state &&
+    test_expect_code 1 git project topic delete --force topic-branch &&
+    verify_nochanges
+'
+
+# This puts both repos on the branch and should print both
+# we would need to parse stderr to verify this.
+test_expect_success 'even with --force, if any repo is on the branch to delete, exit with code 1 and do nothing' '
+    setup_topic_finished &&
+    (cd "space component" && git checkout -q topic-branch) &&
+    git checkout -q topic-branch &&
+    store_state &&
+    test_expect_code 1 git project topic delete --force topic-branch &&
+    verify_nochanges
+'
+
+test_expect_success 'with --force, if branch does not exist in top repo, delete existing branches' '
+    setup_topic_finished &&
+    git branch -q -D topic-branch &&
+    store_state &&
+    git project topic delete --force topic-branch &&
+    verify_remote_branches_deleted &&
+    (cd "space component" && ! git rev-parse --verify -q --no-revs topic-branch)
+'
+
+test_expect_success 'with --force, if branch does not exist in sub-repo, delete existing branches' '
+    setup_topic_finished &&
+    (cd "space component" && git branch -q -D topic-branch) &&
+    store_state &&
+    git project topic delete --force topic-branch &&
+    verify_remote_branches_deleted &&
+    ! git rev-parse --verify -q --no-revs topic-branch
+'
+
+test_expect_success 'with --force, topic branch not merged in local top repo, delete branches' '
+    setup_full_project &&
+    merge_sub_repo &&
+    store_state &&
+    git project topic delete --force topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'with --force, topic branch not merged in sub-repo, delete branches' '
+    setup_full_project &&
+    git merge -q origin/topic-branch -m "merging topic in top-repo" &&
+    store_state &&
+    git project topic delete --force topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'with --force, if topic is ended, delete the topic branch locally and remotely' '
+    setup_topic_finished &&
+    store_state &&
+    git project topic delete --force topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'with --force, with top repo in detached HEAD, delete topic branch locally and remotely' '
+    setup_full_project &>/dev/null &&
+    git checkout -q origin/HEAD &&
+    store_state &&
+    git project topic delete --force topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'when using --local and --force, delete the topic branch locally only' '
+    setup_full_project &&
+    store_state &&
+    git project topic delete --local --force topic-branch &&
+    verify_no_remote_changes &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'with -f, delete topic branch locally and remotely' '
+    setup_full_project &>/dev/null &&
+    store_state &&
+    git project topic delete -f topic-branch &&
+    verify_remote_branches_deleted &&
+    verify_local_branches_deleted
+'
+
+test_expect_success 'a branch in a repo without sub-modules can be deleted' '
+    git init -q --bare "local_repo.git" &&
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch &&
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git merge -q topic-branch &&
+    git remote add origin ../local_repo.git &&
+    git push -u origin topic-branch master &&
+    git project topic delete topic-branch &&
+    ! git rev-parse --quiet --no-revs --verify topic-branch &&
+    ! git ls-remote --exit-code --heads ../local_repo.git topic-branch &&
+    cd .. && rm -rf local_repo local_repo.git
+'
+
+test_expect_success 'a branch in a repo without sub-modules or remote can be deleted' '
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch &&
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git merge -q topic-branch &&
+    git project topic delete -l topic-branch &&
+    ! git rev-parse --quiet --no-revs --verify topic-branch &&
+    cd .. && rm -rf local_repo local_repo.git
+'
+
+test_expect_success 'trying to delete remotely without remote should give error 128' '
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch &&
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git merge -q topic-branch &&
+    test_expect_code 128 git project topic delete topic-branch &&
+    git rev-parse --quiet --no-revs --verify topic-branch &&
+    cd .. && rm -rf local_repo local_repo.git
+'
+
+test_done

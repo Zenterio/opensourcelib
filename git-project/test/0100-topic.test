@@ -1,0 +1,24 @@
+#
+# Test git-project-topic
+#
+
+test_description='git project topic'
+. ./test.sh
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project topic --invalid-option
+'
+
+test_expect_success '-h' '
+    git project topic -h
+'
+
+test_expect_success '--help' '
+    git project topic --help
+'
+
+test_expect_success '--commands' '
+    git project topic --commands
+'
+
+test_done

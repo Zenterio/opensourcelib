@@ -1,0 +1,20 @@
+#! /usr/bin/make -f
+
+override_dh_auto_build:
+	@make --no-print-directory dist
+	@make --no-print-directory docs
+	@make --no-print-directory commands
+
+override_dh_auto_install:
+	@dh_auto_install
+	@DEST="" make --no-print-directory install.config
+
+override_dh_auto_test:
+ifeq ($(strip $(DO_TEST)),n)
+	@echo "** Testing disabled! **"
+else
+	@unset DEB_INSTALL && make --no-print-directory test
+endif
+
+%:
+	dh $@

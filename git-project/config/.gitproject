@@ -1,0 +1,4 @@
+[project]
+template=https://github.com/devconsoft/git-project-template.git
+update-repo=https://github.com/devconsoft/git-project.git
+git-doc-path=/usr/share/doc/git-doc

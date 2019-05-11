@@ -1,0 +1,357 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT <option>"
+    echo "  $SCRIPT <branch> <message>"
+    echo ""
+    echo "Merge the named branch into the current branch in all"
+    echo "repositories of this project. The commit message is"
+    echo "mandatory."
+    echo ""
+    echo "options:"
+    echo "  --abandon  Abandon a merge without restoring state"
+    echo "  --abort    Abort a merge and restore original state"
+    echo "  --continue Continue merge after conflict resolution"
+    echo "  -h         Print this usage"
+    echo "  --help     Show man page"
+    echo ""
+}
+
+##echoerr##
+export -f echoerr
+
+##is-git-repo##
+
+##proj-top-dir##
+
+##submodule-branch-name##
+
+##verify-submodule-branch-names##
+
+##ref_equal##
+
+error_incomplete_merge()
+{
+    echoerr "
+It seems that there is a git project merge in progress
+(GIT_PROJECT_MERGE_HEAD exists) that was stopped because of a conflict.
+
+You can use 'git project status' to find the (sub) repository where
+there is a merge in progress and commit your changes there.
+
+
+When ready, chose to continue the merge with:
+    git project merge --continue
+
+You can also abort the merge to get back to a pre-merge state using:
+    git project merge --abort
+
+If you are sure there is no merge in progress, you can run:
+    git project merge --abandon
+Be aware that this may leave some of your repositories merged and others
+in a half completed merge state."
+    exit 128
+}
+export -f error_incomplete_merge
+
+#
+# Run the actual merge for a subrepo
+# $1 - source branch
+# $2 - message
+# $3 - continue mode (true/false)
+# Will check for and create GIT_PROJECT_MERGE_HEAD
+#
+run_merge() {
+    local source_ref
+    source_ref="$1"
+    local message
+    message="$2"
+    local continue_mode
+    continue_mode=$3
+    local errcode
+    if git rev-parse -q --no-revs --verify ${source_ref}
+    then
+        if git rev-parse -q --no-revs --verify MERGE_HEAD
+        then
+            if ${continue_mode}
+            then
+                git commit -m "${message}"
+                return 0
+            else
+                echoerr "Previous merge in '$(pwd)' with conflicts, giving up."
+                exit 1
+            fi
+        elif git rev-parse -q --no-revs --verify GIT_PROJECT_MERGE_HEAD
+        then
+            if ${continue_mode}
+            then
+                return 0
+            else
+                echoerr "Previous git project merge in '$(pwd)' with conflicts, giving up."
+                exit 1
+            fi
+        else
+            git update-ref GIT_PROJECT_ORIG_HEAD $(git rev-parse HEAD)
+            git update-ref GIT_PROJECT_MERGE_HEAD $(git rev-parse ${source_ref})
+            git merge -m "${message}" "${source_ref}"
+            errcode=$?
+            if [ $errcode -ne 0 ]
+            then
+                echoerr "Git project failed merge in $(pwd)."
+                exit $errcode
+            fi
+        fi
+    fi
+}
+export -f run_merge
+
+#
+# Abort a merge if one is in progress
+#
+abort_merge() {
+    if git rev-parse -q --no-revs --verify GIT_PROJECT_ORIG_HEAD
+    then
+        git reset --merge GIT_PROJECT_ORIG_HEAD
+    fi
+}
+export -f abort_merge
+
+#
+# Clean up
+#
+cleanup() {
+    git submodule --quiet foreach git update-ref -d GIT_PROJECT_MERGE_HEAD
+    git submodule --quiet foreach git update-ref -d GIT_PROJECT_ORIG_HEAD
+    rm .git/GIT_PROJECT_MERGE_SOURCE
+    rm .git/GIT_PROJECT_MERGE_MESSAGE
+    git update-ref -d GIT_PROJECT_MERGE_HEAD
+    git update-ref -d GIT_PROJECT_ORIG_HEAD
+}
+
+#
+# Check if there are traces of merges anywhere.
+#
+find_merge_artifacts() {
+        find .git -name GIT_PROJECT_MERGE_HEAD \
+            -o -name GIT_PROJECT_ORIG_HEAD \
+            -o -name GIT_PROJECT_MERGE_SOURCE \
+            -o -name GIT_PROJECT_MERGE_MESSAGE \
+            -o -name MERGE_HEAD | grep -q -e .
+}
+
+SCRIPT=$(basename "$0")
+ABANDON=false
+ABORT=false
+CONTINUE=false
+
+set +e
+ARGS=$(getopt -o h -l "abandon,abort,continue,help" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        --abandon)
+            shift
+            ABANDON=true
+            if ${ABORT} || ${CONTINUE}; then usage;exit 128;fi
+            ;;
+        --abort)
+            shift
+            ABORT=true
+            if ${ABANDON} || ${CONTINUE}; then usage;exit 128;fi
+            ;;
+        --continue)
+            shift
+            CONTINUE=true
+            if ${ABORT} || ${ABANDON}; then usage;exit 128;fi
+            ;;
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-merge "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+# Parse positional arguments.
+if ${CONTINUE} || ${ABANDON} || ${ABORT}
+then
+    if [ $# -ne 0 ]
+    then
+        usage
+        exit 129
+    fi
+else
+    if [ $# -ne 2 ]
+    then
+        usage
+        exit 129
+    else
+        SOURCE_REF="$1"
+        MESSAGE="$2"
+    fi
+fi
+
+# Basic sanity check
+set -e
+is_git_repo
+cd "$(proj_top_dir)"
+
+if ${ABANDON}
+then
+    if find_merge_artifacts
+    then
+        git submodule --quiet foreach git update-ref -d MERGE_HEAD
+        git update-ref -d MERGE_HEAD
+        cleanup
+        exit 0
+    else
+        echoerr "Trying to abandon a merge when there is no trace of a merge."
+        exit 2
+    fi
+fi
+
+if ${ABORT}
+then
+    if [ ! -f .git/GIT_PROJECT_MERGE_SOURCE ]
+    then
+        echoerr "Trying to abort merge when there is no merge in progress."
+        exit 2
+    fi
+
+    while read -r path; do
+        (cd "${path}" && abort_merge)
+    done <<< "$(git project --submodules)"
+
+    abort_merge
+    cleanup
+    exit 0
+fi
+
+if ${CONTINUE}
+then
+    if [ ! -f .git/GIT_PROJECT_MERGE_SOURCE ]
+    then
+        echoerr "Trying to continue merge when there is no merge in progress."
+        exit 2
+    fi
+    SOURCE_REF="$(<.git/GIT_PROJECT_MERGE_SOURCE)"
+    MESSAGE="$(<.git/GIT_PROJECT_MERGE_MESSAGE)"
+    echo "Resuming merge from '${SOURCE_REF}' with message:"
+    echo ${MESSAGE}
+elif [ -f .git/GIT_PROJECT_MERGE_SOURCE ]
+then
+    error_incomplete_merge
+fi
+
+if ! git rev-parse -q --no-revs --verify "${SOURCE_REF}"
+then
+    echoerr "Branch '${SOURCE_REF}' not found in top repository."
+    exit 1
+fi
+
+# Check for git merge in top repo
+if git rev-parse -q --no-revs --verify MERGE_HEAD && \
+    ! [ -f .git/GIT_PROJECT_MERGE_SOURCE ]
+then
+    echoerr "Unresolved 'git merge' detected in top repository."
+    echoerr "See 'git status' for details."
+    exit 5
+fi
+
+if [ $(git rev-parse -q --verify "${SOURCE_REF}") == \
+     $(git rev-parse -q --verify HEAD) ]
+then
+    echoerr "Already up-to-date."
+    exit 0
+fi
+
+verify_submodule_branch_names "${SOURCE_REF}"
+
+# Start the merge by storing information for CONTINUE
+if ! ${CONTINUE}
+then
+    echo "${SOURCE_REF}" >.git/GIT_PROJECT_MERGE_SOURCE
+    echo "${MESSAGE}" >.git/GIT_PROJECT_MERGE_MESSAGE
+
+    git update-ref GIT_PROJECT_ORIG_HEAD $(git rev-parse HEAD)
+    git update-ref GIT_PROJECT_MERGE_HEAD $(git rev-parse "${SOURCE_REF}")
+fi
+
+# If we have a MERGE_HEAD in top, all subrepos are merged,
+# but there was a conflict in top.
+if ! git rev-parse -q --no-revs --verify MERGE_HEAD
+then
+    mapfile -t MODULES < <( git project --submodules)
+    if [ ${#MODULES[@]} -ne 0 ]
+    then
+        for repo in "${MODULES[@]}"
+        do
+            (cd "$repo"; run_merge "$(submodule_branch_name "${repo}" "${SOURCE_REF}")" "${MESSAGE}" ${CONTINUE})
+            git add "${repo}"
+        done
+    fi
+    if [ -n "$(git status --porcelain)" ]
+    then
+        git status
+        git commit -q -m "$MESSAGE"
+    fi
+    git merge -m "${MESSAGE}" "${SOURCE_REF}"
+elif ${CONTINUE}
+then
+    git commit -m "${MESSAGE}" "${SOURCE_REF}"
+fi
+
+if [ -f .gitmodules ]
+then
+    git show GIT_PROJECT_ORIG_HEAD:.gitmodules >.gitmodules
+    if ! git diff --exit-code --name-only .gitmodules > /dev/null
+    then
+        git add .gitmodules
+        if ref_equal HEAD "${SOURCE_REF}"
+        then
+            # Fast forward merge in top repo, we need to create a new commit.
+            git commit -q -m "${MESSAGE}"
+        else
+            # Merge commit in top repo, we amend it.
+            git commit -q --amend -m "${MESSAGE}"
+        fi
+    fi
+    # Create a new HEAD where ORIG_HEAD is replaced with
+    # GIT_PROJECT_ORIG_HEAD unless we have done a fast forward merge.
+    if ! ref_equal HEAD "${SOURCE_REF}"
+    then
+        ORIG_HEAD=$(git rev-parse --verify ORIG_HEAD)
+        GP_ORIG_HEAD=$(git rev-parse --verify GIT_PROJECT_ORIG_HEAD)
+        NEW_HEAD=$(
+            git cat-file commit HEAD |
+            sed "s/${ORIG_HEAD}/${GP_ORIG_HEAD}/" |
+            git hash-object -t commit -w --stdin
+        )
+        git update-ref HEAD ${NEW_HEAD}
+        # Move ORIG_HEAD
+        git update-ref ORIG_HEAD $(git rev-parse GIT_PROJECT_ORIG_HEAD)
+    fi
+fi
+
+cleanup

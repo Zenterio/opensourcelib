@@ -1,0 +1,50 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+
+  config.ssh.forward_agent = true
+  config.vm.box_download_insecure = true
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 2048
+    v.cpus = 1
+  end
+
+  config.vm.define "u14" do |u14|
+    u14.vm.box = "zenterio-ubuntu-14"
+    u14.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-14/metadata.json"
+    u14.vm.provision :shell, path: "vagrant_provisioning/test_runner_provisioning.sh"
+  end
+
+  config.vm.define "u16" do |u16|
+    u16.vm.box = "zenterio-ubuntu-16"
+    u16.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-16/metadata.json"
+    u16.vm.provision :shell, path: "vagrant_provisioning/test_runner_provisioning.sh"
+  end
+
+  config.vm.define "u18" do |u18|
+    u18.vm.box = "zenterio-ubuntu-18"
+    u18.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-18/metadata.json"
+    u18.vm.provision :shell, path: "vagrant_provisioning/test_runner_provisioning.sh"
+  end
+
+  config.vm.define "u14_deb_builder" do |u14_deb_builder|
+    u14_deb_builder.vm.box = "zenterio-es-dev-14"
+    u14_deb_builder.vm.box_url = "https://vagrant.zenterio.lan/zenterio-es-dev-14/metadata.json"
+    u14_deb_builder.vm.provision :shell, path: "vagrant_provisioning/deb_builder_provisioning.sh"
+  end
+
+  config.vm.define "u16_deb_builder" do |u16_deb_builder|
+    u16_deb_builder.vm.box = "zenterio-es-dev-16"
+    u16_deb_builder.vm.box_url = "https://vagrant.zenterio.lan/zenterio-es-dev-16/metadata.json"
+    u16_deb_builder.vm.provision :shell, path: "vagrant_provisioning/deb_builder_provisioning.sh"
+  end
+
+  config.vm.define "u18_deb_builder" do |u18_deb_builder|
+    u18_deb_builder.vm.box = "zenterio-es-dev-18"
+    u18_deb_builder.vm.box_url = "https://vagrant.zenterio.lan/zenterio-es-dev-18/metadata.json"
+    u18_deb_builder.vm.provision :shell, path: "vagrant_provisioning/deb_builder_provisioning.sh"
+  end
+
+end

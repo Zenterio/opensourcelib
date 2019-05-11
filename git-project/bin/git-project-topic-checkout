@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [-f|--force] [-q|--quiet] <topic-branch>"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage."
+    echo "  --help               Show man page."
+    echo "  -f, --force          Throw away local changes."
+    echo "  -q, --quiet          Quiet, suppress feedback messages."
+    echo ""
+}
+
+##echoerr##
+
+##get-topic##
+
+##is-git-repo##
+
+##proj-top-dir##
+
+##submodule-branch-name##
+
+##submodules-in-topic##
+
+##exit-if-local-changes##
+
+# Check out topic branch in submodules
+# Used global variables:
+# MODULES
+# BRANCH
+# SUBCOMMAND_FLAGS
+checkout_topic_branches() {
+    if [ ${#MODULES[@]} -gt 0 ]
+    then
+        local repo
+        for repo in "${MODULES[@]}"
+        do
+            pushd "${repo}" &>/dev/null
+            git checkout ${SUBCOMMAND_FLAGS} ${BRANCH}
+            popd &>/dev/null
+        done
+    fi
+}
+
+SCRIPT=$(basename "$0")
+QUITE=false
+FORCE=false
+SUBCOMMAND_FLAGS=""
+
+set +e
+ARGS=$(getopt -o fhq -l "force,help,quiet" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-topic-delete "$@"
+            exit $?
+            ;;
+        -q|--quiet)
+            shift
+            QUIET=true
+            SUBCOMMAND_FLAGS="${SUBCOMMAND_FLAGS} -q"
+            ;;
+        -f|--force)
+            shift
+            FORCE=true
+            SUBCOMMAND_FLAGS="${SUBCOMMAND_FLAGS} -f"
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $# -ne 1 ]
+then
+    usage
+    exit 129
+fi
+
+BRANCH=$(get_topic "$1")
+
+is_git_repo
+
+cd "$(proj_top_dir)"
+set -e
+
+if ! ${FORCE}
+then
+    exit_if_local_changes "has local changes, refusing to checkout,
+use --force to overwrite local changes"
+fi
+
+git project checkout ${SUBCOMMAND_FLAGS} ${BRANCH}
+mapfile -t MODULES < <(submodules_in_topic ${BRANCH})
+checkout_topic_branches
+
+exit 0

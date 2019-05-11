@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [options] <branch>"
+    echo ""
+    echo "options:"
+    echo "  -h                   print this usage"
+    echo "  --help               show man page"
+    echo "  -q, --quiet          suppress progress reporting"
+    echo "  --detach             detach the HEAD at named commit"
+    echo "  -f, --force          force checkout (throw away local modifications)"
+    echo ""
+    echo "This command will checkout the branch, tag or commit."
+}
+
+##echoerr##
+
+##is-git-repo##
+
+##proj-top-dir##
+
+##exit-if-local-changes##
+
+SCRIPT=$(basename "$0")
+PASSED_ARGS=()
+FORCED=""
+QUIET=""
+
+if ! ARGS=$(getopt -o fhq -l "detach,force,help,quiet" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-checkout "$@"
+            exit $?
+            ;;
+        -f|--force)
+            FORCED="$1"
+            PASSED_ARGS+=("$1")
+            shift
+            ;;
+        -q|--quiet)
+            QUIET="$1"
+            PASSED_ARGS+=("$1")
+            shift
+            ;;
+        --detach)
+            PASSED_ARGS+=("$1")
+            shift
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $# -ne 1 ]
+then
+    usage
+    exit 129
+fi
+
+# Reference
+PASSED_ARGS+=("$1")
+shift
+
+is_git_repo
+
+cd "$(proj_top_dir)"
+
+if [ -z "${FORCED}" ]
+then
+    exit_if_local_changes "has local changes, refusing to checkout,
+use --force to overwrite local changes"
+fi
+
+set -e
+git checkout "${PASSED_ARGS[@]}"
+# shellcheck disable=SC2086
+git submodule ${QUIET} sync
+# shellcheck disable=SC2086
+git submodule ${QUIET} update --init --recursive ${FORCED}
+# shellcheck disable=SC2086
+git submodule ${QUIET} foreach -q git checkout -q HEAD^0

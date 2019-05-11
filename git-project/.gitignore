@@ -1,0 +1,13 @@
+/build/
+/debian/
+/dist/
+/.vagrant/
+test/sut-*
+*~
+.idea
+*#*
+__pycache__
+.cache
+*.pyc
+debian.make
+lib/version

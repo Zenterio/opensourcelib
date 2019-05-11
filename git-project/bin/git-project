@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [--commands] [--guides] [-h] [--help] [--sw-update]"
+    echo "    [-v] [--version] [<command>]"
+    echo ""
+    echo "options:"
+    echo " --commands           Print list of available commands"
+    echo " --guides             Print list of available guides"
+    echo " -h                   Print this usage"
+    echo " --help               Show man page"
+    echo " --submodules         Print list of top level submodules"
+    echo " --all-submodules     Print list of all submodules"
+    echo " --sw-update          Update git-project installation with latest version"
+    echo " -v                   Print git-project's version number"
+    echo " --version            Print git-project's version string"
+    echo ""
+    echo "Run 'git help gitproject' to access the git-project user manual."
+    echo ""
+}
+
+##array-contains##
+
+##proj-top-dir##
+
+run-command() {
+    local command="$1"
+    shift
+    git project-"${command}" "$@"
+}
+
+print-version-str() {
+    echo "$VERSION_STR"
+}
+
+print-version() {
+    echo "$VERSION"
+}
+
+print-commands() {
+    echo "${COMMANDS[@]}"
+}
+
+print-guides() {
+    local mandir; mandir="$(git config project.install.man)"
+    local contents; contents="$(ls -1 "${mandir}"/man7/gitproject*)"
+    contents="${contents//${mandir}\/man7\//}"
+    contents="${contents//.7/}"
+    contents="${contents//.gz/}"
+    echo "${contents}" | sort -u
+}
+
+# Adds its own arguments to git submodule foreach.
+# e.g. --recursive to list all modules recursively
+print-submodules() {
+    local topdir; topdir="$(proj_top_dir)"
+    local paths
+    paths=$(cd "${topdir}" && git submodule -q foreach "$@" 'pwd')
+    paths=$(echo "${paths}" | sort)
+    if [ -n "${paths}" ]
+    then
+        while read -r path; do
+            echo "${path:((${#topdir} + 1))}"
+        done <<< "${paths}"
+    fi
+}
+
+SCRIPT=$(basename "$0")
+##version##
+VERSION_STR="git project version ${VERSION}"
+INSTALL_DIR=$(dirname "$0")
+
+# Assume all files in the install directory are sub-commands to git-project
+mapfile -t COMMANDS <<< "$(cd "$INSTALL_DIR" && ls git-project-*)"
+
+# Remove git-project- from the file names to get the name of the commands.
+COMMANDS=("${COMMANDS[@]/#git-project-/}")
+
+# Delegate to sub commands
+set +u
+if array-contains "$1" "${COMMANDS[@]}"; then
+    run-command "$@"
+    exit $?
+fi
+set -u
+
+# --sw-update, alias for command sw-update
+set +u
+if [ "$1" = "--sw-update" ]; then
+    shift
+    run-command sw-update "$@"
+    exit $?
+fi
+set -u
+
+# Options to git-project
+if ! ARGS=$(getopt -o hv -l "all-submodules,help,version,commands,guides,submodules" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project "$@"
+            exit 0
+            ;;
+        --version)
+            print-version-str
+            exit $?
+            ;;
+        -v)
+            shift
+            print-version
+            exit $?
+            ;;
+        --commands)
+            shift
+            print-commands
+            exit $?
+            ;;
+        --guides)
+            shift
+            print-guides
+            exit $?
+            ;;
+        --submodules)
+            shift
+            print-submodules
+            exit $?
+            ;;
+        --all-submodules)
+            shift
+            print-submodules --recursive
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+usage
+exit 2

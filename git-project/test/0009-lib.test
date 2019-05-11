@@ -1,0 +1,11 @@
+#
+# Long Description
+#
+
+test_description='test lib functions'
+. ./test.sh
+
+source ${SHARNESS_BUILD_DIRECTORY}/lib/*
+
+
+test_done

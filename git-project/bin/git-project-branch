@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT branch [<subrepos>]"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage"
+    echo "  --help               Show man page"
+    echo ""
+    echo "This command will create and checkout a branch in the listed subrepos."
+    echo "If the subrepos list is empty, it will create and checkout the branch"
+    echo "in all subrepos."
+}
+
+##echoerr##
+
+##array-contains##
+
+##is-git-repo##
+
+##verify-submodule-list##
+
+##proj-top-dir##
+
+##in-detached-head##
+
+##submodule-branch-name##
+##verify-submodule-branch-names##
+
+# Check if checkout should be ok
+# This will fail if branch exists and we are not on it.
+# $1 - branch
+# $2 - subrepo
+check_checkout() {
+    local branch
+    branch="$1"
+    shift
+    local repo
+    repo="$1"
+    shift
+    (cd "${repo}"
+    local current
+    current=$(git symbolic-ref -q --short HEAD)
+    if [ "${current}" == "${branch}" ]
+    then
+        return 0
+    fi
+    if git show-ref -q "${branch}"
+    then
+        echoerr "fatal: A branch named '${branch}' already exists in '${repo}'"
+        return 128
+    fi
+    return 0)
+}
+
+# Checkout branch in subrepository
+# $1 - branch
+# $2 - subrepo
+checkout_subrepo() {
+    local branch
+    branch=$1
+    shift
+    local repo
+    repo=$1
+    shift
+    local modules_file
+    modules_file="$(pwd)/.gitmodules"
+    (cd "${repo}"
+    if ! git show-ref -q "${branch}"
+    then
+        git checkout -q -b "${branch}"
+        git config -f "$modules_file" "submodule.${repo}.branch" "$branch"
+    fi)
+}
+
+SCRIPT=$(basename "$0")
+
+if ! ARGS=$(getopt -o h -l "help" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-COMMAND "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $# -eq 0 ]
+then
+    usage
+    exit 129
+fi
+
+BRANCH="$1"
+shift
+
+is_git_repo
+
+cd "$(proj_top_dir)"
+
+verify_submodule_branch_names HEAD
+
+if [ $# -ne 0 ]
+then
+    verify_submodule_list "$@"
+    modules=("$@")
+else
+    mapfile -t modules < <( git project --submodules)
+fi
+
+if [ ${#modules[@]} -gt 0 ]
+then
+    for repo in . "${modules[@]}"
+    do
+        check_checkout "${BRANCH}" "${repo}" || exit 128
+    done
+fi
+
+if ! git show-ref -q "${BRANCH}"
+then
+    git checkout -q -b "${BRANCH}"
+fi
+
+if [ ${#modules[@]} -gt 0 ]
+then
+    for repo in "${modules[@]}"
+    do
+        checkout_subrepo "${BRANCH}" "${repo}"
+    done
+fi

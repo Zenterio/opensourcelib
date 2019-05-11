@@ -1,0 +1,19 @@
+# Verify that all the supplied module names are top modules.
+#
+# After parsing arguments and commands, call with:
+# verify_submodule_list "$@"
+# Will abort with error message if any argument is not a top level module.
+# Require ##array-contains## to be included.
+verify_submodule_list() {
+    local submodules
+    mapfile -t submodules < <( git project --submodules)
+    for submodule in "$@"
+    do
+        if ! array-contains "${submodule}" "${submodules[@]}"
+        then
+            echo -n "${submodule} is not a top level component. "
+            echo "You may only modify top level components."
+            exit 129
+        fi
+    done
+}

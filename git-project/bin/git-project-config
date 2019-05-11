@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [options] "
+    echo ""
+    echo "Action"
+    echo "  -l, --list           List all project variables"
+    echo "  -h                   Print this usage"
+    echo "  --help               Show man page"
+    echo ""
+    echo "Config file location (mutually exclusive)"
+    echo "  --global             Only read from global config (~/.gitconfig)"
+    echo "  --system             Only read from system wide config"
+    echo "  --local              Only read from local config (.git/config)"
+    echo "  -f, --file filename  Only read from filename"
+    echo "  --blob blob          Only read from specified git blob"
+    echo ""
+    echo "Other"
+    echo "  -z, --null           Use null character as value separator"
+    echo "  --[no-]includes      (Don't) respect include directives in files"
+    echo ""
+    echo "git project config uses --get-regexp, so the default output format is"
+    echo "'key value' instead of 'key=value'"
+    echo ""
+}
+
+##echoerr##
+
+cleanup() {
+    return
+}
+trap cleanup EXIT
+
+SCRIPT=$(basename "$0")
+
+if ! ARGS=$(getopt -o f:hlz -l "blob:,file:,global,help,includes,list,local,no-includes,null,system,testmode" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+eval set -- "$ARGS";
+
+XARGS=""
+BLOB=""
+FILE=""
+LIST_ARG_FOUND=false
+TEST_MODE=""
+
+while true; do
+    case "$1" in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-config "$@"
+            exit $?
+            ;;
+        -l|--list)
+            shift
+            LIST_ARG_FOUND=true
+            ;;
+        -z|--null)
+            shift
+            XARGS="${XARGS} -z"
+            ;;
+        --blob)
+            shift
+            BLOB="$1"
+            shift
+            ;;
+        -f|--file)
+            shift
+            FILE="$1"
+            shift
+            ;;
+        --system)
+            shift
+            XARGS="${XARGS} --system"
+            ;;
+        --local)
+            shift
+            XARGS="${XARGS} --local"
+            ;;
+        --global)
+            shift
+            XARGS="${XARGS} --global"
+            ;;
+        --includes)
+            shift
+            XARGS="${XARGS} --includes"
+            ;;
+        --no-includes)
+            shift
+            XARGS="${XARGS} --no-includes"
+            ;;
+        --testmode)
+            shift
+            TEST_MODE="echo"
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if ! ${LIST_ARG_FOUND}; then
+    usage
+    exit 129
+fi
+
+if [ -n "$FILE" ] && [ -n "$BLOB" ]; then
+    echoerr "error: only one config file at a time."
+    usage
+    exit 129
+fi
+
+if [ -n "$FILE" ]; then
+    # shellcheck disable=SC2086
+    ${TEST_MODE} git config ${XARGS} --file "$FILE" --get-regexp ^project[.].*
+elif [ -n "$BLOB" ]; then
+    # shellcheck disable=SC2086
+    ${TEST_MODE} git config ${XARGS} --blob "$BLOB" --get-regexp ^project[.].*
+else
+    # shellcheck disable=SC2086
+    ${TEST_MODE} git config ${XARGS} --get-regexp ^project[.].*
+fi

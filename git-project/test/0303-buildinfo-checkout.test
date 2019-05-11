@@ -1,0 +1,192 @@
+#
+# Test git-buildinfo-checkout
+#
+
+test_description='git buildinfo checkout'
+. ./test.sh
+
+REPO=top
+
+setup_test_repos(){
+    init_repo_variable component
+    init_repo_variable top
+    init_repo_variable onbranch
+    init_repo_variable detachedhead
+    create_remote_repo "${COMPONENT_PATH}" &&
+    create_remote_repo "${TOP_PATH}" &&
+    create_remote_repo "${ONBRANCH_PATH}" &&
+    create_remote_repo "${DETACHEDHEAD_PATH}" &&
+    (
+     git clone -q "${TOP_PATH}" top &&
+     add_submodule_to_repo "$REPO" "${COMPONENT_PATH}" component &&
+     cd top &&
+     git push origin master &&
+     echo "local changes" >> repo.info &&
+     mkdir externals &&
+     echo "*" > externals/.gitignore &&
+     cd externals &&
+     git clone -q "${ONBRANCH_PATH}" onbranch &&
+     cd onbranch &&
+     touch "dirty_workspace.txt" &&
+     cd .. &&
+     git clone -q "${DETACHEDHEAD_PATH}" detachedhead &&
+     cd detachedhead &&
+     git checkout -q $(git rev-parse master)
+    )
+}
+setup_test_repos
+
+prepare_repo() {
+    local directory; directory="$1"
+    mkdir ${directory} &&
+    test_when_finished rm -rf ${directory} &&
+    git clone -q "${TOP_PATH}" ${directory}/top &&
+    (cd $REPO &&
+     git buildinfo status --save "../${directory}/${directory}.txt") &&
+    test -f "${directory}/${directory}.txt"
+}
+
+get_date_in_seconds(){
+    date '+%s'
+}
+
+convert_time_to_seconds(){
+    local time_str="$1"
+    date -d "${time_str}" '+%s'
+}
+
+parse_time(){
+    local content="$1"
+    local parsed_line; parsed_line=$(echo "${content}" | grep -m 1 "Time:")
+    echo ${parsed_line:6}
+}
+
+parse_property() {
+    local property="$1"; shift
+    local offset; offset=$((${#property}+2))
+    local content="$@"
+    local parsed_lines; parsed_lines=$(echo "${content}" | grep "${property}")
+    while read -r line; do
+        echo "${line:$offset}"
+    done <<< "${parsed_lines}"
+}
+
+parse_message(){
+    local content="$1"
+    echo "${content}" | sed -n '/Message/{n;p}'
+}
+
+# $1 - file1
+# $2 - file2
+test_expect_similar(){
+    local content1; local content2
+    #Remove time
+    content1=$(cat "$1" | grep -v -e Time -e Branch -e Commit)
+    content2=$(cat "$2" | grep -v -e Time -e Branch -e Commit)
+    test_equal "${content1}" "${content2}"
+    local commit1; local commit2
+    commit1=($(parse_property 'Commit' "$1"))
+    commit2=($(parse_property 'Commit' "$2"))
+    test_equal ${commit1[0]} ${commit2[0]}
+}
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git buildinfo checkout --invalid-option
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git buildinfo checkout -h)" &&
+    test -z "${output##Usage:*git-buildinfo-checkout*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git buildinfo checkout --help)" &&
+    test -z "${output##GIT-BUILDINFO-CHECKOUT(1)*}"
+'
+
+test_expect_success 'missing positional argument exits with 129' '
+    test_expect_code 129 git buildinfo checkout
+'
+
+test_expect_success 'non-existing build-info file exits with 1' '
+    echo "Repository: FOO" > incomplete.txt &&
+    test_expect_code 2 git buildinfo checkout incomplete.txt
+'
+
+test_expect_success 'incomplete build-info file exits with 2' '
+    echo "Repository: FOO" > incomplete.txt &&
+    test_expect_code 2 git buildinfo checkout incomplete.txt
+'
+
+test_expect_success 'build-info file without repo data exits with 3' '
+    echo "not build-info data" > empty.txt &&
+    test_expect_code 3 git buildinfo checkout empty.txt
+'
+
+test_expect_success 'checkout using single repo build-info file' '
+    mkdir single &&
+    test_when_finished rm -rf single &&
+    git clone -q "${ONBRANCH_PATH}" single/onbranch &&
+    (cd $REPO &&
+     cd externals/onbranch &&
+     git buildinfo status --save "../../../single/single.txt") &&
+    test -f "single/single.txt" &&
+    (cd single/onbranch &&
+     git buildinfo checkout ../single.txt &&
+     git buildinfo status --save ../single2.txt) &&
+    test_expect_similar single/single.txt single/single2.txt
+'
+
+test_expect_success 'checkout using multi repo build-info file' '
+    prepare_repo multi &&
+    (cd multi/top &&
+     git buildinfo checkout ../multi.txt &&
+     git buildinfo status --save ../multi2.txt &&
+     test -d externals/onbranch &&
+     test -d externals/detachedhead) &&
+    test_expect_similar multi/multi.txt multi/multi2.txt
+'
+
+test_expect_success 'checkout works with submodules' '
+    prepare_repo submodule &&
+    (cd submodule/top &&
+     test ! -f component/repo.info &&
+     git buildinfo checkout ../submodule.txt &&
+     test -f component/repo.info)
+'
+
+test_expect_success 'checkout with no-clone option prevents cloning of repos not already present' '
+    prepare_repo noclone &&
+    (cd noclone/top &&
+     test_expect_code 1 git buildinfo checkout --no-clone ../noclone.txt &&
+     test ! -e externals/onbranch &&
+     test ! -e externals/detachedhead)
+'
+
+test_expect_success 'checkout with checkout-branch option leaves on branch instead of detached HEAD' '
+    prepare_repo branch &&
+    (cd branch/top &&
+     git buildinfo checkout --checkout-branch ../branch.txt &&
+     test_equal "$(git rev-parse --abbrev-ref HEAD)" "master") &&
+    (cd branch/top/externals/onbranch &&
+     test_equal "$(git rev-parse --abbrev-ref HEAD)" "master") &&
+    (cd branch/top/externals/detachedhead &&
+     test_equal "$(git rev-parse --abbrev-ref HEAD)" "HEAD")
+'
+
+test_expect_success 'checkout with invalid sha gives exit code 1' '
+    git clone -q "${TOP_PATH}" invalid/top &&
+    test_when_finished rm -rf invalid/top &&
+    (cd invalid/top &&
+     test_expect_code 1 git buildinfo checkout "${RESOURCE_DIR}/build-info-invalid-sha.txt")
+'
+
+test_expect_success 'checkout with existing non-git directory exits with code 1' '
+    prepare_repo existingdir &&
+    (cd existingdir/top &&
+     mkdir -p externals/onbranch &&
+     test_expect_code 1 git buildinfo checkout ../existingdir.txt) &&
+    test ! -e existingdir/top/externals/onbranch/.git
+'
+
+test_done

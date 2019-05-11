@@ -1,0 +1,8 @@
+# Complains about non existing branch and exits with code 128
+# $1 - The branch name.
+error_no_branch_found() {
+    local branch=$1
+
+    echoerr "No branch '${branch}' found!"
+    exit 128
+}

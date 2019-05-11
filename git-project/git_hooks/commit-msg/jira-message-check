@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+set -eu
+
+if [ "$1" = "--about" ]; then
+    echo "Hook refusing to commit unless message is prefixed with jira issue key."
+    exit 0
+fi
+
+SEP="---------------------------------------------"
+ISSUE_REGEX='^[A-Z][A-Z_0-9]+-[0-9]+[ \t\n:]'
+WHITESPACE_REGEX='^[[:space:]]'
+
+MSG_FILE=$1
+MSG_CONTENT=$(cat "${MSG_FILE}")
+
+# $@ - error message
+die() {
+    echo -e "$@" 1>&2
+    exit 1
+}
+
+
+# $1 - commit message
+# $2 - reason
+reject() {
+    local message=$1; shift
+    local reason=$@
+
+    die "
+Your commit message was rejected for the following reason:
+
+${reason}
+$SEP
+${message}
+$SEP
+"
+}
+
+# $@ - message content
+check_message() {
+    local message_content=$@
+
+    [[ ${message_content} =~ $WHITESPACE_REGEX ]] && \
+       reject "${message_content}" "Leading whitespace is not allowed."
+
+     # Make sure that the log message references a Jira issue.
+     [[ ${message_content} =~ $ISSUE_REGEX ]] || \
+       reject "${message_content}" "You must specify a Jira issue reference matching the following pattern:\n$ISSUE_REGEX\nExample: 'DP-1 info', 'YG-17:info', 'Vestel-42: info'"
+
+     # Check message length, ignoring issue refs
+     local message_without_jira_ref=${message_content/${BASH_REMATCH[0]}}
+
+     [[ ${#message_without_jira_ref} -gt 10 ]] || \
+       reject "${message_content}" "Your commit message \"${message_without_jira_ref}\" is too short. Be more descriptive."
+
+}
+
+check_message "${MSG_CONTENT}"

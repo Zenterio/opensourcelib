@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [-c,--checkout-commit] FILE|URL"
+    echo ""
+    echo "options:"
+    echo "  -c, --checkout-commit	Checks-out commit instead of branch."
+    echo "  -h                   	Print this usage."
+    echo "  --help               	Show man page."
+    echo "Clones repositories based on the provided build-info file."
+    echo "The file can be provided either via file-path or URL (requires curl)."
+}
+
+SCRIPT=$(basename "$0")
+CHECKOUT_COMMITS=false
+
+##echoerr##
+
+##buildinfo-parse-src##
+
+##buildinfo-checkout-commit##
+
+clone_parsed_repos() {
+    local index; index=0
+    local num_repos; num_repos=$(buildinfo_get_number_of_repositories)
+    local branch; local remote; local directory;
+    while test "${index}" -lt "${num_repos}"; do
+        echo "cloning $(buildinfo_get_repository $index)"
+        branch=$(buildinfo_get_branch $index)
+        remote=$(buildinfo_get_remote $index)
+        directory=$(buildinfo_get_directory $index)
+        if [ "${branch}" = "HEAD" ]; then
+            git project clone "${remote}" "${directory}"
+            buildinfo_checkout_commit $index
+        else
+            git project clone -b "${branch}" "${remote}" "${directory}"
+            if ${CHECKOUT_COMMITS}; then
+                buildinfo_checkout_commit $index
+            fi
+        fi
+        index=$((index+1))
+    done
+}
+
+buildinfo_clone() {
+    local src; src="$*"
+    buildinfo_parse_src "${src}"
+    clone_parsed_repos
+}
+
+if ! ARGS=$(getopt -o ch -l "checkout-commit,help" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help buildinfo-clone "$@"
+            exit $?
+            ;;
+        -c|--checkout-commit)
+            shift
+            CHECKOUT_COMMITS=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ ${#@} -ne 1 ]; then
+    echoerr "${SCRIPT} requires exactly one positional argument, FILE or URL."
+    exit 129
+fi
+
+SOURCE="$1"
+
+if [ -e "${SOURCE##http?://*}" ] && [ -e "${SOURCE##ftp://*}" ] && [ -e "${SOURCE##file://*}" ]; then
+    if [ ! -f "$SOURCE" ]; then
+        echoerr "$SOURCE: no such file."
+        exit 1
+    fi
+fi
+
+buildinfo_clone "$SOURCE"

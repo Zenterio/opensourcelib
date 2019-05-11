@@ -1,0 +1,62 @@
+
+  Usage: make <TARGET> [VERBOSE=v]
+
+    help         Print this help
+
+    readme       View the README in console
+                 After installation, the readme is also available as
+                 the man page for 'gitproject-userguide'.
+
+    readme-html  View the README in browser
+
+    install      Install git-project on system
+                 defaults to $(DESTDIR)$(PREFIX)
+
+    uninstall    Uninstall git-project from system
+                 defaults to $(DESTDIR)$(PREFIX)
+                 Uninstall will not delete directories created during
+                 installation, even if they are empty.
+
+                 Root destination directory, (default=$(DESTDIR)),
+                 can be overridden with DESTDIR=.
+                 Prefix, (default=$(PREFIX)), can be overriden
+                 with PREFIX=.
+                 Bash completion prefix, (default=$(COMPLETIONPREFIX)),
+                 can be overriden with COMPLETIONPREFIX=.
+                 Path to HTML based documentation, (default=$(HTMLPREFIX)),
+                 can be overriden with HTMLPREFIX=.
+
+                 Files that will be installed:
+                  * scripts from bin directory:
+                      to: $(BINDEST)
+                  * man pages from man directory:
+                      to: $(MANDEST1), $(MANDEST7)
+                  * html-man pages from man directory:
+                      to: $(HTMLDEST)
+                  * bash-completion script
+                      to: $(COMPLETIONDEST)
+
+                 Depending on destination directory, install/uninstall
+                 may require sudo.
+                 By default, the installation affects git system configuration.
+                 This can be overriden by GITCONFIG=--global.
+
+                 The installation parameters is saved with other git-project
+                 parameters in git-config. To reuse the existing config for
+                 install/uninstall add the argument FROM_CONFIG=y.
+                 The value of GITCONFIG will decide witch config to read from.
+
+                 To check the effects of setting different path options,
+                 run make help with the options active and the list
+                 of paths above will take that into account.
+                 Only use alternative paths if you know what you are doing.
+
+    sandbox      If you want to try out (or test) git project with a minimum of
+                 hassle, it is possible to create a tiny sandbox project repository
+                 with two submodules on local disc. Usage:
+                 make sandbox DEST=<path>
+
+                 View the README in console or the userguide for git project for
+                 more information about how to utilize the sandbox.
+
+    dev-help     Print extended developer help

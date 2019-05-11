@@ -1,0 +1,269 @@
+#!/usr/bin/env bash
+#
+# This is a modified version of "Git Hooks" - https://github.com/icefox/git-hooks'
+# Copyright (c) 2016-2017 Zenterio AB
+#
+# Original copy right statement:
+# ----------------------------------
+#
+# Copyright (c) 2010-2014, Benjamin C. Meyer <ben@meyerhome.net>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the project nor the
+#    names of its contributors may be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ----------------------------------
+#
+
+
+##proj-top-dir##
+
+hook_dirs()
+{
+    if [ ! -z "${1}" ] ; then
+        hook="/${1}"
+    else
+        hook=""
+    fi
+    echo "${HOME}/.git_hooks${hook}"
+    git rev-parse --git-dir &> /dev/null
+    if [ $? -eq 0 ]; then
+    if [ $(git rev-parse --is-bare-repository) = 'false' ]; then
+        cd "$(git rev-parse --show-toplevel)"
+        echo "${PWD}/git_hooks${hook}"
+        echo "${PWD}/.githooks${hook}"
+
+        # Find the main repo using git rev-parse --git-dir and cut off at the .git-dir
+        local main_repo;main_repo="$(proj_top_dir)"
+        if [ "${main_repo}" != "${PWD}" ] && [ "${main_repo}" != "" ]; then
+            # If we're in a sub repo, also add the git_hooks and .githooks of the main repo
+            echo "${main_repo}/git_hooks${hook}"
+            echo "${main_repo}/.githooks${hook}"
+        fi
+    fi
+    fi
+    eval echo "$(git config hooks.global)"${hook}
+}
+
+list_hooks_in_dir()
+{
+    path="${1}"
+    level="${2}"
+    find --help 2>&1 | grep -- '-L' 2>/dev/null >/dev/null
+    if [ $? -eq 1 ] ; then
+        find "${path}/" -mindepth ${level} -maxdepth ${level} -perm +111 -type f 2>/dev/null | grep -v "^.$" | sort
+    else
+        find -L "${path}/" -mindepth ${level} -maxdepth ${level} -perm /111 -type f 2>/dev/null | grep -v "^.$" | sort
+    fi
+}
+
+hooks_are_installed() {
+    GITDIR=$(git rev-parse --git-dir)
+    cat "${GITDIR}/hooks/pre-commit" 2> /dev/null | grep -q 'git-project-hooks'
+    return $?
+}
+
+list_hooks() {
+    GITDIR=$(git rev-parse --git-dir)
+    cat "${GITDIR}/hooks/pre-commit" 2> /dev/null | grep 'git-project-hooks' > /dev/null 2> /dev/null
+    if hooks_are_installed ; then
+        echo "Git hooks ARE installed in this repository."
+        echo ""
+    else
+        echo "Git hooks are NOT installed in this repository. (Run 'git project hooks --install' to install it)"
+        echo ""
+        return
+    fi
+
+    echo 'Listing User, Project, and Global hooks:'
+    echo '---'
+    local dirs; dirs=$(hook_dirs)
+    while read -r dir; do
+        echo "${dir}:"
+        local hooks_in_dir; hooks_in_dir=$(list_hooks_in_dir "${dir}" 2)
+        local hook_type
+        while read -r hook; do
+            if [ ! -z "${hook}" ]; then
+                local dir_name; dir_name=$(basename "$(dirname "${hook}")")
+                local base_name; base_name=$(basename "${hook}")
+                local about; about=$("${hook}" --about)
+                if [ "${hook_type}" != "${dir_name}" ]; then
+                    hook_type=${dir_name}
+                    echo "${hook_type}"
+                fi
+                echo "    ${base_name}"
+                echo "        ${about}"
+             fi
+        done <<< "${hooks_in_dir}"
+        echo ""
+    done <<< "${dirs}"
+}
+
+run_hooks() {
+    dir="${1}"
+    if [[ -z ${dir} || ! -d "${dir}" ]] ; then
+        echo "run_hooks requires a directory name as an argument."
+        return 1
+    fi
+    shift 1
+    local hooks_in_dir; hooks_in_dir=$(list_hooks_in_dir "${dir}" 1)
+    while read -r hook
+    do
+        export last_run_hook="${hook} $@"
+        if [ ! -z ${GIT_HOOKS_VERBOSE} ] ; then
+            echo -n "@@ Running hook: "
+            local dir_name; dir_name=`basename "\`dirname "${hook}"\`"`
+            local base_name; base_name=`basename "${hook}"`
+            local about; about=$("${hook}" --about)
+            echo -e "${dir_name} ${base_name} \t- ${about}"
+        fi
+        "${hook}" "$@"
+    done <<< "${hooks_in_dir}"
+}
+
+run_hook() {
+    set -e
+    hook=`basename "${1}"`
+    if [ -z ${hook} ] ; then
+        echo "run requires a hook argument"
+        return 1
+    fi
+    shift 1
+    local dirs; dirs=$(hook_dirs "${hook}")
+    while read -r dir; do
+        if [ ! -d "${dir}" ] ; then
+            continue
+        fi
+        run_hooks "${dir}" "$@"
+    done <<< "${dirs}"
+    set +e
+}
+
+install_hooks_into() {
+    DIR=$1
+    cd "${DIR}"
+
+    set -e
+    mv hooks hooks.old
+    set +e
+    mkdir hooks
+    cd hooks
+    for file in applypatch-msg commit-msg post-applypatch post-checkout post-commit post-merge post-receive pre-applypatch pre-auto-gc pre-commit prepare-commit-msg pre-rebase pre-receive update pre-push
+    do
+        echo "${2}" > "${file}"
+        chmod +x "${file}"
+    done
+}
+
+install_hooks() {
+    GITDIR=`git rev-parse --git-dir`
+    if [ ! $? -eq 0 ] ; then
+        echo "$1 must be run inside a git repository"
+        return 1
+    fi
+    cd "${GITDIR}"
+    if [ "${1}" = "--install" ] ; then
+        if [ -d hooks.old ] ; then
+            echo "hooks.old already exists, perhaps you already installed?"
+            return 1
+        fi
+    cmd='#!/usr/bin/env bash
+git-project-hooks run "$0" "$@"';
+    install_hooks_into "${PWD}" "${cmd}"
+    else
+        if [ ! -d hooks.old ] ; then
+            echo "Error, hooks.old doesn't exists, aborting uninstall to not destroy something"
+            return 1
+        fi
+        rm -rf hooks
+        mv hooks.old hooks
+    fi
+}
+
+install_global() {
+    TEMPLATE="$HOME/.git-template-with-git-hooks"
+    if [ ! -d "${TEMPLATE}" ] ; then
+        DEFAULT=/usr/share/git-core/templates
+        if [ -d ${DEFAULT} ] ; then
+            cp -rf /usr/share/git-core/templates "${TEMPLATE}"
+        else
+            mkdir -p "${TEMPLATE}/hooks"
+        fi
+        cmd="#!/usr/bin/env bash
+echo \"git project hooks not installed in this repository.  Run 'git project hooks --install' to install it or 'git project hooks -h' for more information.\"";
+        install_hooks_into "${TEMPLATE}" "${cmd}"
+        mv "${TEMPLATE}/hooks.old" "${TEMPLATE}/hooks.original"
+    fi
+    git config --global init.templatedir "${TEMPLATE}"
+    echo "Git global config init.templatedir is now set to ${TEMPLATE}"
+}
+
+uninstall_global() {
+    git config --global --unset init.templatedir
+}
+
+report_error() {
+    echo "Hook failed: $last_run_hook"
+    exit 1
+
+}
+
+case $1 in
+    run )
+        if [ ! -z "${GIT_DIR}" ] ; then
+            unset GIT_DIR
+        fi
+        shift
+        trap report_error ERR
+        run_hook "$@"
+        ;;
+    --install|--uninstall )
+        install_hooks "$1"
+        ;;
+    --install-global|--installglobal )
+        install_global
+        ;;
+    --uninstall-global|--uninstallglobal )
+        uninstall_global
+        ;;
+    -h|--help|-? )
+        echo 'Git Hooks'
+        echo '    A tool to manage project, user, and global Git hooks for multiple git repositories.'
+        echo '    https://github.com/icefox/git-hooks'
+        echo ''
+        echo 'Options:'
+        echo '    --install      Replace existing hooks in this repository with a call to'
+        echo '                   git hooks run [hook].  Move old hooks directory to hooks.old'
+        echo '    --uninstall    Remove existing hooks in this repository and rename hooks.old'
+        echo '                   back to hooks'
+        echo '    --install-global'
+        echo '                   Create a template .git directory that that will be used whenever'
+        echo '                   a git repository is created or cloned that will remind the user'
+        echo '                   to install git-project-hooks.'
+        echo '    --uninstall-global'
+        echo '                   Turn off the global .git directory template that has the reminder.'
+        echo "    run <cmd>      Run the hooks for <cmd> (such as pre-commit)"
+        echo "    (no arguments) Show currently installed hooks"
+        ;;
+    * )
+        list_hooks
+        ;;
+esac

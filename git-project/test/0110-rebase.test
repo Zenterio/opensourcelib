@@ -1,0 +1,654 @@
+#
+# Test git-project-rebase
+#
+test_description='git project rebase'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+# Add a text to the same file name in all 4 modules
+add_to_repos()
+{
+    local text=$1
+    local file=$2
+
+    add_to_repo "component" "${text} comp" "echo \"${text}\" >>${file}" &&
+    add_to_repo "component2" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_repo "space component" "${text} spacecomp" "echo \"${text}\" >>${file}" &&
+    add_to_repo "." "${text} top" "echo \"${text}\" >>${file}"
+}
+
+add_to_remote_repos()
+{
+    local text=$1
+    local file=$2
+
+    add_to_remote_repo "${COMPONENT_PATH}" "${text} comp" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${COMPONENT2_PATH}" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${SPACE_COMPONENT_PATH}" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${FULL_PROJECT_PATH}" "${text} top" "echo \"${text}\" >>${file}"
+}
+
+# These helper functions use global variables that are set in
+# test cases.
+clone_and_cd()
+{
+    git project clone -q "${FULL_PROJECT_PATH}" ${PROJ_DIR} &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    cd ${PROJ_DIR}
+}
+
+update_branch_and_master()
+{
+    make_project_branch ${BRANCH} &&
+    checkout_project_branch ${BRANCH} &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_BRANCH}" &&
+    checkout_project_branch master &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_MASTER}"
+}
+
+update_branch_and_master_with_conflict()
+{
+    make_project_branch ${BRANCH} &&
+    checkout_project_branch ${BRANCH} &&
+    add_to_repos "Change in branch" "${CHANGED_FILE_IN_BRANCH}" &&
+    checkout_project_branch master &&
+    add_to_repos "Change in master" "${CHANGED_FILE_IN_MASTER}"
+}
+
+# Check that a file contains the expected number of lines in all modules
+test_file_lines()
+{
+    local file=$1
+    local lines=$2
+
+    test_equal $(cat component/${file} | wc -l) ${lines} &&
+    test_equal $(cat component2/${file} | wc -l) ${lines} &&
+    test_equal $(cat space\ component/${file} | wc -l) ${lines} &&
+    test_equal $(cat ${file} | wc -l) ${lines}
+}
+
+# Check that the files don't exist in any of the modules
+test_no_files()
+{
+    local file=$1
+
+    test ! -f ${file} &&
+    test ! -f component/${file} &&
+    test ! -f component2/${file} &&
+    test ! -f space\ component/${file}
+}
+
+resolve_conflict()
+{
+    local component="$1"
+    local file="$2"
+
+    echo "Resolving conflict in ${component}" &&
+    pushd "${component}" &&
+    cat ${file} |grep -v "<<<<<<<" |grep -v "=======" |grep -v ">>>>>>>" >${file}.resolved &&
+    cp ${file}.resolved ${file} &&
+    rm ${file}.resolved &&
+    git add ${file} &&
+    popd
+}
+
+# Only tests below
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project rebase --invalid-option
+'
+
+test_expect_success 'require at least one option, otherwise exits with 129' '
+    PROJ_DIR="at_least_one_option" &&
+    clone_and_cd &&
+    test_expect_code 129 git project rebase
+'
+
+test_expect_success '-h' '
+    git project rebase -h
+'
+
+test_expect_success '--help' '
+    git project rebase --help
+'
+
+test_expect_success 'invalid branch exits with 128 (fail to rebase)' '
+    PROJ_DIR="rebase_no_branch" &&
+    BRANCH="InvalidBranch" &&
+    clone_and_cd &&
+    test_expect_code 128 git project rebase ${BRANCH}
+'
+
+test_expect_success '--continue on repo without rebase in progress returns 1' '
+    PROJ_DIR="rebase_no_continue" &&
+    clone_and_cd &&
+    test_expect_code 1 git project rebase --continue
+'
+
+test_expect_success '--abort on repo without rebase in progress returns 1' '
+    PROJ_DIR="rebase_no_abort" &&
+    clone_and_cd &&
+    test_expect_code 1 git project rebase --abort
+'
+
+test_expect_success 'rebase branch onto master no conflicts' '
+    PROJ_DIR="rebase_master_no_conflicts" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    update_branch_and_master &&
+
+    # In the master branch, these files should exist
+    test_equal "$(cat ${CHANGED_FILE_IN_MASTER} | wc -l)" 1 &&
+    test_equal "$(cat component/${CHANGED_FILE_IN_MASTER} | wc -l)" 1 &&
+    test_equal "$(cat component2/${CHANGED_FILE_IN_MASTER} | wc -l)" 1 &&
+
+    # But in the b1 branch, the master files should not exist.
+    checkout_project_branch ${BRANCH} &&
+    test_no_files ${CHANGED_FILE_IN_MASTER} &&
+    # But the branch files should have 1 line each.
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    git project rebase master &&
+
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase however, both the branch and master files should be here
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    # Back up one version
+    git project checkout HEAD~1 &&
+
+    # Here, the master files should exist, but not the branch.
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH}
+'
+
+test_expect_success 'rebase master no conflicts several commits' '
+    PROJ_DIR="rebase_master_no_conflicts_several_commits" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    make_project_branch ${BRANCH} &&
+    checkout_project_branch ${BRANCH} &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_BRANCH}" &&
+    add_to_repos "Change 2" "${CHANGED_FILE_IN_BRANCH}" &&
+    add_to_repos "Change 3" "${CHANGED_FILE_IN_BRANCH}" &&
+
+    checkout_project_branch master &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_MASTER}" &&
+    add_to_repos "Change 2" "${CHANGED_FILE_IN_MASTER}" &&
+
+    checkout_project_branch ${BRANCH} &&
+
+    # This tests that git project rebase works from anywhere in the repository.
+    cd component &&
+    git project rebase master &&
+    cd .. &&
+
+    echo "Checking state after rebase" &&
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase, the branch files should be 3 lines long and the master files 2 lines
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 3 &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 2 &&
+
+    echo "Checking state of HEAD~1" &&
+    # Back up one version, and only 2 lines should remain in all branch files
+    git project checkout HEAD~1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 2 &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 2 &&
+
+    echo "Checking state of HEAD~2" &&
+    # Back up one version more, and only 1 line should remain in all branch files
+    git project checkout HEAD~1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 2 &&
+
+    echo "Checking state of HEAD~3" &&
+    # Back up one version more, and the branch files should be gone
+    git project checkout HEAD~1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH} &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 2 &&
+
+    echo "Checking state of HEAD~4" &&
+    # Back up one version more, the branch files should be gone and the master files only 1 line
+    git project checkout HEAD~1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH} &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+
+    echo "Checking state of HEAD~5" &&
+    # Back up one version more and all files should be gone
+    git project checkout HEAD~1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH} &&
+    test_no_files ${CHANGED_FILE_IN_MASTER} &&
+
+    # Lastly, back up to the branch HEAD again and make sure everything looks right
+    git project checkout ${BRANCH} &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 3 &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 2
+'
+
+test_expect_success 'rebase master with conflicts' '
+    PROJ_DIR="rebase_master_with_conflicts" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="MergeFile" &&
+    CHANGED_FILE_IN_MASTER="MergeFile" &&
+    clone_and_cd &&
+    update_branch_and_master_with_conflict &&
+
+    # In the master branch, the files should exist and have 1 line each
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+
+    checkout_project_branch ${BRANCH} &&
+    test_expect_code 1 git project rebase master &&
+    resolve_conflict "space component" ${CHANGED_FILE_IN_BRANCH} &&
+    test_expect_code 1 git project rebase --continue &&
+    resolve_conflict component2 ${CHANGED_FILE_IN_BRANCH} &&
+    test_expect_code 1 git project rebase --continue &&
+    resolve_conflict component ${CHANGED_FILE_IN_BRANCH} &&
+    test_expect_code 1 git project rebase --continue &&
+    resolve_conflict . ${CHANGED_FILE_IN_BRANCH} &&
+    test_expect_code 0 git project rebase --continue &&
+
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase, these files should exist and have 2 line each
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 2 &&
+
+    echo "Checking state of HEAD~1" &&
+    # Back up one version, and only 1 line should remain in all files
+    git project checkout HEAD~1 &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+
+    echo "Checking state of HEAD~1" &&
+    # Back up one more version and the files should be gone
+    git project checkout HEAD~1 &&
+    test_no_files ${CHANGED_FILE_IN_MASTER}
+'
+
+test_expect_success 'rebase master abort after conflicts' '
+    PROJ_DIR="rebase_master_abort_after_conflicts" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="MergeFile" &&
+    CHANGED_FILE_IN_MASTER="MergeFile" &&
+    clone_and_cd &&
+    update_branch_and_master_with_conflict &&
+
+    # In the master branch, the files should exist and have 1 line each
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+
+    # Now, checkout the branch and start a rebase. Resolve 2 conflicts but abort on the 3rd
+    checkout_project_branch ${BRANCH} &&
+    test_expect_code 1 git project rebase master &&
+    resolve_conflict component2 ${CHANGED_FILE_IN_BRANCH} &&
+    test_expect_code 1 git project rebase --continue &&
+    resolve_conflict component ${CHANGED_FILE_IN_BRANCH} &&
+    test_expect_code 1 git project rebase --continue &&
+
+    # We have now resolved 2 conflicts but will abort the project rebase.
+    # But first gc all repos to be mean
+    git gc --aggressive --prune=all &&
+    cd component &&
+    git gc --aggressive --prune=all &&
+    cd subcomponent &&
+    git gc --aggressive --prune=all &&
+    cd ../../component2 &&
+    git gc --aggressive --prune=all &&
+    cd .. &&
+
+    echo "Aborting rebase" &&
+    git project rebase --abort &&
+
+    # After the abort we should be on the same branches as before we started
+    on_branch ${BRANCH} . component/subcomponent component2 "space component" "thirdparty component" &&
+
+    # After the abort, all should be back to the initial state, i.e. the files should all have 1 line in branch
+    # and 1 line in master
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+    checkout_project_branch master &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1
+'
+
+test_expect_success 'rebase modified content in top repo' '
+    PROJ_DIR="rebase_modified_content_in_top_repo" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    update_branch_and_master &&
+
+    checkout_project_branch ${BRANCH} &&
+
+    # Modify a file in the top repo to make rebase complain while rebasing.
+    echo "Modify" >>"${CHANGED_FILE_IN_BRANCH}" &&
+
+    test_expect_code 1 git project rebase master &&
+
+    # Resolve the conflict by stashing the state.
+    git stash &&
+    git project rebase --continue &&
+
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase, both the branch and master files should be here
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    # Back up one version
+    git project checkout HEAD~1 &&
+
+    # Here, the master files should exist, but not the branch.
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH}
+'
+
+test_expect_success 'rebase modified content in module' '
+    PROJ_DIR="rebase_modified_content_in_module" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    update_branch_and_master &&
+
+    checkout_project_branch ${BRANCH} &&
+
+    # Modify a file in a module to make rebase complain while rebasing.
+    pushd component &&
+    echo "Modify" >>"${CHANGED_FILE_IN_BRANCH}" &&
+    popd &&
+
+    test_expect_code 1 git project rebase master &&
+
+    # Resolve the conflict by stashing the module.
+    pushd component &&
+    git stash &&
+    popd &&
+    git project rebase --continue &&
+
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase, both the branch and master files should be here
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    # Back up one version
+    git project checkout HEAD~1 &&
+
+    # Here, the master files should exist, but not the branch.
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH}
+'
+
+test_expect_success 'rebase staged content in top repo' '
+    PROJ_DIR="rebase_staged_content_in_top_repo" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    update_branch_and_master &&
+
+    checkout_project_branch ${BRANCH} &&
+
+    # Modify and stage a file in the top repo to make rebase complain while rebasing.
+    echo "Modify" >>"${CHANGED_FILE_IN_BRANCH}" &&
+    git add "${CHANGED_FILE_IN_BRANCH}" &&
+
+    test_expect_code 1 git project rebase master &&
+
+    # Resolve the conflict by stashing the state.
+    git stash &&
+    git project rebase --continue &&
+
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase, both the branch and master files should be here
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    # Back up one version
+    git project checkout HEAD~1 &&
+
+    # Here, the master files should exist, but not the branch.
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH}
+'
+
+test_expect_success 'rebase staged content in module' '
+    PROJ_DIR="rebase_staged_content_in_module" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    update_branch_and_master &&
+
+    checkout_project_branch ${BRANCH} &&
+
+    # Modify and stage a file in a module to make rebase complain while rebasing.
+    pushd component >/dev/null &&
+    echo "Modify" >>"${CHANGED_FILE_IN_BRANCH}" &&
+    git add "${CHANGED_FILE_IN_BRANCH}" &&
+    popd >/dev/null &&
+
+    test_expect_code 1 git project rebase master &&
+
+    # Resolve the conflict by stashing the module.
+    pushd component >/dev/null &&
+    git stash -q &&
+    popd >/dev/null &&
+    git project rebase --continue &&
+
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    # After the rebase, both the branch and master files should be here
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    # Back up one version
+    git project checkout HEAD~1 &&
+
+    # Here, the master files should exist, but not the branch.
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_no_files ${CHANGED_FILE_IN_BRANCH}
+'
+
+test_expect_success 'ignore submodules in detached head' '
+    PROJ_DIR="ignore_submodules_detached_head" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    make_project_branch ${BRANCH} &&
+    checkout_project_branch ${BRANCH}
+    add_to_repos "Change" "${CHANGED_FILE_IN_BRANCH}" &&
+    checkout_project_branch master &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_MASTER}" &&
+
+    # In the master branch, these files should exist
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+
+    # But in the b1 branch, the master files should not exist.
+    checkout_project_branch ${BRANCH} &&
+    test_no_files ${CHANGED_FILE_IN_MASTER} &&
+    # But the branch files should have 1 line each.
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    # This leaves component in detached head, but otherwise identical to before
+    cd component &&
+    git checkout -q --detach &&
+    cd .. &&
+    test_expect_code 1 git project rebase master &&
+    git add component &&
+
+    test_expect_code 0 git project rebase --continue &&
+
+    # master files are as expected in component2 and top
+    # but missing in component, since it was skipped
+    test_equal $(cat component2/${CHANGED_FILE_IN_MASTER} | wc -l) 1 &&
+    test ! -f component/${CHANGED_FILE_IN_MASTER} &&
+    test_equal $(cat ${CHANGED_FILE_IN_MASTER} | wc -l) 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+    on_branch ${BRANCH} . component/subcomponent component2 "space component" "thirdparty component"
+'
+
+test_expect_success 'rebase with different target branch in submodule' '
+    PROJ_DIR="rebase_different_submodule_branch" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    make_project_branch ${BRANCH} &&
+    checkout_project_branch ${BRANCH}
+    add_to_repos "Change" "${CHANGED_FILE_IN_BRANCH}" &&
+    checkout_project_branch master &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_MASTER}" &&
+
+    # In the master branch, these files should exist
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+
+    # But in the b1 branch, the master files should not exist.
+    checkout_project_branch ${BRANCH} &&
+    test_no_files ${CHANGED_FILE_IN_MASTER} &&
+    # But the branch files should have 1 line each.
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+    checkout_project_branch master &&
+    git project branch b2 component &&
+    git checkout master &&
+    cd component &&
+    touch Branch2File &&
+    git add Branch2File &&
+    git commit -m "branch2" &&
+    cd .. &&
+    git add component &&
+    git add .gitmodules &&
+    git commit -m "new branch in component" &&
+    checkout_project_branch ${BRANCH} &&
+    git project rebase master &&
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    test -f component/Branch2File
+'
+
+test_expect_success 'rebase master against remote/origin/master' '
+    PROJ_DIR="rebase_against_remote" &&
+    CHANGED_FILE_IN_REMOTE="RemoteFile" &&
+    CHANGED_FILE_IN_LOCAL="LocalFile" &&
+    git project clone "${FULL_PROJECT_PATH}" ${PROJ_DIR} &&
+    add_to_remote_repos "Change" "${CHANGED_FILE_IN_REMOTE}" &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    cd ${PROJ_DIR} &&
+    checkout_project_branch master &&
+    add_to_repos "Change" "${CHANGED_FILE_IN_LOCAL}" &&
+
+    test ! -f RemoteFile &&
+    test ! -f component/RemoteFile &&
+    test ! -f component2/RemoteFile &&
+    test -f LocalFile &&
+    test -f component/LocalFile &&
+    test -f component2/LocalFile &&
+
+    git fetch --recurse-submodules &&
+    git project rebase origin/master &&
+    on_branch master . component component/subcomponent component2 "space component" "thirdparty component" &&
+
+    test -f RemoteFile &&
+    test -f component/RemoteFile &&
+    test -f component2/RemoteFile &&
+    test -f LocalFile &&
+    test -f component/LocalFile &&
+    test -f component2/LocalFile
+'
+
+
+
+test_expect_success 'project rebase after git rebase in single submodule' '
+    PROJ_DIR="rebase_after_local_rebase" &&
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+    update_branch_and_master &&
+
+    checkout_project_branch ${BRANCH} &&
+
+    cd component &&
+    git rebase master &&
+    cd .. &&
+    git add component &&
+    git commit -m "rebased component" &&
+
+    test_expect_code 1 git project rebase master &&
+    # Conflict because git project rebase cannot automatically determine which commit component should
+    # be on.
+
+    git add component &&
+    git project rebase --continue &&
+
+    # After the rebase, both the branch and master files should be here
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1 &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1
+
+'
+
+test_expect_success 'a branch in a repo without sub-modules can be rebased' '
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git checkout -q topic-branch
+    echo "********************* REBASE START" &&
+    git project rebase master &&
+    echo "********************* REBASE DONE" &&
+    on_branch topic_branch .
+    # After the rebase however, both the branch and master files should be here
+    test -f master_file &&
+    test -f branch_file &&
+    # Back up one version
+    git project checkout HEAD~1 &&
+    # Here, the master files should exist, but not the branch.
+    test -f master_file &&
+    test ! -e branch_file
+'
+
+# Failure to rename a branch can happen for two reasons:
+# 1. There is no .gitmodules file on the merge base branch in top
+# repo.
+# 2. The branch tracking information is missing in the .gitmodules
+# file
+# This should abort the rebase and leave no changes.
+# Both cases result in submodule-branch-name returning an empty string.
+test_expect_success 'Do not rebase if branch renaming fails' '
+    PROJ_DIR="skip_on_bad_rename" &&
+
+    BRANCH="b1" &&
+    CHANGED_FILE_IN_BRANCH="BranchFile" &&
+    CHANGED_FILE_IN_MASTER="MasterFile" &&
+    clone_and_cd &&
+
+    set_config_recursive . &&
+    git config -f .gitmodules --unset "submodule.space component.branch" &&
+    git commit -a -m "removed branch info from space component" &&
+
+    update_branch_and_master &&
+
+    # In the master branch, these files should exist
+    test_equal "$(cat ${CHANGED_FILE_IN_MASTER} | wc -l)" 1 &&
+    test_equal "$(cat component/${CHANGED_FILE_IN_MASTER} | wc -l)" 1 &&
+    test_equal "$(cat component2/${CHANGED_FILE_IN_MASTER} | wc -l)" 1 &&
+
+    # But in the b1 branch, the master files should not exist.
+    checkout_project_branch ${BRANCH} &&
+    test_no_files ${CHANGED_FILE_IN_MASTER} &&
+    # But the branch files should have 1 line each.
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+
+    test_expect_code 1 git project rebase master &&
+
+    # After the abort, all should be back to the initial state,
+    # i.e. the files should all have 1 line in branch
+    # and 1 line in master
+    on_branch ${BRANCH} . component component/subcomponent component2 "space component" "thirdparty component" &&
+    test_file_lines ${CHANGED_FILE_IN_BRANCH} 1 &&
+    checkout_project_branch master &&
+    test_file_lines ${CHANGED_FILE_IN_MASTER} 1
+'
+
+test_done

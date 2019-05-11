@@ -1,0 +1,171 @@
+#
+# Test git-buildinfo-clone
+#
+
+test_description='git buildinfo clone'
+. ./test.sh
+
+REPO=top
+
+setup_test_repos(){
+    init_repo_variable component
+    init_repo_variable top
+    init_repo_variable onbranch
+    init_repo_variable detachedhead
+    create_remote_repo "${COMPONENT_PATH}" &&
+    create_remote_repo "${TOP_PATH}" &&
+    create_remote_repo "${ONBRANCH_PATH}" &&
+    create_remote_repo "${DETACHEDHEAD_PATH}" &&
+    (
+     git clone -q "${TOP_PATH}" top &&
+     add_submodule_to_repo top "${COMPONENT_PATH}" component &&
+     cd top &&
+     git push origin master &&
+     echo "local changes" >> repo.info &&
+     mkdir externals &&
+     echo "*" > externals/.gitignore &&
+     cd externals &&
+     git clone -q "${ONBRANCH_PATH}" onbranch &&
+     cd onbranch &&
+     touch "dirty_workspace.txt" &&
+     cd .. &&
+     git clone -q "${DETACHEDHEAD_PATH}" detachedhead &&
+     cd detachedhead &&
+     git checkout -q $(git rev-parse master)
+    )
+}
+setup_test_repos
+
+get_date_in_seconds(){
+    date '+%s'
+}
+
+convert_time_to_seconds(){
+    local time_str="$1"
+    date -d "${time_str}" '+%s'
+}
+
+parse_time(){
+    local content="$1"
+    local parsed_line; parsed_line=$(echo "${content}" | grep -m 1 "Time:")
+    echo ${parsed_line:6}
+}
+
+parse_property() {
+    local property="$1"; shift
+    local offset; offset=$((${#property}+2))
+    local content="$@"
+    local parsed_lines; parsed_lines=$(echo "${content}" | grep "${property}")
+    while read -r line; do
+        echo "${line:$offset}"
+    done <<< "${parsed_lines}"
+}
+
+parse_message(){
+    local content="$1"
+    echo "${content}" | sed -n '/Message/{n;p}'
+}
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git buildinfo clone --invalid-option
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git buildinfo clone -h)" &&
+    test -z "${output##Usage:*git-buildinfo-clone*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git buildinfo clone --help)" &&
+    test -z "${output##GIT-BUILDINFO-CLONE(1)*}"
+'
+
+test_expect_success 'missing positional argument exits with 129' '
+    test_expect_code 129 git buildinfo clone
+'
+
+test_expect_success 'non-existing build-info file exits with 1' '
+    echo "Repository: FOO" > incomplete.txt &&
+    test_expect_code 2 git buildinfo clone incomplete.txt
+'
+
+test_expect_success 'incomplete build-info file exits with 2' '
+    echo "Repository: FOO" > incomplete.txt &&
+    test_expect_code 2 git buildinfo clone incomplete.txt
+'
+
+test_expect_success 'build-info file without repo data exits with 3' '
+    echo "not build-info data" > empty.txt &&
+    test_expect_code 3 git buildinfo clone empty.txt
+'
+
+test_expect_success 'clone using single repo build-info file' '
+    mkdir single &&
+    (cd $REPO &&
+     cd externals/onbranch &&
+     git buildinfo status --save "../../../single/single.txt") &&
+    test -f "single/single.txt" &&
+    (cd single &&
+     git buildinfo clone single.txt &&
+     cd onbranch &&
+     git status) &&
+    test_when_finished rm -rf single
+'
+
+test_expect_success 'clone using single repo build-info file' '
+    mkdir single &&
+    (cd $REPO &&
+     cd externals/onbranch &&
+     git buildinfo status --save "../../../single/single.txt") &&
+    test -f "single/single.txt" &&
+    (cd single &&
+     git buildinfo clone single.txt &&
+     cd onbranch &&
+     git status) &&
+    test_when_finished rm -rf single
+'
+
+test_expect_success 'clone using detached-head repo build-info file leaves repo in detached head.' '
+    mkdir detached &&
+    (cd $REPO &&
+     cd externals/detachedhead &&
+     git buildinfo status --save "../../../detached/detached.txt") &&
+    test -f "detached/detached.txt" &&
+    (cd detached &&
+     git buildinfo clone detached.txt &&
+     cd detachedhead &&
+     git status &&
+     test_equal "HEAD" "$(git rev-parse --abbrev-ref HEAD)" &&
+     commit=$(parse_property Commit "$(cat ../detached.txt)") &&
+     test_equal "${commit}" "$(git rev-parse HEAD)") &&
+    test_when_finished rm -rf detached
+'
+
+test_expect_success 'clone using multi repo build-info file' '
+    mkdir multi &&
+    (cd $REPO &&
+     git buildinfo status --save "../multi/multi.txt") &&
+    test -f "multi/multi.txt" &&
+    (cd multi &&
+     git buildinfo clone multi.txt &&
+     cd top &&
+     git status &&
+     cd externals/onbranch &&
+     git status) &&
+    test_when_finished rm -rf multi
+'
+
+test_expect_success '-c, --checkout-commit leaves repo in detached head' '
+    mkdir checkout &&
+    (cd $REPO &&
+     cd externals/onbranch &&
+     git buildinfo status --save "../../../checkout/checkout.txt" ) &&
+    test -f "checkout/checkout.txt" &&
+    (cd checkout &&
+     git buildinfo clone --checkout-commit checkout.txt &&
+     cd onbranch &&
+     test_equal "HEAD" "$(git rev-parse --abbrev-ref HEAD)" ) &&
+    test_when_finished rm -rf checkout
+'
+
+test_done

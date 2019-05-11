@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+##copyright##
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [-u,--update] [-b,--branch=BRANCH] SUBMODULE [...]"
+    echo ""
+    echo "options:"
+    echo "  -h          Print this usage"
+    echo "  --help      Show man page"
+    echo "  --branch,-b Set a new branch to follow for a submodule"
+    echo "  --update,-u Update a submodule to the latest commit on branch"
+    echo ""
+}
+
+##echoerr##
+
+##in-detached-head##
+
+##proj-top-dir##
+
+##array-contains##
+
+##verify-submodule-list##
+
+SCRIPT=$(basename "$0")
+UPDATE=false
+BRANCH=""
+
+# We parse for all the options first."
+
+ARGS=$(getopt -o b:hu -l "branch:,help,update" -n "$SCRIPT" -- "$@");
+
+if [ $? -ne 0 ]; then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-submodule "$@"
+            exit $?
+            ;;
+        -b|--branch)
+            shift
+            BRANCH="$1"
+            shift
+            ;;
+        -u|--update)
+            UPDATE=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+    esac
+done
+
+if [ $# -eq 0 ]
+then
+    usage
+    exit 129
+fi
+
+set -e
+cd "$(proj_top_dir)"
+
+verify_submodule_list "$@"
+
+for submodule in "$@"
+do
+    if [ -n "${BRANCH}" ]
+    then
+        old_branch=$(git config -f .gitmodules "submodule.${submodule}.branch")
+        git config -f .gitmodules "submodule.${submodule}.branch" "${BRANCH}"
+    fi
+    if $UPDATE
+    then
+        git submodule init "${submodule}"
+        if ! git submodule update --remote "${submodule}"
+        then
+            if [ -n "${BRANCH}" ]
+            then
+                git config -f .gitmodules "submodule.${submodule}.branch" "${old_branch}"
+            fi
+            exit 1
+        fi
+    fi
+done

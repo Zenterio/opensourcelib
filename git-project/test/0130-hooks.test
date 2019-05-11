@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+test_description="git project hooks"
+
+. ./test.sh
+
+test_exec create_template
+test_exec create_full_project_repo
+
+
+test_expect_success 'init install hooks' '
+    PROJ_DIR="proj_hooks" &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    git project init ${PROJ_DIR} &&
+    test_equal "${PROJ_DIR}/repo.info" "${TEMPLATE_PATH}" &&
+    ls ${PROJ_DIR}/src/src.info &&
+    test_equal "${PROJ_DIR}/src/src.info" "src" &&
+    cd ${PROJ_DIR} &&
+    git project hooks >hooks.out &&
+    grep "Git hooks ARE installed in this repository" hooks.out
+'
+
+test_expect_success 'init install hooks recursive' '
+    PROJ_DIR="proj_hooks_recursive" &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    git project init ${PROJ_DIR} -t "${FULL_PROJECT_PATH}" &&
+    test_equal "${PROJ_DIR}/repo.info" "${FULL_PROJECT_PATH}" &&
+    cd ${PROJ_DIR} &&
+    git project hooks &&
+    git project hooks >hooks.out &&
+    grep "Git hooks ARE installed in this repository" hooks.out &&
+    add_to_repo "." "Testing hooks" "echo \"Should commit ok\" >file" &&
+    test_expect_code 1 add_to_repo "." "Testing hooks" "echo \"Should fail to commit\" >file1" &&
+    cd component &&
+    git project hooks >hooks.out &&
+    grep "Git hooks ARE installed in this repository" hooks.out &&
+    add_to_repo "." "Testing hooks" "echo \"Should commit ok\" >file" &&
+    test_expect_code 1 add_to_repo "." "Testing hooks" "echo \"Should fail to commit\" >file1" &&
+    cd subcomponent &&
+    git project hooks >hooks.out &&
+    grep "Git hooks ARE installed in this repository" hooks.out &&
+    add_to_repo "." "Testing hooks" "echo \"Should commit ok\" >file" &&
+    test_expect_code 1 add_to_repo "." "Testing hooks" "echo \"Should fail to commit\" >file1"
+'
+
+test_expect_success 'init without hooks -n' '
+    PROJ_DIR="proj_hooks_n" &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    git project init -n ${PROJ_DIR} &&
+    test_equal "${PROJ_DIR}/repo.info" "${TEMPLATE_PATH}" &&
+    ls ${PROJ_DIR}/src/src.info &&
+    test_equal "${PROJ_DIR}/src/src.info" "src" &&
+    cd ${PROJ_DIR} &&
+    git project hooks >hooks.out &&
+    grep "Git hooks are NOT installed in this repository." hooks.out
+'
+
+test_expect_success 'init without hooks --no-hooks' '
+    PROJ_DIR="proj_nohooks" &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    git project init -n ${PROJ_DIR} &&
+    test_equal "${PROJ_DIR}/repo.info" "${TEMPLATE_PATH}" &&
+    ls ${PROJ_DIR}/src/src.info &&
+    test_equal "${PROJ_DIR}/src/src.info" "src" &&
+    cd ${PROJ_DIR} &&
+    git project hooks >hooks.out &&
+    grep "Git hooks are NOT installed in this repository." hooks.out
+'
+
+test_done

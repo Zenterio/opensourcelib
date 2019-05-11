@@ -1,0 +1,164 @@
+#
+# Test git-buildinfo-status
+#
+
+test_description='git buildinfo status'
+. ./test.sh
+
+REPO=top
+
+setup_test_repos(){
+    init_repo_variable component
+    init_repo_variable top
+    init_repo_variable onbranch
+    init_repo_variable detachedhead
+    create_remote_repo "${COMPONENT_PATH}" &&
+    create_remote_repo "${TOP_PATH}" &&
+    create_remote_repo "${ONBRANCH_PATH}" &&
+    create_remote_repo "${DETACHEDHEAD_PATH}" &&
+    (
+     git clone -q "${TOP_PATH}" top &&
+     add_submodule_to_repo "$REPO" "${COMPONENT_PATH}" component &&
+     cd top &&
+     echo "local changes" >> repo.info &&
+     mkdir externals &&
+     echo "*" > externals/.gitignore &&
+     cd externals &&
+     git clone -q "${ONBRANCH_PATH}" onbranch &&
+     cd onbranch &&
+     touch "dirty_workspace.txt" &&
+     cd .. &&
+     git clone -q "${DETACHEDHEAD_PATH}" detachedhead &&
+     cd detachedhead &&
+     git checkout -q $(git rev-parse master)
+    )
+}
+setup_test_repos
+
+get_date_in_seconds(){
+    date '+%s'
+}
+
+convert_time_to_seconds(){
+    local time_str="$1"
+    date -d "${time_str}" '+%s'
+}
+
+parse_time(){
+    local content="$1"
+    local parsed_line; parsed_line=$(echo "${content}" | grep -m 1 "Time:")
+    echo ${parsed_line:6}
+}
+
+parse_property() {
+    local property="$1"; shift
+    local offset; offset=$((${#property}+2))
+    local content="$@"
+    local parsed_lines; parsed_lines=$(echo "${content}" | grep "${property}")
+    while read -r line; do
+        echo "${line:$offset}"
+    done <<< "${parsed_lines}"
+}
+
+parse_message(){
+    local content="$1"
+    echo "${content}" | sed -n '/Message/{n;p}'
+}
+
+verify_buildinfo_output(){
+    local output="$1"
+    repositories=$(parse_property "Repository" "$output") &&
+    test_equal "${repositories}" "top\ndetachedhead\nonbranch" &&
+    messages=$(parse_message "$output") &&
+    test_equal "${messages}" "Added submodule (path=component, repo=${SHARNESS_TRASH_DIRECTORY}/component.git)\nAdded repo.info\nAdded repo.info" &&
+    branches=$(parse_property "Branch" "$output") &&
+    test_equal "${branches}" "master\nHEAD\nmaster" &&
+    directories=$(parse_property "Directory" "${output}") &&
+    test_equal "${directories}" "top\ntop/externals/detachedhead\ntop/externals/onbranch"
+}
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git buildinfo status --invalid-option
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git buildinfo status -h)" &&
+    test -z "${output##Usage:*git-buildinfo-status*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git buildinfo status --help)" &&
+    test -z "${output##GIT-BUILDINFO-STATUS(1)*}"
+'
+
+test_expect_success 'has property time' '
+    cd $REPO &&
+    time_before=$(get_date_in_seconds) &&
+    output="$(git buildinfo status)" &&
+    time_after=$(get_date_in_seconds) &&
+    parsed_time=$(parse_time "${output}") &&
+    parsed_seconds=$(convert_time_to_seconds "${parsed_time}") &&
+    test ${time_before} -le ${parsed_seconds} &&
+    test ${time_after} -ge ${parsed_seconds}
+'
+
+test_expect_success 'detects local changes' '
+    cd $REPO &&
+    output="$(git buildinfo status)" &&
+    commits=$(parse_property "Commit" "$output") &&
+    test -z "${commits##*(LOCAL CHANGES)*}"
+'
+
+test_expect_success 'detects dirty workspace' '
+    cd $REPO &&
+    output="$(git buildinfo status)" &&
+    commits=$(parse_property "Commit" "$output") &&
+    test -z "${commits##*(DIRTY WORKSPACE)*}"
+'
+
+test_expect_success 'output printed when in root folder' '
+    cd $REPO &&
+    output="$(git buildinfo status)" &&
+    verify_buildinfo_output "${output}"
+'
+
+test_expect_success 'output printed when in sub-repository folder' '
+    cd $REPO &&
+    cd component &&
+    output="$(git buildinfo status)" &&
+    verify_buildinfo_output "${output}"
+'
+
+test_expect_success 'without external repos prints info once' '
+    cd $REPO &&
+    cd externals/onbranch &&
+    output="$(git buildinfo status)" &&
+    repositories=$(parse_property "Repository" "$output") &&
+    test_equal "${repositories}" "onbranch"
+'
+
+test_expect_success '--save writes to build-info.txt by default' '
+    cd $REPO &&
+    git buildinfo status --save &&
+    test -f build-info.txt &&
+    output="$(cat build-info.txt)" &&
+    verify_buildinfo_output "${output}"
+'
+
+test_expect_success '--save with positional argument writes to custom file' '
+    cd $REPO &&
+    git buildinfo status --save output.txt &&
+    test -f output.txt &&
+    output="$(cat output.txt)" &&
+    verify_buildinfo_output "${output}"
+'
+
+test_expect_success 'positional argument is only valid with --save and else exits with 129' '
+    test_expect_code 129 git buildinfo status --save ONE TWO
+'
+
+test_expect_success 'more than one positional argument is invalid with --save and exits with 129' '
+    test_expect_code 129 git buildinfo status --save ONE TWO
+'
+
+test_done

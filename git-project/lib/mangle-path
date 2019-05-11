@@ -1,0 +1,7 @@
+# Mangles a path name into a usable file name.
+# Only replaces path separators '/' with '_'
+# $1 - The path to be mangled.
+mangle_path() {
+    local path="$1"
+    echo "${path}"|sed 's|/|_|g'
+}

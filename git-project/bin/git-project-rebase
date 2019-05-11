@@ -1,0 +1,482 @@
+#!/usr/bin/env bash
+##copyright##
+##echoerr##
+##error-no-branch-found##
+##error-no-argument##
+##proj-top-dir##
+##mangle-path##
+##list-branch-commits##
+##submodule-branch-name##
+##is-git-repo##
+##verify-submodule-branch-names##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo " $SCRIPT [--abort] [--continue] [-h] [--help] [<branch>]"
+    echo ""
+    echo "options:"
+    echo " --abort              Abort rebasing and reset original state"
+    echo " --continue           Continue rebasing after manual conflict resolution"
+    echo " -h                   Print this usage"
+    echo " --help               Show man page"
+    echo ""
+}
+
+info_resolve_manually_and_continue()
+{
+    echo "A conflict has been detected that can't be resolved automatically."
+    echo "Please resolve the conflict and then continue rebasing with"
+    echo "git project rebase --continue"
+    exit 1
+}
+
+error_incomplete_rebase()
+{
+    echoerr "It seems that there is already a project-rebase-state directory, you might be in the"
+    echoerr "middle of another project rebase.  If that is the case, please try git project"
+    echoerr "rebase (--continue | --abort | --skip) If that is not the case, please"
+    echoerr "rm -fr '${REBASE_STATE_DIR}' and try again."
+    exit 1
+}
+
+error_no_current_rebase()
+{
+    local command; command="$1"
+    echoerr "There doesn't seem to be an ongoing project rebase to ${command}."
+    exit 1
+}
+
+
+error_unknown_submodule_commit()
+{
+    local commit="$1"
+    local submodule="$2"
+
+    echoerr "Unknown commit ${commit} encountered while trying to resolve submodule conflict for submodule ${submodule}"
+    echoerr "Please resolve manually and then continue with git project rebase --continue"
+
+    exit 1
+}
+
+# Returns true (i.e. 0) iff a rebase is ongoing in this repo
+is_rebase_ongoing()
+{
+    local git_dir;git_dir=$(git rev-parse --git-dir)
+    return $(test -d "${git_dir}/rebase-apply")
+}
+
+# Return a file name to a file where the original (pre-rebase) commits for the branch will be stored.
+get_orig_commits_file()
+{
+    local mangled_module_name
+    local parent_module; parent_module="$1"
+    if [ $# -ge 2 ]; then
+        local submodule; submodule="$2"
+
+        if [ "${parent_module}" = "." ]; then
+            mangled_module_name=$(mangle_path "${submodule}")
+        else
+            local submodule_relative_top;submodule_relative_top="${parent_module}/${submodule}"
+            mangled_module_name=$(mangle_path "${submodule_relative_top}")
+        fi
+    else
+        mangled_module_name=$(mangle_path "${parent_module}")
+    fi
+
+    echo ${REBASE_STATE_DIR}/${ORIG_SUBMODULE_BRANCH_COMMITS}${mangled_module_name}
+}
+
+# Return a file name to a file where the rebased (post-rebase) commits for the branch will be stored.
+get_rebased_commits_file()
+{
+    local mangled_module_name
+    local parent_module; parent_module="$1"
+    if [ $# -ge 2 ]; then
+        local submodule; submodule="$2"
+
+        if [ "${parent_module}" = "." ]; then
+            mangled_module_name=$(mangle_path "${submodule}")
+        else
+            local submodule_relative_top;submodule_relative_top="${parent_module}/${submodule}"
+            mangled_module_name=$(mangle_path "${submodule_relative_top}")
+        fi
+    else
+        mangled_module_name=$(mangle_path "${parent_module}")
+    fi
+
+    echo ${REBASE_STATE_DIR}/${REBASED_SUBMODULE_BRANCH_COMMITS}${mangled_module_name}
+}
+
+# Tries to resolve a submodule conflict in a submodule.
+# A submodule conflict is a conflict where two versions points to two different commits of the submodule.
+# It is resolved by assuming that the rebase of the submodule is the cause of the conflict and will point
+# the submodule pointer to the rebased version of the commit.
+#
+resolve_submodule_conflict()
+{
+    local conflict="$1"
+    local parent_module="$2"   # This is the module that we should resolve
+
+    echo "Trying to resolve submodule conflict '${conflict}'"
+
+    local submodule; submodule=$(echo ${conflict} | sed 's/.*conflict in //')
+    git diff --submodule "${submodule}"
+    local orig_commit;orig_commit=$(git diff --submodule "${submodule}"|grep " -Subproject commit"|sed 's| -Subproject commit ||')
+    #echo "orig_commit ${orig_commit}"
+    if [ -z ${orig_commit} ]; then
+        echo "No original commit found, trying another approach."
+        orig_commit=$(git diff "${submodule}"|grep index|sed -r 's/index ([0-9a-fA-F]+),([0-9a-fA-F]+).*/\2/')
+
+        echo "Original commit: (before rebase) ${orig_commit}"
+    fi
+
+    local orig_commits_file;orig_commits_file="$(get_orig_commits_file ${parent_module} "${submodule}")"
+    local rebased_commits_file;rebased_commits_file="$(get_rebased_commits_file ${parent_module} "${submodule}")"
+    #echo "orig_commits_file ${orig_commits_file}"
+    #cat "${orig_commits_file}"
+    #echo "rebased_commits_file ${rebased_commits_file}"
+    #cat "${rebased_commits_file}"
+    set +e
+    local orig_commit_line;orig_commit_line=$(grep -n ${orig_commit} "${orig_commits_file}")
+    set -e
+    #echo "orig_commit_line ${orig_commit_line}"
+    if [ -z ${orig_commit_line} ]; then
+        error_unknown_submodule_commit ${orig_commit} "${submodule}"
+    fi
+    local orig_commit_num;orig_commit_num=$(echo ${orig_commit_line} | sed 's|:.*||')
+    #echo "orig_commit_num ${orig_commit_num}"
+
+    local rebased_commit;rebased_commit=$(tail -n +${orig_commit_num} "${rebased_commits_file}" | head -1)
+    #echo "Rebased commit: '${rebased_commit}'"
+
+    echo "Pointing ${submodule} to correct (rebased) commit ${rebased_commit}"
+    pwd
+    pushd "${submodule}"
+    pwd
+    #echo "Checking out ${rebased_commit} in module ${submodule}"
+    git checkout "${rebased_commit}"
+    popd
+    git add "${submodule}"
+}
+
+# Rebases a module. It can be either a submodule or the top repo.
+# $1 - branch to rebase against (in top repo, will be renamed)
+# $2 - module
+# $3 - continue (true/false)
+#
+module_rebase()
+{
+    local branch; branch="$1"
+    local module; module="$2"
+    local continue; continue=$3
+    local outfile;outfile=$(mktemp)
+
+    if [ "${module}" != "." ]; then
+        local renamedbranch; renamedbranch="$(submodule_branch_name "${module}" ${branch})"
+        branch="${renamedbranch}"
+    fi
+
+    echo "********  Rebasing module ${PWD}  $branch ********"
+
+    local rebase_result
+    # Even if continue is set here, i.e. the user has asked for a --continue, we might not
+    # have started the rebase of *this* module.
+    #echo "ongoing? " $(is_rebase_ongoing)
+    if ${continue} && is_rebase_ongoing; then
+        git rebase --continue |& tee ${outfile}
+    else
+        # From where did this branch originate
+        local branch_point;branch_point=$(git merge-base $(git rev-parse HEAD) ${branch})
+        local orig_commits_file
+        orig_commits_file=$(get_orig_commits_file "${module}")
+        list_branch_commits ${branch_point} >"${orig_commits_file}"
+        git rebase ${branch} |& tee ${outfile}
+    fi
+
+    rebase_result=${PIPESTATUS[0]}
+    #echo "rebase_result ${rebase_result}"
+    while [ ${rebase_result} -ne 0 ]; do
+        set +e
+        #grep "CONFLICT (submodule)" "${outfile}"
+        local submodule_conflicts;submodule_conflicts=$(grep "CONFLICT (submodule)" "${outfile}")
+        local conflicts_result=$?
+        set -e
+        if [ ${conflicts_result} -eq 0 ];then
+            echo "${SCRIPT} detected a submodule conflict. Trying to help out"
+            echo "${submodule_conflicts}" | while read -r conflict; do
+                resolve_submodule_conflict "${conflict}" "${module}"
+            done
+            #echo "Continuing rebase after resolving submodule conflict(s)"
+            local cwd; cwd=${PWD}
+            #echo "cwd ${cwd}"
+            set +e
+            git rebase --continue |& tee ${outfile}
+            rebase_result=${PIPESTATUS[0]}
+            set -e
+            #echo "rebase_result after continue ${rebase_result}"
+        else
+            info_resolve_manually_and_continue
+        fi
+    done
+
+    #echo "Done rebasing submodule ${module}. Making a rebased commits file for it."
+    # Now make a list with the new commits after the rebase
+    branch_point=$(git merge-base $(git rev-parse HEAD) ${branch})
+    list_branch_commits ${branch_point} >"$(get_rebased_commits_file "${module}")"
+
+    rm -f ${outfile}
+}
+
+# Cleans up the rebase state directory
+cleanup()
+{
+    local sha
+    local module
+    local description
+    local branch
+    local state
+
+    tac "${REBASE_STATE_DIR}/${ORIG_STATUS_FILE}" | while read -n1 state; do
+        read -d' ' sha
+        read -d'(' module
+        read -d')' description
+        read branch
+        (cd "${module}"; git checkout -q "${branch}")
+    done
+    rm -rf "${REBASE_STATE_DIR}"
+}
+
+
+# Rebase all repos in the repo list starting with repo number $2
+project_rebase_repo_list()
+{
+    local branch=$1
+    local start_repo_num=$2
+    local continue=$3
+
+    local sha
+    local module
+    local description
+    local current_branch
+    local state
+    #echo "project_rebase_repo_list() ${branch} ${start_repo_num} ${continue}"
+    local line_num; line_num=0
+    # git submodule --recursive will handle submodules width first, but we want depth
+    # first, so simply reverse the order using tac.
+    # FIXME: We are now sacrificing ( instead of space.
+    tac "${REBASE_STATE_DIR}/${ORIG_STATUS_FILE}" | while read -n1 state; do
+        read -d' ' sha
+        read -d'(' module
+        read -d ')' description
+        read current_branch
+        # echo "line ${line_num}: start_repo ${start_repo_num} state '${state}', sha ${sha}, mod ${module}, desc ${description}, cont ${continue}"
+        if [ ${line_num} -ge ${start_repo_num} ]; then
+            echo ${line_num} >"${REBASE_STATE_DIR}/${REBASE_REPO_NUM_FILE}"
+            cd "${PROJ_TOP_DIR}/${module}"
+            module_rebase ${branch} "${module}" ${continue}
+            continue=false
+        fi
+        line_num=$((${line_num}+1))
+    done
+
+    return 0
+}
+
+# Main function for git project rebase.
+#
+project_rebase()
+{
+    local branch; branch=$1
+
+    if [ -d "${REBASE_STATE_DIR}" ]; then
+        error_incomplete_rebase
+    fi
+
+    mkdir "${REBASE_STATE_DIR}"
+
+    # Dump the original state of SHA:s so we can abort later.
+    # We start with the top repo, then add the submodules
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    local top_sha;top_sha="$(git rev-parse HEAD)"
+    echo " ${top_sha} . ($(git describe --all ${top_sha}))  ${current_branch}" >"${REBASE_STATE_DIR}/${ORIG_STATUS_FILE}"
+
+    local modulestats
+    modulestats="$(git submodule status)"
+
+    printf '%s\n' "$modulestats" | while read -n1 state; do
+        read -d' ' sha
+        read -d'(' module
+        read description
+        pushd "${module}" > /dev/null
+        current_branch=$(git rev-parse --abbrev-ref HEAD)
+        popd > /dev/null
+
+        if [ "$current_branch" != "HEAD" ]
+        then
+            echo "${state}" "${sha}" "${module}" "(${description} ${current_branch}" >> "${REBASE_STATE_DIR}/${ORIG_STATUS_FILE}"
+        fi
+    done
+
+
+    echo ${branch} >"${REBASE_STATE_DIR}/${REBASE_BRANCH_FILE}"
+
+    # Start rebasing from repo number 0
+    project_rebase_repo_list ${branch} 0 false
+
+    cleanup
+}
+
+# Continues a previously interrupted project rebase
+#
+project_rebase_continue()
+{
+    if [ ! -d "${REBASE_STATE_DIR}" ]; then
+        error_no_current_rebase "continue"
+    fi
+
+    local branch
+    local start_repo_num
+    branch=$(cat "${REBASE_STATE_DIR}/${REBASE_BRANCH_FILE}")
+    start_repo_num=$(cat "${REBASE_STATE_DIR}/${REBASE_REPO_NUM_FILE}")
+    echo "Continuing rebasing branch ${branch} module number ${start_repo_num}"
+
+    local result
+    project_rebase_repo_list ${branch} ${start_repo_num} true
+    result=$?
+
+    if [ ${result} -eq 0 ];then
+        cleanup
+    fi
+
+    exit ${result}
+}
+
+# Aborts a project rebase.
+#
+project_rebase_abort()
+{
+    if [ ! -d "${REBASE_STATE_DIR}" ]; then
+        error_no_current_rebase "abort"
+    fi
+
+    # To abort, iterate over the ORIG_STATUS_FILE and abort/reset each submodule's state
+    # FIXME: We are now sacrificing ( instead of space.
+    tac "${REBASE_STATE_DIR}/${ORIG_STATUS_FILE}" | while read -n1 state; do
+        read -d' ' sha
+        read -d'(' module
+        read description
+        echo "Aborting any ongoing rebase and resetting module '${module}' to original commit ${sha}"
+        pushd "${PROJ_TOP_DIR}/${module}"
+        # Never mind if this is not ongoing, it will complain but no harm will be done.
+        set +e
+        git rebase --abort
+        set -e
+        # This is what we really want to do (it might have been done by the abort above if the rebase was ongoing)
+        git reset --hard ${sha}
+        popd
+    done
+
+    cleanup
+}
+
+SCRIPT=$(basename "$0")
+ABORT=false
+CONTINUE=false
+PROJ_TOP_DIR="$(proj_top_dir)"
+REBASE_STATE_DIR="${PROJ_TOP_DIR}/.git/project-rebase-state"
+ORIG_STATUS_FILE="orig-submodule-status"
+ORIG_SUBMODULE_BRANCH_COMMITS="orig-submodule-branch-commits-"
+REBASED_SUBMODULE_BRANCH_COMMITS="rebased-submodule-branch-commits-"
+REBASE_REPO_NUM_FILE="rebase_repo_num_file"
+REBASE_BRANCH_FILE="rebase_branch_file"
+
+set +e
+ARGS=$(getopt -o h -l "abort,continue,help" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --abort)
+            shift
+            ABORT=true
+            ;;
+        --continue)
+            shift
+            CONTINUE=true
+            ;;
+        --help)
+            shift
+            git help project-rebase "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+is_git_repo
+
+cd "${PROJ_TOP_DIR}"
+
+if [ -n "$(git project --submodules)" ]
+then
+    HAVE_SUBMODULES=true
+else
+    HAVE_SUBMODULES=false
+fi
+
+if ${ABORT}; then
+    if ${HAVE_SUBMODULES}
+    then
+        project_rebase_abort
+    else
+        git rebase --abort
+    fi
+elif ${CONTINUE}; then
+    if ${HAVE_SUBMODULES}
+    then
+        project_rebase_continue
+    else
+        git rebase --continue
+    fi
+else
+    if [ $# -lt 1 ]; then
+        error_no_argument "branch"
+    fi
+
+    BRANCH="$1"
+    if ! git rev-parse -q --no-revs --verify "${BRANCH}"
+    then
+        error_no_branch_found "${BRANCH}"
+    fi
+
+    if ${HAVE_SUBMODULES}
+    then
+        if verify_submodule_branch_names "${BRANCH}"
+        then
+            project_rebase "${BRANCH}"
+        else
+            echo "Aborting because of submodule branch tracking error." >&2
+            exit 1
+        fi
+    else
+        git rebase "${BRANCH}"
+    fi
+fi

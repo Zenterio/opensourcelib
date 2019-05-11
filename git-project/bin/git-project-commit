@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [options] [submodule ...]"
+    echo ""
+    echo "If no submodule is specified, all submodules are used."
+    echo ""
+    echo "options:"
+    echo "  -h                    Print this usage"
+    echo "  --help                Show man page"
+    echo "  -q, --quiet           Suppress output"
+    echo "  -v, --verbose         Show diff in commit message template"
+    echo ""
+    echo "Commit message options:"
+    echo ""
+    echo "WARNING!"
+    echo "When using options which specifies a commit, only use relative commits"
+    echo "such as HEAD, since the same command will be applied to several"
+    echo "repositories (submodules). Also have in mind the implication of applying"
+    echo "a commit that reference another commit, to multiple repositories."
+    echo ""
+    echo "  -F, --file <file>     Read message from file"
+    echo "  --author <author>     Override author for commit"
+    echo "  --date <date>         Override date for commit"
+    echo "  -m, --message <message>"
+    echo "                        Commit message"
+    echo "  -c, --reedit-message <commit>"
+    echo "                        Reuse and edit message from specified commit."
+    echo "  -C, --reuse-message <commit>"
+    echo "                        Reuse message from specified commit"
+    echo "  --fixup <commit>      Use autosquash formatted message to fixup specified commit"
+    echo "  --squash <commit>     Use autosquash formatted message to squash specified commit"
+    echo "  --reset-author        The commit is authored by me now (used with -C/-c/--amend)"
+    echo "  -s, --signoff         Add Signed-off-by:"
+    echo "  -t, --template <file>"
+    echo "                        Use specified template file"
+    echo "  -e, --edit            Force edit of commit"
+    echo "  --cleanup <default>   How to strip spaces and #comments from message"
+    echo "  --status              Include status in commit message template"
+    echo "  -S, --gpg-sign[=<key id>]"
+    echo "                        GPG sign commit"
+    echo ""
+    echo "Commit contents options"
+    echo ""
+    echo "  -a, --all             Commit all changed files"
+    echo "  --interactive         Interactively add files"
+    echo "  -p, --patch           Interactively add changes"
+    echo "  -n, --no-verify       Bypass pre-commit hook"
+    echo "  --dry-run             Show what would be committed"
+    echo "  --short               Show status concisely"
+    echo "  --branch              Show branch information"
+    echo "  --porcelain           Machine-readable output"
+    echo "  --long                Show status in long format (default)"
+    echo "  -z, --null            Terminate entries with NUL"
+    echo "  --amend               Amend previous commit"
+    echo "  --no-post-rewrite     Bypass post-rewrite hook"
+    echo "  -u, --untracked-files[=<mode>]"
+    echo "                        Show untracked files, optional modes: all, normal, no. (Default: all)"
+}
+
+
+##proj-top-dir##
+
+##echoerr##
+
+##array-contains##
+
+##verify-submodule-list##
+
+##args-to-newline-list##
+
+##has-staged-content##
+
+##has-modified-content##
+
+SCRIPT=$(basename "$0")
+QUIET=false
+ADD_MODIFIED=false
+SUCCESSFUL_COMMITS=()
+COMMON_ARGS=()
+MODULES=()
+
+error_handler() {
+    local error_code; error_code="$1"
+    local top; top="$(proj_top_dir)"
+
+    if [ "${error_code}" != "0" ] && [ ${#SUCCESSFUL_COMMITS[@]} -gt 0 ]; then
+        for path in "${SUCCESSFUL_COMMITS[@]}"; do
+            (cd "${top}" &&
+             git reset HEAD "${path}" &&
+             cd "${path}" &&
+             git reset --soft HEAD^)
+        done
+    fi
+}
+trap 'error_handler ${?}' EXIT
+
+# $1 - top
+# $2 - path to submodule
+# depends on global COMMON_ARGS, ADD_MODIFIED, QUIET
+do_repo_commit() {
+    local top; top="$1"; shift
+    local path; path="$1"; shift
+    local fullpath; fullpath="${top}/${path}"
+
+    if ! ${QUIET}; then
+        echo "" && echo "${path}" && echo "${path//?/-}"
+    fi
+
+    if has_staged_content "${fullpath}" || { ${ADD_MODIFIED} && has_modified_content "${fullpath}"; }; then
+        set +u
+        (cd "${fullpath}" && git commit "${COMMON_ARGS[@]}") &&
+        (cd "${top}" && git add "${path}") &&
+        SUCCESSFUL_COMMITS+=("${path}") || return 1
+        set -u
+    else
+        if ! ${QUIET}; then
+            echo "Nothing to commit for ${path}."
+        fi
+    fi
+}
+
+# depends on global COMMON_ARGS, QUIET, MODULES
+do_commit() {
+    local topdir; topdir="$(proj_top_dir)"
+    local repo
+
+    if [ ${#MODULES[@]} -ne 0 ]
+    then
+        for repo in "${MODULES[@]}"
+        do
+            do_repo_commit "${topdir}" "${repo}"
+        done
+    fi
+
+    if ! ${QUIET}; then
+        echo "" && echo "." && echo "-"
+    fi
+    set +u
+    (cd "${topdir}" && git commit "${COMMON_ARGS[@]}")
+    set -u
+}
+
+if ! ARGS=$(getopt -o ac:C:eF:hm:npqsS:t:uvz -l "all,amend,author:,branch,cleanup:,date:,dry-run,edit,file:,fixup:,gpg-sign:,help,interactive,long,message:,no-post-rewrite,no-verify,null,patch,porcelain,quiet,reedit-message:,reset-author:,reuse-message:,signoff,squash:,short,status,template:,untracked-files,verbose" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -a|--all)
+            COMMON_ARGS+=("$1"); shift
+            ADD_MODIFIED=true
+            ;;
+        # non-arg options
+        -v|--verbose|--amend|--interactive|--patch|--dry-run|--short|--branch|--porcelain|--null|--no-post-rewrite|-n|--no-verify|--reset-author|-s|--signoff|-e|--edit|--status)
+            COMMON_ARGS+=("$1"); shift
+            ;;
+        # arg options
+        --author|--cleanup|--date|-m|--message|-c|--reedit-message|-C|--reuse-message|--fixup|--squash|-S|--gpg-sign)
+            COMMON_ARGS+=("$1"); shift
+            COMMON_ARGS+=("$1"); shift
+            ;;
+        # file based options
+        -F|--file|-t|--template)
+            COMMON_ARGS+=("$1"); shift
+            COMMON_ARGS+=("$(readlink -f "$1")"); shift
+            ;;
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-commit "$@"
+            exit $?
+            ;;
+        -q|--quiet)
+            COMMON_ARGS+=("$1"); shift
+            QUIET=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+verify_submodule_list "$@"
+mapfile -t MODULES < <(args_to_newline_list "$@")
+if [ 0 -eq ${#MODULES[@]} ]
+then
+    mapfile -t MODULES < <(git project --submodules)
+fi
+
+do_commit

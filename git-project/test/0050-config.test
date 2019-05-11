@@ -1,0 +1,128 @@
+#
+# Test git-project-config
+#
+
+test_description='git project config'
+. ./test.sh
+
+STUB_CONFIG="${SHARNESS_TRASH_DIRECTORY}/stub-config.cfg"
+STUB_CONFIG_LIST="${SHARNESS_TRASH_DIRECTORY}/stub-config.list"
+STUB_CONFIG_ZLIST="${SHARNESS_TRASH_DIRECTORY}/stub-config.zlist"
+
+STUB_CONFIG_INCLUDE="${SHARNESS_TRASH_DIRECTORY}/stub-config-include.cfg"
+STUB_CONFIG_INCLUDE_LIST="${SHARNESS_TRASH_DIRECTORY}/stub-config-include.list"
+STUB_CONFIG_INCLUDE_NOINCLUDE_LIST="${SHARNESS_TRASH_DIRECTORY}/stub-config-noinclude.list"
+
+setup_configuration() {
+    rm -f "${STUB_CONFIG}"
+    git config -f "${STUB_CONFIG}" --add project.key data
+    git config -f "${STUB_CONFIG}" --add projects.key "not the data"
+    git config -f "${STUB_CONFIG}" --add wrong.project.badkey "definitely not"
+
+    git config -f "${STUB_CONFIG}" --get-regexp "^project[.].*" > "${STUB_CONFIG_LIST}"
+    git config -f "${STUB_CONFIG}" -z --get-regexp "^project[.].*" > "${STUB_CONFIG_ZLIST}"
+
+    git config -f "${STUB_CONFIG_INCLUDE}" --add include.path stub-config.cfg
+    git config -f "${STUB_CONFIG_INCLUDE}" --add project.key "double"
+    git config -f "${STUB_CONFIG_INCLUDE}" --add project.another.key "another key"
+
+    git config -f "${STUB_CONFIG_INCLUDE}" --includes --get-regexp "^project[.].*" > "${STUB_CONFIG_INCLUDE_LIST}"
+    git config -f "${STUB_CONFIG_INCLUDE}" --no-includes --get-regexp "^project[.].*" > "${STUB_CONFIG_INCLUDE_NOINCLUDE_LIST}"
+}
+
+test_exec create_full_project_repo
+
+test_exec setup_configuration
+
+test_expect_success 'invalid option exits with 129 (usage)' '
+    test_expect_code 129 git project config --invalid-option
+'
+
+test_expect_success 'No arguments exits with 129 (usage)' '
+    test_expect_code 129 git project config
+'
+
+test_expect_success '-z alone is invalid' '
+    test_expect_code 129 git project config -z
+'
+
+test_expect_success '-h' '
+    git project config -h
+'
+
+test_expect_success '--help' '
+    git project config --help
+'
+
+# These four file options can't be tested with live git-config, so
+# they are tested using --testmode
+# --blob
+# --system
+# --local
+# --global
+
+test_expect_success '--blob' '
+    test_equal "$(git project config --testmode --blob master:.gitmodules -l)"  "git config --blob master:.gitmodules --get-regexp ^project[.].*"
+'
+
+test_expect_success '--system' '
+    test_equal "$(git project config --testmode --system -l)"  "git config --system --get-regexp ^project[.].*"
+'
+
+test_expect_success '--local' '
+    test_equal "$(git project config --testmode --local -l)"  "git config --local --get-regexp ^project[.].*"
+'
+
+test_expect_success '--global' '
+    test_equal "$(git project config --testmode --global -l)"  "git config --global --get-regexp ^project[.].*"
+'
+
+# Use custom GIT_CONFIG for the basic tests
+OLD_GIT_CONFIG="${GIT_CONFIG}"
+export GIT_CONFIG="${STUB_CONFIG}"
+
+test_expect_success '-l' '
+    test_equal "$(git project config -l)" "${STUB_CONFIG_LIST}"
+'
+
+test_expect_success '--list' '
+    test_equal "$(git project config --list)" "${STUB_CONFIG_LIST}"
+'
+
+test_expect_success '-z' '
+    git project config -z -l > output &&
+    test_equal "output" "${STUB_CONFIG_ZLIST}"
+'
+
+test_expect_success '--null' '
+    git project config --null -l > output &&
+    test_equal "output" "${STUB_CONFIG_ZLIST}"
+'
+
+# Testing --file requires unsetting the GIT_CONFIG_VARIABLE
+unset GIT_CONFIG
+
+test_expect_success '--file' '
+    git project config --file "${STUB_CONFIG}" -l > output &&
+    test_equal "output"  "${STUB_CONFIG_LIST}"
+'
+
+test_expect_success '-f' '
+    git project config -f "${STUB_CONFIG}" -l > output &&
+    test_equal "output"  "${STUB_CONFIG_LIST}"
+'
+
+# Use -f to test --[no-]includes
+test_expect_success '--includes' '
+    git project config --includes -f "${STUB_CONFIG_INCLUDE}" -l > output.includes &&
+    test_equal "output.includes" "${STUB_CONFIG_INCLUDE_LIST}"
+'
+
+test_expect_success '--no-includes' '
+    test_equal "$(git project config --no-includes -f "${STUB_CONFIG_INCLUDE}" -l)" "${STUB_CONFIG_INCLUDE_NOINCLUDE_LIST}"
+'
+
+# Restore GIT_CONFIG so the test harness does not destroy resources
+export GIT_CONFIG="$OLD_GIT_CONFIG"
+
+test_done

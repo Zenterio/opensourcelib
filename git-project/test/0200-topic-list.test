@@ -1,0 +1,180 @@
+#
+# Test git-project-topic-list
+#
+
+test_description='git project topic list'
+. ./test.sh
+
+# As git project topic list makes no changes, we set up a remote and a
+# local repository for all tests.
+#
+# Branches and the sub repository they should be on:
+# remote project repo:
+#  topic-remote-only      - top repository only
+#  topic-remote-and-local - 'space component'
+# local project repo:
+#  topic-local            - 'component'and 'space component'
+#  topic-remote-and-local - 'space component'
+#
+# Actual sub repositories are not needed by topic list,
+# but they have to be configured.
+#
+create_full_project_topic_repo() {
+    create_remote_repo "${FULL_PROJECT_PATH}"
+    create_remote_repo "${COMPONENT_PATH}"
+    create_remote_repo "${SPACE_COMPONENT_PATH}"
+    add_submodule_to_remote_repo "${FULL_PROJECT_PATH}" "${COMPONENT_PATH}" "component"
+    add_submodule_to_remote_repo "${FULL_PROJECT_PATH}" "${SPACE_COMPONENT_PATH}" "space component"
+
+    local tmp_workdir; tmp_workdir="$(mktemp -d)"
+    pushd "${tmp_workdir}" >/dev/null
+
+    git project clone -q "${FULL_PROJECT_PATH}"
+    cd full_project
+    set_config_recursive .
+
+    # Create topic-remote-only
+    git checkout -q -b topic-remote-only
+    git push -q origin topic-remote-only:topic-remote-only
+    git checkout -q master
+
+    # Create topic-remote-unempty
+    git project topic begin topic-remote-unempty 'component'
+    git add .
+    git commit -q -m "Creating topic-remote-unempty"
+    git push -q origin topic-remote-unempty:topic-remote-unempty
+
+    # Create topic-remote-and-local
+    git project topic begin topic-remote-and-local 'space component'
+    git add .
+    git commit -q -m "Creating topic-remote-and-local"
+    git push -q origin topic-remote-and-local:topic-remote-and-local
+
+    popd >/dev/null
+
+    # Create local repository with topic-local and topic-remote-and-local
+    git project clone -q "${FULL_PROJECT_PATH}" full_project
+    cd full_project
+    set_config_recursive .
+    git project topic begin topic-local 'space component' 'component'
+    git add .
+    git commit -q -m "Creating topic-local"
+
+    git project checkout -q topic-remote-and-local
+    git project checkout -q master
+}
+
+# Create expected output files
+create_expected_output_files() {
+    cat <<EOF >expected-output-local
+topic-local ('component', 'space component')
+topic-remote-and-local ('space component')
+EOF
+    cat <<EOF >expected-output-remote
+origin/topic-remote-and-local ('space component')
+origin/topic-remote-only ()
+origin/topic-remote-unempty ('component')
+EOF
+    cat <<EOF >expected-output-all
+topic-local ('component', 'space component')
+topic-remote-and-local ('space component')
+origin/topic-remote-and-local ('space component')
+origin/topic-remote-only ()
+origin/topic-remote-unempty ('component')
+EOF
+}
+
+test_exec create_full_project_topic_repo
+
+test_exec create_expected_output_files
+
+test_expect_success 'invalid option exits with 129 (usage)' '
+    output="$(test_expect_code 129 git project topic list --invalid-option)" &&
+    test -z "${output##Usage:*git-project-topic-list*}"
+'
+
+test_expect_success 'too many options exits with 129 (usage)' '
+    output="$(test_expect_code 129 git project topic list -r --remote)" &&
+    test -z "${output##Usage:*git-project-topic-list*}"
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git project topic list -h)" &&
+    test -z "${output##Usage:*git-project-topic-list*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git project topic list --help)" &&
+    test -z "${output##GIT-PROJECT-TOPIC-LIST(1)*}"
+'
+
+test_expect_success 'with no topic branches, exit with code 1' '
+    git init -q no_remote_repository &&
+    cd no_remote_repository &&
+    test_expect_code 1 git project topic list
+'
+
+# no arguments == local only
+test_expect_success 'With no arguments, list local topics' '
+    cd full_project &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list | tee ../output &&
+    test_equal ../output ../expected-output-local
+'
+
+# no arguments == local only
+test_expect_success 'If on a topic and no arguments, list local topics the same way as when on master' '
+    cd full_project &&
+    git project checkout -q topic-local &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list | tee ../output &&
+    git project checkout -q master &&
+    test_equal ../output ../expected-output-local
+'
+
+# -a == all
+test_expect_success 'With -a, list all topics' '
+    cd full_project &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list -a | tee ../output &&
+    test_equal ../output ../expected-output-all
+'
+
+# -all == all
+test_expect_success 'With no --all, list all topics' '
+    cd full_project &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list --all | tee ../output &&
+    test_equal ../output ../expected-output-all
+'
+
+# -r == remote only
+test_expect_success 'With -r, list remote topics' '
+    cd full_project &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list --r | tee ../output &&
+    test_equal ../output ../expected-output-remote
+'
+
+# --remote == remote only
+test_expect_success 'With --remote, list remote topics' '
+    cd full_project &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list --remote | tee ../output &&
+    test_equal ../output ../expected-output-remote
+'
+
+test_expect_success 'a topic in a repo without sub-modules gives empty list' '
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo" &&
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b topic-branch &&
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    test_when_finished "rm -f \"${SHARNESS_TRASH_DIRECTORY}/output\"" &&
+    git project topic list | tee ../output &&
+    test_equal ../output "topic-branch ()"
+'
+
+test_done

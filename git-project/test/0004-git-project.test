@@ -1,0 +1,79 @@
+#
+# Test git-project-sw-update
+#
+# NOTE!
+# Since we are doing a software update from the repository currently tested from,
+# make sure the committed version is stable enough.
+#
+# Conflicts between the version under test and the committed version might cause
+# errors in the git-project-sw-update file since it is overwritten by the update
+# while executing.
+#
+
+test_description='git project'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project --invalid-option
+'
+
+test_expect_success '-h' '
+    git project sw-update -h
+'
+
+test_expect_success '--help' '
+    git project sw-update --help
+'
+
+test_expect_success '--commands' '
+    git project --commands
+'
+
+test_expect_success '--guides' '
+    git project --guides
+'
+
+test_expect_success '--all-submodules' '
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/proj_submodules\" \"${SHARNESS_TRASH_DIRECTORY}/submodules.expected.out\"" &&
+    echo "component" > submodules.expected.out &&
+    echo "component/subcomponent" >> submodules.expected.out &&
+    echo "component2" >> submodules.expected.out &&
+    echo "space component" >> submodules.expected.out &&
+    echo "thirdparty component" >> submodules.expected.out &&
+    git project clone "${FULL_PROJECT_PATH}" proj_submodules &&
+    cd proj_submodules &&
+    git project --all-submodules > submodules.out &&
+    test_equal ../submodules.expected.out submodules.out
+'
+
+test_expect_success '--submodules' '
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/proj_submodules\" \"${SHARNESS_TRASH_DIRECTORY}/submodules.expected.out\"" &&
+    echo "component" > submodules.expected.out &&
+    echo "component2" >> submodules.expected.out &&
+    echo "space component" >> submodules.expected.out &&
+    echo "thirdparty component" >> submodules.expected.out &&
+    git project clone "${FULL_PROJECT_PATH}" proj_submodules &&
+    cd proj_submodules &&
+    git project --submodules > submodules.out &&
+    test_equal ../submodules.expected.out submodules.out
+'
+
+test_expect_success '--submodules with no submodules should give no output' '
+    create_repo "simple repo" &&
+    cd "simple repo" &&
+    git project --submodules &&
+    test "$(git project --submodules|wc -l)" -eq "0"
+'
+
+test_expect_success '-v' '
+    git project -v
+'
+
+test_expect_success '--version' '
+    git project --version > version.out &&
+    grep "git project version" version.out
+'
+
+test_done

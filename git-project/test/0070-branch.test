@@ -1,0 +1,103 @@
+#
+# Test git-project-branch
+#
+
+# Clone and cd to full_project
+setup_full_project() {
+    git project clone -q "${FULL_PROJECT_PATH}" &&
+    test_when_finished "rm -rf \"$(pwd)/full_project\""
+    cd full_project
+    set_config_recursive .
+}
+
+test_description='git project branch'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+test_expect_success 'invalid option exits with 129 (usage)' '
+    test_expect_code 129 git project branch --invalid-option
+'
+
+test_expect_success 'No arguments exits with 129 (usage)' '
+    test_expect_code 129 git project branch
+'
+
+test_expect_success '-h' '
+    git project branch -h
+'
+
+test_expect_success '--help' '
+    git project branch --help
+'
+
+test_expect_success 'refuse to branch to existing branch (code 128)' '
+    setup_full_project &&
+    git fetch -q origin second_branch &&
+    git checkout -q master &&
+    test_expect_code 128 git project branch second_branch &&
+    test_equal "$(git status --porcelain)" ""
+'
+
+test_expect_success 'refuse to branch to existing branch (code 128) when in detached head' '
+    setup_full_project &&
+    git checkout -q --detach HEAD &&
+    test_expect_code 128 git project branch master &&
+    test_equal "$(git status --porcelain)" ""
+'
+
+test_expect_success 'branch all repositories to new branch' '
+    setup_full_project &&
+    git project branch topic-new &&
+    on_branch topic-new . component component2 "space component" "thirdparty component" &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch topic-new component component2 "space component" "thirdparty component"
+'
+
+test_expect_success 'branch one repository to new branch' '
+    setup_full_project &&
+    git project branch topic-new "space component" &&
+    on_branch topic-new . "space component" &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch master component component2 "thirdparty component" &&
+    follows_branch topic-new "space component"
+'
+
+test_expect_success 'branch from inside a sub repository' '
+    setup_full_project &&
+    cd component &&
+    git project branch topic-new component2 &&
+    cd .. &&
+    on_branch topic-new . component2 &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch master component "space component" "thirdparty component" &&
+    follows_branch topic-new component2
+'
+
+test_expect_success 'a topic in a repo without sub-modules can be checked out' '
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo" &&
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git project branch test-branch &&
+    on_branch "test-branch" . &&
+    rm -rf "${SHARNESS_TRASH_DIRECTORY}/local_repo"
+'
+
+test_expect_success 'Create branch also in detached head on top repo' '
+    setup_full_project &&
+    git checkout -q --detach HEAD &&
+    git project branch new_branch &&
+    on_branch "new_branch" .
+'
+
+test_expect_success 'Fail with error code 1 if a submodule has no tracked branch.' '
+    setup_full_project &&
+    git config -f .gitmodules --unset submodule.component.branch &&
+    git commit -q -a -m "Removing the branch tracking for component" &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_expect_code 1 git project branch new_branch &&
+    cd .. &&
+    compare_all_refs before.git HEAD full_project/.git HEAD
+'
+
+test_done

@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# Installs ronn if not already installed
+#
+
+GEM=
+RONN=
+TOOLSDIR=$(cd $(dirname $0) && pwd)
+EC_GEM_NOT_FOUNT=1
+EC_RONN_NOT_FOUNT=2
+EC_INSTALL_FAILED=3
+GIT_CONFIG_CMD="git config --global project.dev.ronn-path PATH"
+
+find_gem() {
+    if gem --version 2> /dev/null | grep -e "2.[0|1|2]." > /dev/null; then
+        GEM=gem
+        return 0
+    fi
+
+    if gem2.0 --version 2> /dev/null | grep -e "2.[0|1|2]." > /dev/null; then
+        GEM=gem2.0
+        return 0
+    fi
+
+    if gem2.2 --version 2> /dev/null | grep -e "2.[0|1|2]." > /dev/null; then
+        GEM=gem2.2
+        return 0
+    fi
+}
+
+set_ronn_config() {
+    local ronn=$1
+    git config --global project.dev.ronn-path ${ronn}
+    echo "git config --global project.dev.ronn-path:"
+    git config --global project.dev.ronn-path
+}
+
+find_ronn() {
+    RONN=$(git config project.dev.ronn-path)
+    if [ -z "${RONN}" ]; then
+        RONN=$(ls ~/.gem/ruby/2.*/bin/ronn* 2> /dev/null)
+    fi
+    if [ -z "${RONN}" ]; then
+        RONN=$(which ronn 2>&1 /dev/null)
+    fi
+}
+
+install_ronn() {
+    find_gem
+    if [ -z "${GEM}" ]; then
+        echo >&2 "Gem 2 could not be located on the system. Please install gem 2:"
+        echo >&2 "sudo apt-get install ruby2.0"
+        echo >&2 "sudo apt-get install ruby2.0-dev"
+        exit ${EC_GEM_NOT_FOUNT}
+    fi
+
+   if ${GEM} list -i ronn > /dev/null || ${GEM} install --user-install ronn; then
+        find_ronn
+        if [ ! -z "${RONN}" ]; then
+            set_ronn_config "${RONN}"
+            echo "git-project have been developed using Ronn version 0.7.3"
+            echo "You have:"
+            ${TOOLSDIR}/ronn --version
+        else
+            echo >&2 "Installation procedure did not report any errors, "
+            echo >&2 "but ronn could not be located after the installation."
+            echo >&2 "Please set the path to the ronn executable via:"
+            echo >&2 "${GIT_CONFIG_CMD}"
+            exit ${RONN_NOT_FOUND}
+        fi
+    else
+        echo >&2 "Failed to install ronn using '${GEM} install --user-install ronn'"
+        echo >&2 "or failed to detect installation!"
+        echo >&2 "Please install it manually and specify the full path to the ronn binary using:"
+        echo >&2 "${GIT_CONFIG_CMD}"
+        exit ${EC_INSTALL_FAILED}
+    fi
+}
+
+is_ronn_installed() {
+    find_ronn
+    test ! -z "${RONN}"
+    return $?
+}
+
+if ! is_ronn_installed; then
+    install_ronn
+else
+    echo "Ronn already installed. Setting project configuration:"
+    set_ronn_config "${RONN}"
+fi

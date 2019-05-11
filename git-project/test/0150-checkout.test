@@ -1,0 +1,316 @@
+#
+# Long Description
+#
+
+test_description='git project checkout'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+#
+# This will set up the second branch to use second_branch in all submodules.
+# It does not change tracking, just the committed hash but this is
+# enough to test git project checkout.
+#
+setup_second_branch() {
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo
+    set_config_recursive local_repo
+    cd local_repo
+    git submodule foreach --recursive git checkout second_branch
+    git checkout second_branch
+    git submodule foreach git commit -a -m "Changing submodule to second_branch"
+    git commit -a -m "Changing submodule to second_branch"
+    git submodule foreach --recursive git push
+    git push
+    git tag SECOND_BRANCH_TAG
+    git push origin SECOND_BRANCH_TAG
+    cd ..
+    rm -rf local_repo
+}
+
+# This content is on second branch.
+verify_second_branch_contents() {
+    git submodule -q foreach --recursive [ -f second_branch.txt ] &&
+    [ -f second_branch.txt ]
+}
+
+# No second branch should mean master content.
+verify_no_second_branch_contents() {
+    git submodule -q foreach --recursive [ ! -f second_branch.txt ] &&
+    [ ! -f second_branch.txt ]
+}
+
+# First and only arg is expected branch for top repo
+# No subrepo should ever be on branch in this case.
+verify_actual_branch() {
+   on_branch "" "component" "component/subcomponent" "component2" "space component" "thirdparty component" &&
+   on_branch "$1" .
+}
+
+test_exec setup_second_branch
+
+clone_local_repo() {
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo > /dev/null &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/local_repo\"" &&
+    cd local_repo 
+}
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project checkout --invalid-option
+'
+
+test_expect_success '-h' '
+    git project checkout -h
+'
+
+test_expect_success '--help' '
+    git project checkout --help
+'
+
+# Check that setup is ok
+test_expect_success 'setup is correct' '
+    clone_local_repo &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+test_expect_success 'checkout branch' '
+    clone_local_repo &&
+    git project checkout second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch "second_branch"
+'
+
+test_expect_success 'checkout origin/branch' '
+    clone_local_repo &&
+    git project checkout origin/second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch ""
+'
+
+test_expect_success 'checkout tag' '
+    clone_local_repo &&
+    git project checkout SECOND_BRANCH_TAG &&
+    verify_second_branch_contents &&
+    verify_actual_branch ""
+'
+
+test_expect_success 'checkout nonexisting ref' '
+    clone_local_repo &&
+    test_expect_code 1 git project checkout no_such_ref &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+# Have to have the branch to be able to check out detached.
+test_expect_success 'checkout --detach branch works if branch is local' '
+    clone_local_repo &&
+    git project checkout second_branch &&
+    git project checkout master &&
+    git project checkout --detach second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch ""
+'
+
+# Have to have the branch to be able to check out detached,
+# so this fails.
+test_expect_success 'checkout --detach branch fails if branch is not local' '
+    clone_local_repo &&
+    test_expect_code 128 git project checkout --detach second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+test_expect_success 'checkout -q branch' '
+    clone_local_repo &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/quiet_out.log\"" &&
+    git project checkout -q second_branch >../quiet_out.log &&
+    test_must_be_empty "../quiet_out.log" &&
+    verify_second_branch_contents &&
+    verify_actual_branch "second_branch"
+'
+
+test_expect_success 'checkout --quiet branch' '
+    clone_local_repo &&
+    git project checkout --quiet second_branch >../quiet_out.log &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/quiet_out.log\"" &&
+    test_must_be_empty "../quiet_out.log" &&
+    verify_second_branch_contents &&
+    verify_actual_branch "second_branch"
+'
+
+#
+# This section is about stopped and forced checkout.
+# 1 - staged files
+# 2 - unstaged tracked files
+# 3 - untracked files
+# 4 - ignored files
+#
+# These may appear in the top repository or a sub repository.
+# Assume all sub repositores are handed equal regardless of depth.
+# With stopped and forced checkout this is 16 test cases.
+#
+
+# Staged files
+test_expect_success 'Checkout with toprepo staged changes should fail' '
+    clone_local_repo &&
+    touch "local change" &&
+    git add "local change" &&
+    test_expect_code 1 git project checkout second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+test_expect_success 'Checkout with subrepo staged changes should fail' '
+    clone_local_repo &&
+    touch "component/subcomponent/deep change" &&
+    cd component/subcomponent && git add "deep change" && cd ../.. &&
+    test_expect_code 1 git project checkout second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+# Unstaged tracked files
+test_expect_success 'Checkout with toprepo unstaged changes should fail' '
+    clone_local_repo &&
+    echo "unstage change" > repo.info &&
+    test_expect_code 1 git project checkout second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+test_expect_success 'Checkout with subrepo unstaged changes should fail' '
+    clone_local_repo &&
+    echo "unstage change" > component/subcomponent/repo.info &&
+    test_expect_code 1 git project checkout second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+# Untracked files
+test_expect_success 'Checkout with toprepo untracked changes should fail' '
+    clone_local_repo &&
+    touch "local change" &&
+    test_expect_code 1 git project checkout second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+test_expect_success 'Checkout with subrepo untracked changes should fail' '
+    clone_local_repo &&
+    touch "component/subcomponent/deep change" &&
+    test_expect_code 1 git project checkout second_branch &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+# Ignored files
+test_expect_success 'Checkout with toprepo ignored changes should work and keep changes' '
+    clone_local_repo &&
+    touch "local change.ignore" &&
+    git project checkout second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -f "local change.ignore" ]
+'
+
+test_expect_success 'Checkout with subrepo ignored changes should work and keep changes' '
+    clone_local_repo &&
+    touch "component/subcomponent/deep change.ignore" &&
+    git project checkout second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -f "component/subcomponent/deep change.ignore" ]
+'
+
+# force Staged files
+test_expect_success 'Forced checkout with toprepo staged changes should drop changes' '
+    clone_local_repo &&
+    touch "local change" &&
+    git add "local change" &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -z "$(git status --porcelain)" ]
+'
+
+test_expect_success 'Forced checkout with subrepo staged changes should drop changes' '
+    clone_local_repo &&
+    touch "component/subcomponent/deep change" &&
+    cd component/subcomponent && git add "deep change" && cd ../.. &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    (cd "component/subcomponent" &&
+     [ -z "$(git status --porcelain)" ])
+'
+
+# force Unstaged tracked files
+test_expect_success 'Forced checkout with toprepo unstaged changes should drop changes' '
+    clone_local_repo &&
+    echo "unstage change" > repo.info &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -z "$(git status --porcelain)" ]
+'
+
+test_expect_success 'Forced checkout with subrepo unstaged changes should drop changes' '
+    clone_local_repo &&
+    echo "unstage change" > component/subcomponent/repo.info &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    (cd "component/subcomponent" &&
+     [ -z "$(git status --porcelain)" ])
+'
+
+# force Untracked files
+test_expect_success 'Forced checkout with toprepo untracked changes should keep changes' '
+    clone_local_repo &&
+    touch "local change" &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -f "local change" ]
+'
+
+test_expect_success 'Forced checkout with subrepo untracked changes should keep changes' '
+    clone_local_repo &&
+    touch "component/subcomponent/deep change" &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -f "component/subcomponent/deep change" ]
+'
+
+# force Ignored files
+test_expect_success 'Forced checkout with toprepo ignored changes should work and keep changes' '
+    clone_local_repo &&
+    touch "local change.ignore" &&
+    git project checkout --force second_branch &&
+    verify_second_branch_contents &&
+    verify_actual_branch second_branch &&
+    [ -f "local change.ignore" ]
+'
+
+test_expect_success 'Forced checkout with subrepo ignored changes should work and keep changes' '
+    clone_local_repo &&
+    touch "component/subcomponent/deep change.ignore" &&
+    git project checkout --force second_branch &&
+    verify_actual_branch second_branch &&
+    [ -f "component/subcomponent/deep change.ignore" ]
+'
+
+# If we are on a branch, make we are not still on it after git project checkout.
+test_expect_success 'Subrepo should be in detached head even if on branch before' '
+    clone_local_repo &&
+    cd thirdparty\ component/ &&
+    git checkout master &&
+    cd .. &&
+    git project checkout master &&
+    verify_no_second_branch_contents &&
+    verify_actual_branch "master"
+'
+
+test_done

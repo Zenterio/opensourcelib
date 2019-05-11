@@ -1,0 +1,12 @@
+
+# $1 - index
+buildinfo_checkout_commit() {
+    local index; index=$1; shift
+    local directory; directory=$(buildinfo_get_directory "$index")
+    if [ ${#@} -gt 0 ]; then
+        local topdir; topdir="$1"
+        directory=${directory/$topdir/.}
+    fi
+    local commit; commit=$(buildinfo_get_commit "$index")
+    (cd "${directory}" && git checkout "${commit}")
+}

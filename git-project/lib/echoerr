@@ -1,0 +1,4 @@
+# echoes the passed arguments to stderr
+echoerr() {
+    cat <<< "$@" 1>&2;
+}

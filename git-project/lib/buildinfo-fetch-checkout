@@ -1,0 +1,22 @@
+
+# $1 - index
+# $2 - checkout_branch (true|false)
+buildinfo_fetch_checkout() {
+    local index=$1
+    local checkout_branch=$2
+    local branch; local remote; local commit;
+    local remote_name;
+    remote=$(buildinfo_get_remote "$index")
+    remote_name=$(unset GIT_CONFIG && git config --local --get-regexp remote\..*\.url "${remote}") || \
+        (echoerr "No matching remote for ${remote} in $(pwd)" && exit 1)
+    remote_name=${remote_name#remote.}
+    remote_name=${remote_name%.url "${remote}"}
+    branch=$(buildinfo_get_branch "$index")
+    git fetch "${remote_name}" "${branch}"
+    if ${checkout_branch}; then
+        git project checkout "${branch}"
+    else
+        commit=$(buildinfo_get_commit "$index")
+        git project checkout "${commit}"
+    fi
+}

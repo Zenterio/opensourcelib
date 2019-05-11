@@ -1,0 +1,248 @@
+#
+# Test git-project-pull
+#
+
+test_description='git project pull'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+# Add a text to the same file name in all 5 repositories
+# $1: contents of file
+# $2: name of file
+add_to_repos()
+{
+    local text=$1
+    local file=$2
+
+    add_to_repo "component" "${text} comp" "echo \"${text}\" >>${file}" &&
+    add_to_repo "component2" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_repo "space component" "${text} spacecomp" "echo \"${text}\" >>${file}" &&
+    add_to_repo "thirdparty component" "${text} spacecomp" "echo \"${text}\" >>${file}" &&
+    add_to_repo "." "${text} top" "echo \"${text}\" >>${file}"
+}
+
+# Add a text to the same file name in all 5 remote repositories
+# $1: contents of file
+# $2: filename
+add_to_remote_repos()
+{
+    local text=$1
+    local file=$2
+
+    add_to_remote_repo "${COMPONENT_PATH}" "${text} comp" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${COMPONENT2_PATH}" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${SPACE_COMPONENT_PATH}" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${THIRDPARTY_COMPONENT_PATH}" "${text} comp2" "echo \"${text}\" >>${file}" &&
+    add_to_remote_repo "${FULL_PROJECT_PATH}" "${text} top" "echo \"${text}\" >>${file}"
+}
+
+# Check that file exists in all repositories
+# $1: filename
+test_files()
+{
+    local file=$1
+
+    test -f ${file} &&
+    test -f component/${file} &&
+    test -f component2/${file} &&
+    test -f space\ component/${file} &&
+    test -f thirdparty\ component/${file}
+}
+
+# Check that file does not exist in any repository
+# $1: filename
+test_no_files()
+{
+    local file=$1
+
+    test ! -f ${file} &&
+    test ! -f component/${file} &&
+    test ! -f component2/${file} &&
+    test ! -f space\ component/${file} &&
+    test ! -f thirdparty\ component/${file}
+}
+
+# Checkout all submodules on master
+checkout_modules()
+{
+    cd component &&
+    git checkout -q master &&
+    cd .. &&
+    cd space\ component &&
+    git checkout -q master &&
+    cd .. &&
+    cd thirdparty\ component &&
+    git checkout -q master &&
+    cd .. &&
+    cd component2 &&
+    git checkout -q master &&
+    cd ..
+}
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project pull --invalid
+'
+
+test_expect_success '-h' '
+    output="$(git project pull -h)" &&
+    test -z "${output##Usage:*git-project-pull*}"
+'
+
+test_expect_success '--help' '
+    output="$(git project pull --help)" &&
+    test -z "${output##GIT-PROJECT-PULL(1)*}"
+'
+
+test_expect_success 'rebase and -m together exits with 2' '
+    test_expect_code 2 git project pull --rebase -m "commit message"
+'
+
+test_expect_success 'fast-forward merge does not create merge commit or require commit message' '
+    PROJ_DIR="fastforward_merge" &&
+    REMOTE_FILE="pull" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "pulltest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    test_no_files ${REMOTE_FILE} &&
+    checkout_modules &&
+    set_config_recursive . &&
+    NUM_COMMITS=$(git rev-list --count HEAD) &&
+    git project pull &&
+    test_files ${REMOTE_FILE} &&
+    test_equal $(git rev-list --count HEAD) $((NUM_COMMITS+1))
+'
+
+test_expect_success 'non-fastforward merge exits with code 1 if no commit message supplied' '
+    PROJ_DIR="non_fastforward_merge" &&
+    REMOTE_FILE="nomessageremote" &&
+    LOCAL_FILE="nomessagelocal" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "nomessagetest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    checkout_modules &&
+    add_to_repos "mergetest" ${LOCAL_FILE} &&
+    test_expect_code 1 git project pull
+'
+
+test_expect_success 'merge remote and local changes' '
+    PROJ_DIR="merge_remote_and_local_changes" &&
+    REMOTE_FILE="mergeremote" &&
+    LOCAL_FILE="mergelocal" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "mergetest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    checkout_modules &&
+    test_no_files ${REMOTE_FILE} &&
+    add_to_repos "mergetest" ${LOCAL_FILE} &&
+    test_files ${LOCAL_FILE} &&
+    LOCAL_HEAD="$(git rev-parse HEAD)" &&
+    git project pull -m "merge remote changes" &&
+    test_files ${REMOTE_FILE} &&
+    test_files ${LOCAL_FILE} &&
+    check_ancestry HEAD HEAD^ HEAD^2
+'
+
+test_expect_success 'rebase remote and local changes' '
+    PROJ_DIR="rebase_remote_and_local_changes" &&
+    REMOTE_FILE="rebaseremote" &&
+    LOCAL_FILE="rebaselocal" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "rebasetest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    checkout_modules &&
+    test_no_files ${REMOTE_FILE} &&
+    add_to_repos "rebasetest" ${LOCAL_FILE} &&
+    test_files ${LOCAL_FILE} &&
+    git project pull --rebase &&
+    test_files ${REMOTE_FILE} &&
+    test_files ${LOCAL_FILE} &&
+    check_ancestry HEAD HEAD^
+'
+
+test_expect_success 'submodule not on branch is skipped' '
+    PROJ_DIR="skip_detached_submodule" &&
+    REMOTE_FILE="detachremote" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "detachtest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    checkout_modules &&
+    cd component2 &&
+    git checkout -q --detach &&
+    cd .. &&
+    test_no_files ${REMOTE_FILE} &&
+    git project pull -m "skipped component2" &&
+    test -f component/${REMOTE_FILE} &&
+    test ! -f component2/${REMOTE_FILE}
+'
+
+test_expect_success 'pull operates from top directory at all times' '
+    PROJ_DIR="operate_from_top_dir" &&
+    REMOTE_FILE="topremote" &&
+    LOCAL_FILE="toplocal" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "toptest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    checkout_modules &&
+    test_no_files ${REMOTE_FILE} &&
+    add_to_repos "toptest" ${LOCAL_FILE} &&
+    test_files ${LOCAL_FILE} &&
+    cd component &&
+    git project pull -m "merge remote changes" &&
+    cd .. &&
+    test_files ${REMOTE_FILE} &&
+    test_files ${LOCAL_FILE}
+'
+
+test_expect_success 'no submodules in project, merge' '
+    git init -q --bare "remote_repo_merge.git" &&
+    create_repo "remote_repo_merge" &&
+    create_repo "local_repo_merge" &&
+    cd "remote_repo_merge" &&
+    add_to_repo . "creating remote file" "echo remote > remote_file" &&
+    git remote add origin ../remote_repo_merge.git &&
+    git push -q -u origin master >/dev/null &&
+    cd .. &&
+    cd local_repo_merge &&
+    test ! -f remote_file &&
+    test -f local_file
+    git remote add origin ../remote_repo_merge.git &&
+    git fetch -q &&
+    add_to_repo . "creating local file" "echo local > local_file" &&
+    git branch --set-upstream-to=origin/master master &&
+    git project pull -m "merge remote changes" &&
+    test -f remote_file &&
+    test -f local_file
+'
+
+test_expect_success 'no submodules in project, fast-forward' '
+    git init -q --bare "remote_repo_ff.git" &&
+    create_repo "remote_repo_ff" &&
+    create_repo "local_repo_ff" &&
+    cd "remote_repo_ff" &&
+    add_to_repo . "creating remote file" "echo remote > remote_file" &&
+    git remote add origin ../remote_repo_ff.git &&
+    git push -q -u origin master >/dev/null &&
+    cd .. &&
+    cd local_repo_ff &&
+    test ! -f remote_file &&
+    git remote add origin ../remote_repo_ff.git &&
+    git fetch -q &&
+    git branch -q --set-upstream-to=origin/master master &&
+    git project pull -m "merge remote changes" &&
+    test -f remote_file
+'
+
+test_expect_success 'refuse to work in detached HEAD, error 1' '
+    PROJ_DIR="detached_head" &&
+    REMOTE_FILE="detached" &&
+    git project clone -q "${FULL_PROJECT_PATH}" "${PROJ_DIR}" &&
+    add_to_remote_repos "pulltest" ${REMOTE_FILE} &&
+    cd "${PROJ_DIR}" &&
+    test_no_files ${REMOTE_FILE} &&
+    checkout_modules &&
+    set_config_recursive . &&
+    git checkout -q --detach &&
+    test_expect_code 1 git project pull
+'
+test_done

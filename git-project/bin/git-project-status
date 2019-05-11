@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h] [--help] "
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage"
+    echo "  --help               Show man page"
+    echo ""
+}
+
+##proj-top-dir##
+
+# $1: path
+# $2: topdir
+show_repo_status() {
+    local path; path="$1"
+    local topdir; topdir="$2"
+    local relpath; relpath="${path:((${#topdir} + 1))}"
+    local hash; hash=$(cd "${path}" && git rev-parse --verify --quiet --short HEAD) || true
+    local tags="";
+    if [ -n "${hash}" ]; then
+        tags=$(cd "${path}" && 2>/dev/null git tag --points-at HEAD | paste -s -d ",")
+    fi
+    local header="${hash}";
+    if [ ! -z "${relpath}" ]; then
+        header="${header} ${relpath}"
+    fi
+    if [ ! -z "${tags}" ]; then
+        header="${header} (${tags})"
+    fi
+    #if [ ! -z "${branch}" ]; then
+    #    header="${header} [${branch}]"
+    #fi
+    echo "${header}"
+    echo "${header//?/-}"
+    (cd "${path}" && git status)
+    echo ""
+}
+
+show_status() {
+    local topdir; topdir="$(proj_top_dir)"
+    local topname; topname=$(basename "${topdir}")
+    local paths
+    if [ -f "${topdir}/.git/GIT_PROJECT_MERGE_SOURCE" ]
+    then
+        echo "A 'git project merge $(<.git/GIT_PROJECT_MERGE_SOURCE)' is in progress with detected conflicts."
+        echo "Resolve the unmerged paths listed below and use 'git add' when finished."
+        echo "HOWEVER: Instead of 'git commit' run 'git project merge --continue'"
+    fi
+    paths=$(cd "${topdir}" && pwd && git submodule -q foreach --recursive 'pwd')
+    while read -r path; do
+        show_repo_status "${path}" "${topdir}"
+    done <<< "${paths}"
+}
+
+SCRIPT=$(basename "$0")
+
+set +e
+ARGS=$(getopt -o h -l "help" -n "$SCRIPT" -- "$@");
+
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-status "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+show_status

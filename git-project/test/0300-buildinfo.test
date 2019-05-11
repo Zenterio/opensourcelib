@@ -1,0 +1,30 @@
+#
+# Long Description
+#
+
+test_description='git buildinfo'
+. ./test.sh
+
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git buildinfo --invalid-option
+'
+
+test_expect_success '-h should print usage information' '
+    output="$(git buildinfo -h)" &&
+    test -z "${output##Usage:*git-buildinfo*}"
+'
+
+test_expect_success '--help should print the man page' '
+    output="$(git buildinfo --help)" &&
+    test -z "${output##GIT-BUILDINFO(1)*}"
+'
+
+test_expect_success '--commands should list available commands' '
+    output="$(git buildinfo --commands)" &&
+    test -z "${output##*status*}" &&
+    test -z "${output##*clone*}" &&
+    test -z "${output##*checkout*}"
+'
+
+test_done

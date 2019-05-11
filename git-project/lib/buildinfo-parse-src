@@ -1,0 +1,166 @@
+
+BUILDINFO_PARSE_STATE_FIND_REPO=0
+BUILDINFO_PARSE_STATE_FIND_REMOTE=1
+BUILDINFO_PARSE_STATE_FIND_BRANCH=2
+BUILDINFO_PARSE_STATE_FIND_COMMIT=3
+BUILDINFO_PARSE_STATE_FIND_DIRECTORY=4
+BUILDINFO_CURRENT_PARSE_STATE=
+
+BUILDINFO_REPOSITORIES=()
+BUILDINFO_REPO_REMOTES=()
+BUILDINFO_REPO_BRANCHES=()
+BUILDINFO_REPO_COMMITS=()
+BUILDINFO_REPO_DIRECTORIES=()
+
+BUILDINFO_TOKEN_REPO="Repository"
+BUILDINFO_TOKEN_REMOTE="Remote"
+BUILDINFO_TOKEN_BRANCH="Branch"
+BUILDINFO_TOKEN_COMMIT="Commit"
+BUILDINFO_TOKEN_DIRECTORY="Directory"
+
+buildinfo_file_print_data() {
+    (set +u
+     echo BUILDINFO_REPOSITORIES="${BUILDINFO_REPOSITORIES[*]}"
+     echo BUILDINFO_REPO_REMOTES="${BUILDINFO_REPO_REMOTES[*]}"
+     echo BUILDINFO_REPO_BRANCHES="${BUILDINFO_REPO_BRANCHES[*]}"
+     echo BUILDINFO_REPO_COMMITS="${BUILDINFO_REPO_COMMITS[*]}"
+     echo BUILDINFO_REPO_DIRECTORIES="${BUILDINFO_REPO_DIRECTORIES[*]}"
+    )
+}
+
+# $1 - property
+# $@ - line
+buildinfo_file_parse_property() {
+    local property; property="$1"; shift
+    local line; line="$*"
+    local offset; offset=$((${#property}+2))
+    echo "${line:${offset}}"
+}
+
+# $1 - property
+# $@ - line
+buildinfo_file_find_property() {
+    local property; property="$1"; shift
+    local line; line="$*"
+    test -z "${line##${property}:*}"
+    return $?
+}
+
+# $@ - line
+buildinfo_parse_line() {
+    local line; line="$*"
+    local value
+    if [ -z "${line}" ]; then
+        return
+    fi
+    case ${BUILDINFO_CURRENT_PARSE_STATE} in
+        ${BUILDINFO_PARSE_STATE_FIND_REPO})
+            if buildinfo_file_find_property "${BUILDINFO_TOKEN_REPO}" "${line}"; then
+                value=$(buildinfo_file_parse_property "${BUILDINFO_TOKEN_REPO}" "${line}")
+                BUILDINFO_REPOSITORIES+=("${value}")
+                BUILDINFO_CURRENT_PARSE_STATE=${BUILDINFO_PARSE_STATE_FIND_REMOTE}
+            fi
+            ;;
+        ${BUILDINFO_PARSE_STATE_FIND_REMOTE})
+            if buildinfo_file_find_property "${BUILDINFO_TOKEN_REMOTE}" "${line}"; then
+                value=$(buildinfo_file_parse_property "${BUILDINFO_TOKEN_REMOTE}" "${line}")
+                BUILDINFO_REPO_REMOTES+=("${value}")
+                BUILDINFO_CURRENT_PARSE_STATE=${BUILDINFO_PARSE_STATE_FIND_BRANCH}
+            fi
+            ;;
+        ${BUILDINFO_PARSE_STATE_FIND_BRANCH})
+            if buildinfo_file_find_property "${BUILDINFO_TOKEN_BRANCH}" "${line}"; then
+                value=$(buildinfo_file_parse_property "${BUILDINFO_TOKEN_BRANCH}" "${line}")
+                BUILDINFO_REPO_BRANCHES+=("${value}")
+                BUILDINFO_CURRENT_PARSE_STATE=${BUILDINFO_PARSE_STATE_FIND_COMMIT}
+            fi
+            ;;
+        ${BUILDINFO_PARSE_STATE_FIND_COMMIT})
+            if buildinfo_file_find_property "${BUILDINFO_TOKEN_COMMIT}" "${line}"; then
+                value=$(buildinfo_file_parse_property "${BUILDINFO_TOKEN_COMMIT}" "${line}")
+                BUILDINFO_REPO_COMMITS+=("${value}")
+                BUILDINFO_CURRENT_PARSE_STATE=${BUILDINFO_PARSE_STATE_FIND_DIRECTORY}
+            fi
+            ;;
+        ${BUILDINFO_PARSE_STATE_FIND_DIRECTORY})
+            if buildinfo_file_find_property "${BUILDINFO_TOKEN_DIRECTORY}" "${line}"; then
+                value=$(buildinfo_file_parse_property "${BUILDINFO_TOKEN_DIRECTORY}" "${line}")
+                BUILDINFO_REPO_DIRECTORIES+=("${value}")
+                BUILDINFO_CURRENT_PARSE_STATE=${BUILDINFO_PARSE_STATE_FIND_REPO}
+            fi
+            ;;
+    esac
+}
+
+# $@ - content
+buildinfo_parse_content() {
+    local content; content="$*"
+    BUILDINFO_CURRENT_PARSE_STATE=${BUILDINFO_PARSE_STATE_FIND_REPO}
+    shopt -s lastpipe
+    printf '%s\n' "${content}" | while IFS= read -r line; do
+        buildinfo_parse_line "${line}"
+    done
+
+    if [ ${BUILDINFO_CURRENT_PARSE_STATE} -ne ${BUILDINFO_PARSE_STATE_FIND_REPO} ]; then
+        echoerr "Unexpected end of file. Incomplete build-info file."
+        exit 2
+    fi
+    if [ ${#BUILDINFO_REPOSITORIES[@]} -eq 0 ]; then
+        echoerr "Not a build-info file. Could not find any repository information."
+        exit 3
+    fi
+}
+
+# $@ - source, file or downloadable URL
+buildinfo_get_content() {
+    local src; src="$*"
+    local extract=cat
+    if [ -z "${src##http?://*}" ] || [ -z "${src##ftp://*}" ] || [ -z "${src##file://*}" ]; then
+        extract="curl --silent"
+    fi
+    ${extract} "${src}"
+}
+
+# $@ - source, file or downloadable URL
+buildinfo_parse_src() {
+    local src; src="$*"
+    local content; content=$(buildinfo_get_content "${src}")
+    buildinfo_parse_content "${content}"
+}
+
+# $1 - index
+buildinfo_get_repository() {
+    local index; index=$1
+    echo "${BUILDINFO_REPOSITORIES[${index}]}"
+}
+
+# $1 - index
+buildinfo_get_remote() {
+    local index; index=$1
+    echo "${BUILDINFO_REPO_REMOTES[${index}]}"
+}
+
+# $1 - index
+buildinfo_get_branch() {
+    local index; index=$1
+    echo "${BUILDINFO_REPO_BRANCHES[${index}]}"
+}
+
+# $1 - index
+buildinfo_get_commit() {
+    local index; index=$1
+    local commit;
+    # trim-away any extra text, e.g (DIRTY WORKSPACE), by converting to array
+    IFS=" " read -r -a commit <<< "${BUILDINFO_REPO_COMMITS[${index}]}"
+    echo "${commit[0]}"
+}
+
+# $1 - index
+buildinfo_get_directory() {
+    local index; index=$1
+    echo "${BUILDINFO_REPO_DIRECTORIES[${index}]}"
+}
+
+buildinfo_get_number_of_repositories() {
+    echo ${#BUILDINFO_REPOSITORIES[@]}
+}

@@ -1,0 +1,5 @@
+# This will check if the branch in the current repsitory is
+# up to date (at or before remote branch).
+branch_up_to_date() {
+    [ $(git rev-parse @{u}) = $(git merge-base @ @{u}) ]
+}

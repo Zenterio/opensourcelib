@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#
+# Wrapper for ronn executable
+#
+set -eu
+
+RONN=
+
+find_ronn() {
+    set +e
+    RONN=$(git config project.dev.ronn-path)
+    if [ -z "${RONN}" ]; then
+        RONN=$(ls ~/.gem/ruby/2.*/bin/ronn* 2> /dev/null)
+    fi
+    if [ -z "${RONN}" ]; then
+        RONN=$(which ronn)
+    fi
+    set -e
+}
+
+execronn() {
+    find_ronn
+
+    if [ ! -z "${RONN}" ]; then
+        ${RONN} "$@"
+        return $?
+    else
+        echo >&2 "Ronn not installed, or could not be located."
+        echo >&2 "Install it using 'make dev-install', or install it manually."
+        echo >&2 "If already installed. Set the full path to the ronn binary using:"
+        echo >&2 "git config --system/global project.dev.ronn-path PATH-TO-RONN"
+        return 1
+    fi
+}
+
+execronn "$@"
+exit $?

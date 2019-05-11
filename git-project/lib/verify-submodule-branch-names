@@ -1,0 +1,28 @@
+# Verify that all submodules have branch names set
+# $1 - Branch name in top repository
+#
+# Requires:
+# ##submodule-branch-name##
+
+verify_submodule_branch_names()
+{
+    local branch; branch="$1"
+    local submodules; mapfile -t submodules < <( git project --submodules)
+    local module
+    if [ ${#submodules[@]} -gt 0 ]
+    then
+        for module in "${submodules[@]}"
+        do
+            submodule_branch=$(submodule_branch_name "${module}" "${branch}")
+            if [ -z "${submodule_branch}" ]
+            then
+                echo "No tracked branch for '${module}' on branch ${branch}" >&2
+                echo "To set up a tracked branch, use:" >&2
+                echo "git checkout ${branch}" >&2
+                echo "git config -f .gitmodules submodule.${module}.branch <branch>" >&2
+                return 1
+            fi
+        done
+    fi
+    return 0
+}

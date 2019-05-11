@@ -1,0 +1,80 @@
+#
+# Test git-project-topic-begin
+#
+
+# Clone and cd to full_project
+setup_full_project() {
+    git project clone "${FULL_PROJECT_PATH}" &&
+    test_when_finished "rm -rf \"$(pwd)/full_project\""
+    cd full_project
+}
+
+test_description='git project topic begin'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+test_expect_success 'invalid option exits with 129 (usage)' '
+    test_expect_code 129 git project topics begin --invalid-option
+'
+
+test_expect_success 'No arguments exits with 129 (usage)' '
+    test_expect_code 129 git project topic begin
+'
+
+test_expect_success '-h' '
+    git project topic begin -h
+'
+
+test_expect_success '--help' '
+    git project topic begin --help
+'
+
+test_expect_success 'branch all repositories to new branch' '
+    setup_full_project &&
+    git project topic begin topic-new &&
+    on_branch topic-new . component component2 "space component" "thirdparty component" &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch topic-new component component2 "space component" "thirdparty component"
+'
+
+test_expect_success 'branch one repository to new branch' '
+    setup_full_project &&
+    git project topic begin topic-new "space component" &&
+    on_branch topic-new . "space component" &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch master component component2 "thirdparty component" &&
+    follows_branch topic-new "space component"
+'
+
+test_expect_success 'branch from inside a sub repository' '
+    setup_full_project &&
+    cd component &&
+    git project topic begin topic-new component2 &&
+    cd .. &&
+    on_branch topic-new . component2 &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch master component "space component" "thirdparty component" &&
+    follows_branch topic-new component2
+'
+
+test_expect_success 'branch name without topic- will have it added' '
+    setup_full_project &&
+    git project topic begin name &&
+    on_branch topic-name . component component2 "space component" "thirdparty component" &&
+    [ "$(git diff --name-only)" = ".gitmodules" ] &&
+    follows_branch topic-name component component2 "space component" "thirdparty component"
+'
+test_expect_success 'abort witch code 1 if branch renaming fails' '
+    setup_full_project &&
+    set_config_recursive . &&
+    git config -f .gitmodules --unset "submodule.space component.branch" &&
+    git commit -a -m "removed branch info from space component" &&
+    store_state &&
+    echo "************************ TOPIC BEGIN BEGINS *****************" &&
+    test_expect_code 1 git project topic begin branch &&
+    echo "************************ TOPIC BEGIN DONE *******************" &&
+    compare_all_refs ../before.git HEAD .git HEAD    
+'
+
+test_done

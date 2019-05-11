@@ -1,0 +1,33 @@
+# Check what branch <module> is on in <branch>
+# $1: The submodule
+# $2: The branch
+# Example: 'submodule_branch_name lib/module master'
+# Returns: the "branch" entry for lib/module in .gitmodules on master.
+# Will return "" if there is no .gitmodules on that branch,
+# commands using this function must handle that situation.
+# Requires ##proj-top-dir##.
+submodule_branch_name() {
+    local module;
+    local branch;
+    module="$1"
+    branch="$2"
+
+    local topdir;
+    topdir="$(proj_top_dir)"
+    cd "${topdir}"
+
+    local branchname;
+    unset GIT_CONFIG
+    if git cat-file -e "${branch}:.gitmodules" 2>/dev/null
+    then
+        branchname="$(git config --blob "${branch}:.gitmodules" --get "submodule.${module}.branch")"
+        if [[ ${branch} =~ origin/.* ]] ;
+        then
+            echo "origin/""${branchname}"
+        else
+            echo "${branchname}"
+        fi
+    else
+        echo ""
+    fi
+}

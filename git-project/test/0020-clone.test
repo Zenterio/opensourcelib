@@ -1,0 +1,65 @@
+#
+# Test git-project-clone
+#
+test_description='git project clone'
+. ./test.sh
+
+test_exec create_full_project_repo
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project clone --invalid-option
+'
+
+test_expect_success 'require at least one option, otherwise exits with 129' '
+    test_expect_code 129 git project clone
+'
+
+test_expect_success '-h' '
+    git project clone -h
+'
+
+test_expect_success '--help' '
+    git project clone --help
+'
+
+test_expect_success 'invalid repo exits with 128 (fail to clone)' '
+    test_expect_code 128 git project clone "invalid-repo" proj_invalid_repo
+'
+
+test_expect_success 'clone <REPO>' '
+    PROJ_DIR="proj_clone" &&
+    git project clone "${FULL_PROJECT_PATH}" ${PROJ_DIR} &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    ls ${PROJ_DIR}/component/repo.info &&
+    test_equal "${PROJ_DIR}/component/repo.info" "${COMPONENT_PATH}" &&
+    ls ${PROJ_DIR}/component/subcomponent/repo.info &&
+    test_equal "${PROJ_DIR}/component/subcomponent/repo.info" "${SUBCOMPONENT_PATH}"
+'
+
+test_expect_success 'clone <REPO> --bare' '
+    PROJ_DIR="proj_clone_bare.git" &&
+    PROJ_DIR_FROM_BARE="proj_clone_bare" &&
+    git project clone --bare "${FULL_PROJECT_PATH}" ${PROJ_DIR} &&
+    ls ${PROJ_DIR} &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    git project clone ${PROJ_DIR} &&
+    test_when_finished "rm -rf ${PROJ_DIR_FROM_BARE}" &&
+    ls ${PROJ_DIR_FROM_BARE}/component/repo.info &&
+    test_equal "${PROJ_DIR_FROM_BARE}/component/repo.info" "${COMPONENT_PATH}" &&
+    ls ${PROJ_DIR_FROM_BARE}/component/subcomponent/repo.info &&
+    test_equal "${PROJ_DIR_FROM_BARE}/component/subcomponent/repo.info" "${SUBCOMPONENT_PATH}"
+'
+
+test_expect_success 'clone <REPO> --quiet' '
+    PROJ_DIR="proj_clone_quiet" &&
+    2>&1 git project clone --quiet "${FULL_PROJECT_PATH}" "${PROJ_DIR}" > out.log &&
+    test_when_finished "rm -rf ${PROJ_DIR}" &&
+    test_when_finished "rm -rf out.log" &&
+    test_must_be_empty out.log &&
+    ls ${PROJ_DIR}/component/repo.info &&
+    test_equal "${PROJ_DIR}/component/repo.info" "${COMPONENT_PATH}" &&
+    ls ${PROJ_DIR}/component/subcomponent/repo.info &&
+    test_equal "${PROJ_DIR}/component/subcomponent/repo.info" "${SUBCOMPONENT_PATH}"
+'
+
+test_done

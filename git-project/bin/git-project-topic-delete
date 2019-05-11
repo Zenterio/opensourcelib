@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [-l|--local] [-f|--force] <topic-branch>"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage."
+    echo "  --help               Show man page."
+    echo "  -f, --force          Delete branches without checking if they are merged."
+    echo "  -l, --local          Only delete local branches."
+    echo ""
+}
+
+# read modules list
+# with --force use all modules
+# otherwise just modules on topic
+# Created global variable:
+# MODULES
+read_modules() {
+    if ${FORCE}
+    then
+        mapfile -t MODULES < <(git project --submodules)
+    elif git rev-parse --verify -q --no-revs "${BRANCH}"
+    then
+        mapfile -t MODULES < <(submodules_in_topic ${BRANCH})
+    else
+        echoerr "There is no local branch '${BRANCH}' in the top repository."
+        echoerr "Use --force to delete the branch without checking."
+        exit 1
+    fi
+    MODULES+=(".")
+}
+
+# Verify that the branch is not checked out
+# Unless --force, check also that the branch is available and merged
+# in all submodules where it should be
+# Used global variables:
+# MODULES
+# BRANCH
+# FORCE
+check_preconditions() {
+    local result; result=0
+    local repo
+    local current
+    for repo in "${MODULES[@]}"
+    do
+        pushd "${repo}" &>/dev/null
+        if ! in_detached_head
+        then
+            current="$(git symbolic-ref -q --short HEAD)"
+            if [ "${current}" == "${BRANCH}" ]
+            then
+                echoerr "You are currently on the same branch that you want to delete in"
+                echoerr "'$(pwd)'."
+                echoerr "You need to check out another branch."
+                result=1
+            fi
+        fi
+        if ! ${FORCE}
+        then
+            if ! git rev-parse --verify -q --no-revs "${BRANCH}"
+            then
+                echoerr "There is no local branch '${BRANCH}' in"
+                echoerr "'$(pwd)'."
+                echoerr "Use --force to delete the branch without checking."
+                result=1
+            elif ! branch_is_merged "${BRANCH}"
+            then
+                echoerr "'${BRANCH}' is not merged in"
+                echoerr "'$(pwd)'."
+                echoerr "Use --force to delete the branch without checking."
+                result=1
+            fi
+        fi
+        if $DELETE_REMOTE && ! git ls-remote --exit-code --quiet origin &>/dev/null
+        then
+            echoerr "Unable to access remote origin in '$(pwd)'."
+            echoerr "Use -l to only delete topic locally."
+            result=128
+        fi
+        popd &>/dev/null
+    done
+    [ $result == 0 ] || exit $result
+}
+
+# Delete the branch locally and if needed globally
+# Used global variables:
+# MODULES
+# BRANCH
+# FORCE
+# DELETE_REMOTE
+delete_branches() {
+    local repo
+    for repo in "${MODULES[@]}"
+    do
+        pushd "${repo}" &>/dev/null
+        echo "Deleting '${BRANCH}' in '${repo}'"
+        if $FORCE
+        then
+            git branch -D "${BRANCH}" || true
+        else
+            git branch -d "${BRANCH}"
+        fi
+        if $DELETE_REMOTE ; then
+            git push origin ":${BRANCH}" || true
+        fi
+        popd &>/dev/null
+    done
+}
+
+##echoerr##
+
+##get-topic##
+
+##in-detached-head##
+
+##is-git-repo##
+
+##proj-top-dir##
+
+##submodule-branch-name##
+
+##submodules-in-topic##
+
+##branch-is-merged##
+
+SCRIPT=$(basename "$0")
+DELETE_REMOTE=true
+FORCE=false
+
+set +e
+ARGS=$(getopt -o fhl -l "force,help,local" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-topic-delete "$@"
+            exit $?
+            ;;
+        -l|--local)
+            shift
+            DELETE_REMOTE=false
+            ;;
+        -f|--force)
+            shift
+            FORCE=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $# -ne 1 ]
+then
+    usage
+    exit 129
+fi
+
+BRANCH=$(get_topic "$1")
+
+is_git_repo
+
+cd "$(proj_top_dir)"
+
+read_modules
+
+check_preconditions
+
+delete_branches
+
+exit 0

@@ -1,0 +1,7 @@
+# returns 0 if the pointed to repository can be fastforwarded to given branch
+
+# $1 - path to repository
+# $2 - branch to check
+can_fastforward() {
+    (cd "$1" && git merge-base --is-ancestor HEAD "$2")
+}

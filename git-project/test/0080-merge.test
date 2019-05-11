@@ -1,0 +1,335 @@
+#
+# Test git-poject-merge
+#
+
+test_description='git project merge'
+. ./test.sh
+
+clone_local_repo() {
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/local_repo\"" &&
+    cd local_repo 
+}
+
+setup_topic_branch_with_content() {
+    git project branch topic-branch 'space component' component component2
+    for repo in 'space component' component component2 .
+    do
+        add_to_repo "$repo" 'Adding topic content' 'echo topic-branch-content >topic-branch-file'
+    done
+    for repo in 'space component' component component2 .
+    do
+        (cd "$repo"; git checkout master)
+    done
+}
+
+verify_topic_branch_file() {
+    for i in "$@"
+    do
+        if ! (cd "$i" &&
+                [ -f topic-branch-file ] &&
+                test_equal topic-branch-file topic-branch-content)
+        then
+            echo "verify_topic_branch_file() failed in $i"
+            return 1
+        fi
+    done
+    return 0
+}
+
+setup_master_and_topic_branch_for_merge() {
+    setup_topic_branch_with_content
+    for repo in 'space component' component component2 .
+    do
+        add_to_repo "$repo" 'Adding master content' 'echo master-branch-content >master-branch-file'
+    done
+}
+
+verify_master_branch_file() {
+    for i in "$@"
+    do
+        if ! (cd "$i" &&
+                [ -f master-branch-file ] &&
+                test_equal master-branch-file master-branch-content)
+        then
+            echo "verify_master_branch_file() failed in $i"
+            return 1
+        fi
+    done
+    return 0
+}
+
+check_finished() {
+    repo="${SHARNESS_TRASH_DIRECTORY}/local_repo/.git"
+    ! file_exists_anywhere MERGE_HEAD "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_MERGE_HEAD "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_ORIG_HEAD "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_MERGE_SOURCE "$repo" &&
+    ! file_exists_anywhere GIT_PROJECT_MERGE_MESSAGE "$repo"
+}
+
+test_exec create_full_project_repo
+
+test_expect_success 'trying to abandon merge in clean repository' '    
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    test_expect_code 2 git project merge --abandon
+'
+
+test_expect_success 'trying to abort merge in clean repository' '    
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    test_expect_code 2 git project merge --abort
+'
+
+test_expect_success 'trying to continue merge in clean repository' '    
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    test_expect_code 2 git project merge --continue
+'
+
+test_expect_success 'merge from same branch as currently checked out does nothing' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge master "merging message" &&
+    echo "************************ MERGE DONE *******************" &&
+    cd .. &&
+    compare_all_refs before.git HEAD local_repo/.git HEAD &&
+    check_finished
+'
+
+test_expect_success 'merge from nonexisting branch exits with code 1' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    test_expect_code 1 git project merge not-a-branch "merging message" &&
+    echo "************************ MERGE DONE *******************" &&
+    cd .. &&
+    compare_all_refs before.git HEAD local_repo/.git HEAD &&
+    check_finished
+'
+
+test_expect_success 'merge branch that is only in top repo' '
+    clone_local_repo &&
+    git checkout -b top-only &&
+    add_to_repo . "Adding topic content" "echo top-only-content >top-only-file" &&
+    git checkout master &&
+    add_to_repo . "Adding master content" "echo master-branch-content >master-branch-file" &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge top-only "merging message" &&
+    echo "************************ MERGE DONE *******************" &&
+    test_equal top-only-content top-only-file &&
+    test_equal master-branch-content master-branch-file &&
+    check_ancestry HEAD ORIG_HEAD  refs/heads/top-only &&
+    cd .. &&
+    compare_all_refs before.git HEAD local_repo/.git HEAD &&
+    check_finished
+'
+
+test_expect_success 'fast forward merge of feature branch' '
+    clone_local_repo &&
+    setup_topic_branch_with_content &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge topic-branch "merging message" &&
+    echo "************************ MERGE DONE *******************" &&
+    check_ancestry HEAD ORIG_HEAD  refs/heads/topic-branch &&
+    verify_topic_branch_file "space component" component component2 . &&
+    cd "${SHARNESS_TRASH_DIRECTORY}" &&
+    diff -q "before.git/modules/thirdparty component/refs/heads/master" \
+       "local_repo/.git/modules/thirdparty component/refs/heads/master" &&
+    compare_all_refs before.git refs/heads/master local_repo/.git ORIG_HEAD "thirdparty component" &&
+    compare_all_refs before.git refs/heads/topic-branch local_repo/.git  refs/heads/topic-branch "thirdparty component" &&
+    check_finished
+'
+
+test_expect_success 'basic merge of topic branch' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge topic-branch "merging message" &&
+    echo "************************ MERGE DONE *******************" &&
+    [ -z "$(git status --porcelain)" ] &&
+    check_ancestry_recursive "space component" component component2 -- HEAD ORIG_HEAD  refs/heads/topic-branch &&
+    verify_commit_message "merging message" master &&
+    verify_topic_branch_file "space component" component component2 . &&
+    verify_master_branch_file "space component" component component2 . &&
+    cd "${SHARNESS_TRASH_DIRECTORY}" &&
+    diff -q "before.git/modules/thirdparty component/refs/heads/master" \
+       "local_repo/.git/modules/thirdparty component/refs/heads/master" &&
+    compare_all_refs before.git refs/heads/master local_repo/.git ORIG_HEAD "thirdparty component" &&
+    compare_all_refs before.git refs/heads/topic-branch local_repo/.git refs/heads/topic-branch "thirdparty component" &&
+    check_finished
+'
+
+test_expect_success 'resolve conflicts and continue' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    add_to_repo "space component" "Adding conflict content" "echo conflict-content >topic-branch-file" &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    test_expect_code 1 git project merge topic-branch "merging message" &&
+    echo "************************ MERGE DONE *******************" &&
+    test_equal ".git/GIT_PROJECT_MERGE_SOURCE" "topic-branch" &&
+    cd "space component" &&
+    echo "resolution" >topic-branch-file &&
+    git add topic-branch-file &&
+    echo "************************ MERGE RESTART *****************" &&
+    git project merge --continue &&
+    echo "************************ MERGE DONE *******************" &&
+    cd .. &&
+    [ -z "$(git status --porcelain)" ] &&
+    check_ancestry_recursive "space component" component component2 -- HEAD ORIG_HEAD  refs/heads/topic-branch &&
+    verify_topic_branch_file component component2 . &&
+    verify_master_branch_file "space component" component component2 . &&
+    [ $(cat "space component/topic-branch-file") = "resolution" ] &&
+    cd "${SHARNESS_TRASH_DIRECTORY}" &&
+    diff -q "before.git/modules/thirdparty component/refs/heads/master" \
+       "local_repo/.git/modules/thirdparty component/refs/heads/master" &&
+    compare_all_refs before.git refs/heads/master local_repo/.git ORIG_HEAD "thirdparty component" &&
+    compare_all_refs before.git refs/heads/topic-branch local_repo/.git refs/heads/topic-branch "thirdparty component" &&
+    check_finished
+'
+
+test_expect_success 'git project merge in progess in top level repository' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    add_to_repo . "Adding conflict content" "echo conflict-content >topic-branch-file" &&
+    test_expect_code 1 git project merge topic-branch "merging message" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    test_expect_code 128 git project merge master "merging message" &&
+    echo "************************ MERGE DONE *******************"
+'
+
+test_expect_success 'git merge in progess in top level repository' '
+    clone_local_repo &&
+    add_to_repo . "Adding conflict content" "echo conflict-content >second_branch.txt" &&
+    test_expect_code 1 git merge origin/second_branch -m "a message" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    test_expect_code 5 git project merge master "merging message" &&
+    echo "************************ MERGE DONE *******************"
+'
+
+test_expect_success 'merge in progress in subrepo' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    add_to_repo "space component" "Adding conflict content" "echo conflict-content >topic-branch-file" &&
+    test_expect_code 1 git project merge topic-branch "merging message" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    test_expect_code 128 git project merge master "merging message" &&
+    echo "************************ MERGE DONE *******************"
+'
+
+test_expect_success 'abandon merge in progress' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    add_to_repo "space component" "Adding conflict content" "echo conflict-content >topic-branch-file" &&
+    test_expect_code 1 git project merge topic-branch "merging message" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge --abandon &&
+    echo "************************ MERGE DONE *******************" &&
+    check_finished
+'
+
+test_expect_success 'abort merge in progress' '
+    clone_local_repo &&
+    setup_master_and_topic_branch_for_merge &&
+    add_to_repo "space component" "Adding conflict content" "echo conflict-content >topic-branch-file" &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/before.git\"" &&
+    test_expect_code 1 git project merge topic-branch "merging message" &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge --abort &&
+    echo "************************ MERGE DONE *******************" &&
+    test_equal "$(git status --porcelain)" " M \"space component\"" &&
+    cd .. &&
+    compare_all_refs before.git HEAD local_repo/.git HEAD &&
+    check_finished
+'
+
+# This test case is where there exist a branch in the sub repo
+# with the same name as the one we merge from, but it is not the 
+# correct branch because of .gitmodule branch directive.
+#
+# The standard setup creates second_branch but the second_branch is
+# not created using git project branch, so it is still tracking the
+# master branch.
+#
+# So when we merge second_branch we really want to merge master in all
+# the subrepos.
+#
+# See create_full_project_repo in test_lib.sh
+test_expect_success 'merge renaming avoids branch with same name (remote branch)' '
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/local_repo\"" &&
+    set_config_recursive local_repo &&
+    cd local_repo &&
+    git checkout -b second_branch master &&
+    add_to_repo . "Adding diverging local second_branch"  "echo divergent > divergent" &&
+    git checkout master &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge origin/second_branch "really just in top repo" &&
+    echo "************************ MERGE DONE *******************" &&
+    [ "$(git rev-parse master)" = "$(git rev-parse origin/second_branch)" ] &&
+    check_finished
+'
+
+# Merge a renamed branch
+test_expect_success 'merge from local branch under another name' '
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/local_repo\"" &&
+    set_config_recursive local_repo &&
+    cd local_repo &&
+    git checkout -b topic-2 &&
+    git project submodule "space component" --branch second_branch --update &&
+    git add "space component" .gitmodules &&
+    git commit -m "Changing branch to second_branch in space component."
+    (cd "space component"; git checkout second_branch; git checkout master) &&
+    git checkout master &&
+    echo "************************ MERGE BEGINS *****************" &&
+    git project merge topic-2 "Merging branches with renaming" &&
+    echo "************************ MERGE DONE *******************" &&
+    [[ $(rev_parse_submodule "space component" master) == \
+       $(rev_parse_submodule "space component" second_branch) ]] &&
+    check_ancestry HEAD origin/HEAD topic-2 &&
+    check_finished
+'
+
+test_expect_success 'should work in a repository without sub repositories' '
+    create_repo "local_repo" &&
+    cd "local_repo" &&
+    git checkout -q -b branch
+    add_to_repo . "Creating branch file" "echo branch_content > branch_file" &&
+    git checkout -q master &&
+    add_to_repo . "Creating master file" "echo master_content > master_file" &&
+    git project merge branch "Simple merge" &&
+    verify_commit . HEAD "Simple merge" "branch_file"
+'
+
+test_expect_success 'Fail with error code 1 if a submodule has no tracked branch.' '
+    git project clone -n "${FULL_PROJECT_PATH}" local_repo_broken_tracking &&
+    test_when_finished "rm -rf \"${SHARNESS_TRASH_DIRECTORY}/local_repo_broken_tracking\"" &&
+    set_config_recursive local_repo_broken_tracking &&
+    cd local_repo_broken_tracking &&
+    git config -f .gitmodules --unset submodule.component.branch &&
+    git commit -a -m "Removing the branch tracking for component" &&
+    git project checkout second_branch &&
+    rsync -a .git/ "${SHARNESS_TRASH_DIRECTORY}/before.git" &&
+    test_expect_code 1 git project merge master "unused message" &&
+    cd .. &&
+    compare_all_refs before.git HEAD local_repo_broken_tracking/.git HEAD &&
+    check_finished
+'
+
+test_done

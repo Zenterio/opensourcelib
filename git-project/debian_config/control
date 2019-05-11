@@ -1,0 +1,14 @@
+Source: zenterio-git-project
+Maintainer: Zenterio AB - Enginering Services <engineering-services@zenterio.com>
+Section: utils
+Priority: optional
+Build-Depends: debhelper (>= 7.0.0), ruby-ronn, git
+Standards-Version: 0.9
+Homepage: http://zenterio.com
+
+Package: zenterio-git-project
+Architecture: amd64
+Depends: ${misc:Depends}, git, git-doc
+Description: git extensions to make it easier to work with submodules
+ This package provides extra git commands to make it easier to work with
+ submodules.

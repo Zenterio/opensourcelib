@@ -1,0 +1,20 @@
+# Lists all commits from the branch point to the current HEAD of a branch.
+# The branch point's commit is not included.
+# $1 - The branch point
+list_branch_commits()
+{
+    local branch_point=$1
+
+    #echo "Listing branch commits back to ${branch_point} to stdout"
+    local count=0
+    while [ $(git rev-parse HEAD~${count}) != ${branch_point} ];do
+        count=$((${count} + 1))
+    done
+
+    #echo "branch len was ${count}"
+    count=$((${count} - 1))
+    while [ ${count} -ge 0 ];do
+        git rev-parse HEAD~${count}
+        count=$((${count} - 1))
+    done
+}

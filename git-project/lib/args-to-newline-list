@@ -1,0 +1,8 @@
+# converts argument list to a newline separated list
+# call with "$@"
+args_to_newline_list() {
+    while [ $# -gt 0 ]; do
+        echo "$1"
+        shift
+    done
+}

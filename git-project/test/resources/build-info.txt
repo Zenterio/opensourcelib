@@ -1,0 +1,25 @@
+Time: 2016-10-14 18:01:37+02:00
+Job: pd-ref-develop-cpl-ref_connected_bcm_kaon_co1000p-dbg
+Build: 526
+External build number: 549
+URL: https://ci-production.zenterio.lan/job/pd-ref-develop-cpl-ref_connected_bcm_kaon_co1000p-dbg/526/
+Build node: buildserver104 - default
+Origin: develop
+-------------------------------------------------
+Repository: zids
+Remote: git@git.zenterio.lan:zids
+Branch: develop
+Commit: 366b1cc5db9567c6db7e594ea7b4e3d9917567d1
+Directory: zids
+Message:
+PRZ-3260: Implement channel locking per device for pretzel product.
+
+-------------------------------------------------
+Repository: secimage
+Remote: git@git.zenterio.lan:secimage
+Branch: master
+Commit: 39dc02a1e6ef191b22702124015c6f8f9b3717b4
+Directory: zids/externals/secimage
+Message:
+PRZ-4459 Merge branch 'topic-PRZ-4459'
+

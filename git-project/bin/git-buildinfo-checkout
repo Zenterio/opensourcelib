@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [--no-clone] [-b,--checkout-branch] FILE|URL"
+    echo ""
+    echo "options:"
+    echo "  -h                   	Print this usage."
+    echo "  --help               	Show man page."
+    echo " --no-clone			 	Prevents cloning of missing repository."
+    echo " -b, --checkout-branch 	Checks out the branch instead of commit."
+    echo "Checks-out repositories based on the provided build-info file."
+    echo "The file can be provided either via file-path or URL (requires curl)."
+    echo "The command must be run in the top repository, matching the first entry"
+    echo "in the build-info file."
+}
+
+SCRIPT=$(basename "$0")
+ALLOW_CLONE=true
+CHECKOUT_BRANCH=false
+
+
+##echoerr##
+
+##buildinfo-parse-src##
+
+##buildinfo-checkout-commit##
+
+##buildinfo-fetch-checkout##
+
+##proj-top-dir##
+
+checkout_parsed_repos() {
+    local index;
+    local num_repos; num_repos=$(buildinfo_get_number_of_repositories)
+    local branch; local remote; local directory;
+    local top_dir; top_dir=$(buildinfo_get_directory 0)
+    local result_code=0
+
+    cd "$(proj_top_dir)"
+    index=0
+    echo "checking out $(buildinfo_get_repository $index)"
+    buildinfo_fetch_checkout $index ${CHECKOUT_BRANCH}
+
+    index=1
+    while test "${index}" -lt "${num_repos}"; do
+        echo "checking out $(buildinfo_get_repository $index)"
+        branch=$(buildinfo_get_branch $index)
+        remote=$(buildinfo_get_remote $index)
+        directory=$(buildinfo_get_directory $index)
+        directory=${directory/${top_dir}/.}
+
+        if [ -d "${directory}"/.git ]; then
+            (cd "${directory}" && buildinfo_fetch_checkout $index ${CHECKOUT_BRANCH})
+        elif [ ! -e "${directory}" ]; then
+            if ${ALLOW_CLONE}; then
+                if ${CHECKOUT_BRANCH} && [ "${branch}" != "HEAD" ]; then
+                    git project clone -b "${branch}" "${remote}" "${directory}"
+                else
+                    git project clone "${remote}" "${directory}"
+                    buildinfo_checkout_commit $index "${top_dir}"
+                fi
+            else
+                echoerr "Repository not found and not allowed to clone."
+                result_code=1
+            fi
+        else
+            echoerr "Invalid state, could not checkout."
+            result_code=1
+        fi
+        index=$((index + 1))
+    done
+    return $result_code
+}
+
+buildinfo_checkout() {
+    local src; src="$*"
+    buildinfo_parse_src "${src}"
+    checkout_parsed_repos
+    exit $?
+}
+
+if ! ARGS=$(getopt -o bch -l "checkout-branch,no-clone,help" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help buildinfo-status "$@"
+            exit $?
+            ;;
+        --no-clone)
+            shift
+            ALLOW_CLONE=false
+            ;;
+        -b|--checkout-branch)
+            shift
+            CHECKOUT_BRANCH=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ ${#@} -ne 1 ]; then
+    echoerr "${SCRIPT} requires exactly one positional argument, FILE or URL."
+    exit 129
+fi
+
+SOURCE="$1"
+
+if [ -e "${SOURCE##http://*}" ] && [ -e "${SOURCE##https://*}" ] && [ -e "${SOURCE##ftp://*}" ] && [ -e "${SOURCE##file://*}" ]; then
+    if [ ! -f "$SOURCE" ]; then
+        echoerr "$SOURCE: no such file."
+        exit 1
+    fi
+fi
+
+buildinfo_checkout "$SOURCE"

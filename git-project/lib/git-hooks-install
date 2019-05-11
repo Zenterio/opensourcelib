@@ -1,0 +1,14 @@
+# installs git hooks
+# The function requires that the cwd is the main repo
+# It also installs git hooks in all sub repos.
+#
+# Note! It requires that the .githooks dirs are already present in the main repo
+# and links from the sub-repos exists to that .githooks dir
+git_hooks_install()
+{
+    # Install git-hooks for the main repo
+    git project hooks --install
+
+    # Install git-hooks for all sub repos
+    git submodule foreach --quiet --recursive "git project hooks --install"
+}

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -u
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT <topic-branch> [<subrepos>]"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage."
+    echo "  --help               Show man page."
+    echo ""
+    echo "This command will create and checkout a topic branch in the listed subrepos."
+    echo "If the subrepos list is empty, it will create and checkout the topic branch"
+    echo "in all subrepos."
+}
+
+##echoerr##
+
+##is-git-repo##
+
+##get-topic##
+
+SCRIPT=$(basename "$0")
+
+set +e
+ARGS=$(getopt -o h -l "help" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set +e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-topic-begin "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $# -eq 0 ]
+then
+    usage
+    exit 129
+fi
+
+BRANCH=$(get_topic "$1")
+shift
+
+is_git_repo
+
+git project branch "${BRANCH}" "$@"

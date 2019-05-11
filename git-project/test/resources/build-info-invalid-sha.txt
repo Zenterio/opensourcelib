@@ -1,0 +1,27 @@
+Time: 2016-10-15 21:17:04+00:00
+-------------------------------------------------
+Repository: top
+Remote: /home/peboh/git/git/git-project/test/trash directory.0303-buildinfo-checkout/top.git
+Branch: master
+Commit: deadbeafdeadbeaf (LOCAL CHANGES)
+Directory: top
+Message:
+Added submodule (path=component, repo=/home/peboh/git/git/git-project/test/trash directory.0303-buildinfo-checkout/component.git)
+
+-------------------------------------------------
+Repository: onbranch
+Remote: /home/peboh/git/git/git-project/test/trash directory.0303-buildinfo-checkout/onbranch.git
+Branch: master
+Commit: edb1c29769cab8f1556d813a3e5b880a4161a5de (DIRTY WORKSPACE)
+Directory: top/externals/onbranch
+Message:
+Added repo.info
+
+-------------------------------------------------
+Repository: detachedhead
+Remote: /home/peboh/git/git/git-project/test/trash directory.0303-buildinfo-checkout/detachedhead.git
+Branch: HEAD
+Commit: 4d71a044cb8e6362dab321f6ecfbfc5eb63afe7c
+Directory: top/externals/detachedhead
+Message:
+Added repo.info

@@ -1,0 +1,20 @@
+# Check if there are local changes in any subrepo
+# and abort if there are any.
+# $1 - error message, it will be prefixed with repository path.
+# Requires:
+# ##echoerr##
+exit_if_local_changes() {
+    local errmsg; errmsg="$1"
+    local modules; mapfile -t modules < <( git project --submodules)
+    modules+=(".")
+    local repo
+
+    for repo in "${modules[@]}"
+    do
+        if (cd "$repo" && test -n "$(git status --porcelain)" )
+        then
+            echoerr "${repo} ${errmsg}"
+            exit 1
+        fi
+    done
+}

@@ -1,0 +1,4 @@
+# check whether current directory is in detached HEAD
+in_detached_head() {
+  ! git symbolic-ref -q HEAD >/dev/null
+}

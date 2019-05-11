@@ -1,0 +1,44 @@
+#
+# Test git-project-help
+#
+
+test_description='git project help'
+. ./test.sh
+
+test_expect_success '-h' '
+    git project help -h
+'
+
+test_expect_success '--help' '
+    git project help --help
+'
+
+test_expect_success 'command' '
+    git project help status
+'
+
+test_expect_success 'guide' '
+    git project help gitproject-roadmap
+'
+
+test_expect_success 'invalid command' '
+    test_expect_code 16 git project help invalid
+'
+
+test_expect_success 'guides' '
+    git project help -g
+'
+
+test_expect_success 'long guides' '
+    git project help --guides
+'
+
+test_expect_success 'invalid options' '
+    test_expect_code 129 git project help --invalid
+'
+
+test_expect_success 'no arguments' '
+    git project help
+'
+
+test_done

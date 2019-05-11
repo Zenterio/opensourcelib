@@ -1,0 +1,11 @@
+# Complains about non existing argument and exits with code 129
+# $1 - The missing argument name.
+error_no_argument() {
+    if [ $# -lt 1 ]; then
+        error_no_argument "argument"
+    fi
+    local argument=$1
+
+    echoerr "No argument '${argument}' specified!"
+    exit 129
+}

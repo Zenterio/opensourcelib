@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# An example hook script to verify what is about to be committed.
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+# git-hooks also wants to be able to call a hook with one argument '--about'
+# to output a short string explaining what the hook does.
+
+if [ "$1" = "--about" ]; then
+    echo "Hook refusing to commit files if user.name=test user, or user.email=test@test.com."
+    exit 0
+fi
+
+if [ "$(git config user.name)" = "test user" -o "$(git config user.email)" = "test@test.com" ]; then
+    echo "Refusing to commit due to invalid user name or email! Run git config --list to check your settings." >&2
+    exit 1
+fi

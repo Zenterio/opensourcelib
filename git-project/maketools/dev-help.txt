@@ -1,0 +1,82 @@
+  !! Only for tool developers, not needed for regular use !!
+
+  Usage: make <TARGET>
+              [VERBOSE=v] [KEEP_BUILD_FILES=y]
+              [NO_DELETE_ON_ERROR=y] [DRYRUN=echo]
+
+    dev-help     Print this help
+
+    prepare      Generate files that should be committed.
+
+    package      Build debian packages and and run system tests on Ubuntu 14 and 16.
+
+    clean        Delete all build artifacts
+
+    cleandist    Delete generated debian packages (alias debclean)
+
+    cleanvm      Shutdown and destroy VM.
+
+    cleanup      Clean up everything
+
+    deb          Create debian package
+                 DO_TEST=n to disable test target run.
+
+    debclean     Delete generated debian packages (alias cleandist)
+
+    commands     Generate commands
+                 the command files end up in the build directory
+
+    docs         Generate documentation
+                 man pages and HTML files end up in the man-director
+
+    docclean     Delete documentation artifacts
+                 deletes man pages and HTML files from man-directory
+
+    dev-install  Installs the tools needed for development.
+
+    dev-uninstall
+                 Uninstalls the tools needed for development.
+
+    dev-readme   View the developer guide in console
+                 After installation, the guide is also available as
+                 the man page for 'gitproject-devguide'.
+
+    dev-readme-html
+                 View the developer guide in browser
+
+    static|lint  Run static code analysis on all source and test files.
+
+    test         Run tests on local system.
+                 TEST_OPTS=<OPTIONS>, SYSTEM_TEST=y, TEST_FILTER=<pattern>
+
+    prove        Run tests using prove on local system.
+                 PROVE_OPTS=<OPTIONS>, TEST_OPTS=<OPTIONS>, SYSTEM_TEST=y, TEST_FILTER=<pattern>
+
+                 If SYSTEM_TEST is defined, it will run the tests using
+                 the system installation of git-project.
+
+    check        Run all tests including system tests in vagrant
+
+    vagrant_deb
+                Build debian packages in vagrant on Ubuntu 14, 16 and 18.
+                VAGRANT_HALT=n to disable halting vagrant machine when done.
+                Speeds up repeated building.
+
+    vagrant_full_systest
+                 Run system tests in vagrant on Ubuntu 14, 16 and 18.
+                 VAGRANT_HALT=n to disable halting vagrant machine when done.
+                 Speeds up repeated testing.
+
+    test-env     Starts a shell with a basic test environment setup.
+
+    debug-print-VARIABLE
+                 Print variable: name=value
+
+    debug-print-value-VARIABLE
+                 Print variable: value
+
+    debug-is-def-VARIABLE
+                 Returns with error if not defined
+
+    debug-origin-VARIABLE
+                 Print the variable's origin

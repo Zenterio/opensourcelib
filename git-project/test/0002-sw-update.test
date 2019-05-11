@@ -1,0 +1,64 @@
+#
+# Test git-project-sw-update
+#
+# NOTE!
+# Since we are doing a software update from the repository currently tested from,
+# make sure the committed version is stable enough.
+#
+# Conflicts between the version under test and the committed version might cause
+# errors in the git-project-sw-update file since it is overwritten by the update
+# while executing.
+#
+
+test_description='git project sw-update'
+. ./test.sh
+
+test_exec create_update_repo
+
+test_expect_success 'invalid option exits with 129' '
+    test_expect_code 129 git project sw-update --invalid-option
+'
+
+test_expect_success '-h' '
+    git project sw-update -h
+'
+
+test_expect_success '--help' '
+    git project sw-update --help
+'
+
+test_expect_success '--print-repo' '
+    test_equal "$(git project sw-update --print-repo)" "${SWUPDATE_PATH}"
+'
+
+test_expect_success '-p' '
+    test_equal "$(git project sw-update -p)" "${SWUPDATE_PATH}"
+'
+
+test_expect_success '--repo <REPO> --print-repo' '
+    test_equal "$(git project sw-update --repo=REPO --print-repo )" "REPO"
+'
+
+test_expect_success '-r <REPO> -p' '
+    test_equal "$(git project sw-update -r REPO -p)" "REPO"
+'
+
+test_expect_success 'config/path mismatch detected' '
+    test_when_finished "rm \"${SHARNESS_TRASH_DIRECTORY}/gitconfig.fake\"" &&
+    (export GIT_CONFIG=${SHARNESS_TRASH_DIRECTORY}/gitconfig.fake &&
+    git config project.install.bin "fake" &&
+    git config project.update-repo "repo" &&
+    test_expect_code 4 git project sw-update)
+'
+
+# Only DEV_TEST, since the fake git config will not match the system
+# installation and hence can not run under system test.
+test_expect_success DEV_TEST 'invalid update repo exits with 128 (fails to clone)' '
+        test_expect_code 128 git project sw-update --repo invalid-repo
+'
+
+test_expect_success 'no update repo exits with 1' '
+    test_expect_code 1 git project sw-update --repo ""
+'
+
+test_done

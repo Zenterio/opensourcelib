@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-g,--guides] [-h] [--help] "
+    echo ""
+    echo "options:"
+    echo "  -g, --guides         list guides"
+    echo "  -h                   Print this usage"
+    echo "  --help               Show man page"
+    echo "  --web                Show help as html"
+    echo ""
+}
+
+##echoerr##
+
+##array-contains##
+
+cleanup() {
+    return
+}
+trap cleanup EXIT
+
+list_guides() {
+    echo "The following guides are available: "
+    local guides; guides=$(git project --guides)
+    echo "${guides}"
+    echo "accessible with 'git project help [guide]' or 'man [guide]'"
+}
+
+list_commands() {
+    git project -h
+    echo "The following commands are available:"
+    local commands; commands="$(git project --commands)"
+    for command in ${commands}; do
+        echo "${command}"
+    done
+    echo "use 'git project help [command]' for more information,
+or 'git project help -g' to list available guides"
+}
+
+
+# Dispatch help command to git help
+# Argument:
+# $1 - command
+# Globals used:
+# $WEB
+command_help() {
+    local command; command=$1
+    local commands; IFS=" " read -r -a commands <<< "$(git project --commands)"
+    local guides; mapfile -t guides < <(git project --guides)
+    if array-contains "${command}" "${commands[@]}"; then
+        git help "git-project-${command}" "${WEB}"
+    elif array-contains "${command}" "${guides[@]}"; then
+        git help "${command}" "${WEB}"
+    else
+        echo "command '${command}' not found"
+        exit 16
+    fi
+}
+
+SCRIPT=$(basename "$0")
+
+if ! ARGS=$(getopt -o gh -l "guides,help,web" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+eval set -- "$ARGS";
+
+WEB=""
+
+while true; do
+    case $1 in
+        -g|--guides)
+            shift
+            list_guides
+            exit 0
+            ;;
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-help
+            exit $?
+            ;;
+        --web)
+            shift
+            WEB="--web"
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ -z "${1:-}" ]; then
+    list_commands
+else
+    command_help "$1"
+fi

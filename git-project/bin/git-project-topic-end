@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT <branch> <message>"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage."
+    echo "  --help               Show man page."
+    echo ""
+}
+
+# Give error message if not up to date.
+require_up_to_date() {
+    if ! branch_up_to_date
+    then
+        echoerr "'$(pwd)' is not up to date with upstream repository"
+        echoerr "You need to use 'git pull' to remedy this, or delete the local branch."
+        exit 1
+    fi
+}
+
+##get-topic##
+
+##echoerr##
+
+##is-git-repo##
+
+##in-detached-head##
+
+##submodule-branch-name##
+
+##verify-submodule-branch-names##
+
+##submodules-in-topic##
+
+##branch-up-to-date##
+
+##proj-top-dir##
+
+SCRIPT=$(basename "$0")
+
+set +e
+ARGS=$(getopt -o h -l "help" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help project-topic-end "$@"
+            exit $?
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+if [ $# -ne 2 ]
+then
+    usage
+    exit 129
+fi
+
+BRANCH=$(get_topic "$1")
+shift
+MESSAGE="$1"
+shift
+
+is_git_repo
+cd "$(proj_top_dir)"
+
+if in_detached_head
+then
+    echoerr "You have to check out the parent branch to end a topic."
+    echoerr "You are currently in detached head."
+    exit 1
+fi
+
+CURRENT=$(git symbolic-ref -q --short HEAD)
+
+verify_submodule_branch_names "${CURRENT}"
+
+if [ "${CURRENT}" == "${BRANCH}" ]
+then
+    echoerr "You have to check out the parent branch to end a topic."
+    echoerr "You are currenty on the same branch that you want to end."
+    echoerr "Use 'git project checkout <parent>' to check out the parent branch."
+    exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]
+then
+    echoerr "There are local changes, $SCRIPT requires a clean checkout"
+    exit 1
+fi
+
+if ! git rev-parse -q --no-revs --verify "${BRANCH}"
+then
+    echoerr "Branch '${BRANCH}' not found in top repository."
+    exit 1
+fi
+
+mapfile -t MODULES_IN_TOPIC < <(submodules_in_topic "${BRANCH}")
+
+if [ -n "$(git remote)" ]
+then
+    git fetch -q
+    require_up_to_date
+fi
+
+set -e
+if [ 0 -lt "${#MODULES_IN_TOPIC[@]}" ]
+then
+    for module in "${MODULES_IN_TOPIC[@]}"
+    do
+        local_branch=$(submodule_branch_name "${module}" "${CURRENT}")
+        pushd "${module}" &>/dev/null
+        if ! in_detached_head
+        then
+            echoerr "Module '${module}' has a branch checked out. Please use:'"
+            echoerr "'git project checkout' before running ${SCRIPT}."
+            exit 1
+        fi
+        git fetch -q
+        git checkout -q "${local_branch}"
+        require_up_to_date
+        popd  &>/dev/null
+    done
+fi
+
+git project merge "${BRANCH}" "${MESSAGE}"

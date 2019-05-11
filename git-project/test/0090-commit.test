@@ -1,0 +1,225 @@
+#
+# Test git-project-help
+#
+
+test_description='git project commit'
+. ./test.sh
+
+# $1 - project dirname
+setup_project() {
+    local dirname; dirname="$1" &&
+    git project clone --quiet "${FULL_PROJECT_PATH}" "${dirname}" &&
+    test_when_finished "rm -rf ${SHARNESS_TRASH_DIRECTORY}/${dirname}" &&
+    set_config_recursive "${dirname}" &&
+    unset GIT_CONFIG &&
+    cd "${dirname}"
+}
+
+test_exec create_full_project_repo
+
+test_expect_success '-h' '
+    git project commit -h
+'
+
+test_expect_success '--help' '
+    git project commit --help
+'
+
+test_expect_success 'invalid option exits with code 129' '
+    test_expect_code 129 git project commit --invalid-option
+'
+
+test_expect_success 'nothing to commit exits with code 1' '
+    setup_project "proj_nothing_to_commit" &&
+    test_expect_code 1 git project commit -m "message"
+'
+
+test_expect_success 'abort when commit fails in submodule and revert' '
+    setup_project "proj_component_abort" &&
+    # Add file2 to component2, fileN to top, component and space component.
+    # full_project_repo has a hook preventing commits with files that end with
+    # a digit, hence commit of file1 in component should fail and abort."
+    create_add_file fileN "." component "space component" &&
+    create_add_file file2 component2 &&
+    # command under test
+    test_expect_code 1 git project commit -m "message" &&
+    # check that staged files in top and submodules have not been committed.
+    something_to_commit component &&
+    something_to_commit "space component" &&
+    something_to_commit "." &&
+    # and submodules are not added to top repos index
+    ! index_contains_any_file "." component "space component"
+'
+
+test_expect_success 'abort when commit fails in top repo and revert' '
+    setup_project "proj_top_abort" &&
+    # Add file1 to top, fileN to component and space component.
+    # full_project_repo has a hook preventing commits with files that end with
+    # a digit, hence commit of file1 in component should fail and abort."
+    create_add_file fileN component "space component" &&
+    create_add_file file1 "." &&
+    # command under test
+    test_expect_code 1 git project commit -m "message" &&
+    # check that staged files in top and submodules have not been committed.
+    something_to_commit component &&
+    something_to_commit "space component" &&
+    something_to_commit "." &&
+    # and submodules are not added to top repos index
+    ! index_contains_file "." component "space component"
+'
+
+test_expect_success 'regular committed submodules are not committed in top' '
+    setup_project "proj_reg_commit_not_added" &&
+    add_to_repo component "message" "touch file" &&
+    # command under test
+    test_expect_code 1 git project commit -m "message"
+'
+
+test_expect_success 'regular committed submodules are committed in top if they have staged changes' '
+    setup_project "proj_reg_commit_added_if_staged_changes" &&
+    add_to_repo component "first" "touch fileA.txt" &&
+    create_add_file fileB.txt component &&
+    # command under test
+    git project commit -m "second" &&
+    # verify submodule and top
+    verify_commit component HEAD^ "first" fileA.txt &&
+    verify_commit component HEAD "second" fileB.txt &&
+    verify_commit "." HEAD "second" component
+'
+
+test_expect_success 'can specify to only commit specific submodules' '
+    setup_project "proj_commit_specific_submodules" &&
+    create_add_file file.txt component component2 "space component" &&
+    # command under test
+    git project commit -m "message" component "space component" &&
+    # verify component2 not committed
+    something_to_commit component2 &&
+    ! verify_commit component2 HEAD "message" file.txt &&
+    ! rev_contains_file "." HEAD component2 &&
+    # verify submodule and top committed
+    verify_commit component HEAD "message" file.txt &&
+    verify_commit "space component" HEAD "message" file.txt &&
+    verify_commit "." HEAD "message" component "space component"
+'
+
+read -r -d '' MSG << EOM
+line1
+line2
+line3
+EOM
+
+test_expect_success 'message can be multi-line' '
+    setup_project "proj_multi_line_message" &&
+    create_add_file file.txt component &&
+    # command under test
+    git project commit -m "${MSG}" &&
+    # verify submodule and top
+    verify_commit "component" HEAD "${MSG}" file.txt &&
+    verify_commit "." HEAD "${MSG}" component
+'
+
+test_expect_success 'invalid submodule gives exit code 1' '
+    setup_project "proj_invalid_submodule" &&
+    # command under test
+    test_expect_code 129 git project commit -m "message" "invalid submodule"
+'
+
+test_expect_success '--quiet supresses output' '
+    setup_project "proj_quiet" &&
+    create_add_file file.txt component component2 "space component" &&
+    test_when_finished "rm -f quiet_out.log" &&
+    # command under test
+    git project commit --quiet -m "message" > quiet_out.log &&
+    # verify no output when quiet
+    test_must_be_empty "quiet_out.log" &&
+    # verify submodules and top
+    verify_commit component HEAD "message" file.txt &&
+    verify_commit component2 HEAD "message" file.txt &&
+    verify_commit "space component" HEAD "message" file.txt &&
+    verify_commit "." HEAD "message" component component2 "space component"
+'
+
+test_expect_success 'commit can be done anywhere in project repo' '
+    setup_project "proj_anywhere" &&
+    create_add_file file.txt component component2 "space component" &&
+    (cd "component/subcomponent" &&
+    # command under test
+    git project commit -m "message") &&
+    # verify submodules and top
+    verify_commit component HEAD "message" file.txt &&
+    verify_commit component2 HEAD "message" file.txt &&
+    verify_commit "space component" HEAD "message" file.txt &&
+    verify_commit "." HEAD "message" component component2 "space component"
+'
+
+test_expect_success '--amend affects top repo and submodule commits' '
+    setup_project "proj_amend" &&
+    add_to_repo component "add files" "touch fileA" &&
+    add_to_repo "." "add files" "touch fileA" &&
+    create_add_file fileB component "." &&
+    # command under test
+    git project commit --message "message" --amend &&
+    # verify submodule and top
+    verify_commit component HEAD "message" fileA fileB &&
+    verify_commit "." HEAD "message" fileA fileB component
+'
+
+test_expect_success '--file works with relative path' '
+    setup_project "proj_file" &&
+    create_add_file fileA "space component" "." &&
+    test_when_finished "rm -f ${SHARNESS_TRASH_DIRECTORY}/file_message.txt" &&
+    echo "my message" > ../file_message.txt &&
+    # command under test
+    git project commit --file ../file_message.txt &&
+    # verify submodule and top
+    verify_commit "space component" HEAD "${SHARNESS_TRASH_DIRECTORY}/file_message.txt" fileA &&
+    verify_commit "." HEAD "${SHARNESS_TRASH_DIRECTORY}/file_message.txt" fileA "space component"
+'
+
+read -r -d '' SIGNED_MSG << EOM
+add files
+
+Signed-off-by: test user <test@test.com>
+EOM
+
+test_expect_success 'common arguments are applied on submodules and top' '
+    setup_project "proj_common_args" &&
+    add_to_repo "space component" "add files" "touch fileA" &&
+    add_to_repo "." "add files" "touch fileA" &&
+    create_add_file file1 "space component" "." &&
+    echo "A" > "space component/fileA" &&
+    echo "A" > "./fileA" &&
+    # command under test
+    git project commit -n --amend -C HEAD --author "A U Thor <author@example.com>" --date "2015-01-01T01:01:01" -s -a &&
+    verify_commit "space component" HEAD "${SIGNED_MSG}" fileA file1 &&
+    verify_commit "." HEAD "${SIGNED_MSG}" fileA file1 &&
+    rev_has_author "space component" HEAD "A U Thor" &&
+    rev_has_author "." HEAD "A U Thor"
+'
+
+test_expect_success '--all affects submodules without staged but with modified content' '
+    setup_project "proj_all" &&
+    echo "more stuff" >> component/repo.info &&
+    #command under test
+    git project commit --all -m "adding more stuff" &&
+    # verify submodule and top
+    verify_commit component HEAD "adding more stuff" repo.info &&
+    verify_commit "." HEAD "adding more stuff" component
+'
+
+test_expect_success 'without any options, fails due to lack of editor and no commit message' '
+    setup_project "proj_no_args" &&
+    create_add_file fileA "space component" &&
+    #command under test
+    test_expect_code 1 git project commit
+'
+
+test_expect_success 'should work in a repository without sub repositories' '
+    create_repo "simple repo" &&
+    cd "simple repo" &&
+    create_add_file "just a file" &&
+    git project commit -m "Adding just a file" &&
+    verify_commit . HEAD "Adding just a file" "just a file"
+'
+
+test_done

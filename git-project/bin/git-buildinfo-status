@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+##copyright##
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h]"
+    echo "  $SCRIPT [--help]"
+    echo "  $SCRIPT [--save] [FILE]"
+    echo ""
+    echo "options:"
+    echo "  -h                   Print this usage."
+    echo "  --help               Show man page."
+    echo "  --save [FILE]        Saves build-info to FILE,"
+    echo "                       defaults to ${BUILD_INFO_FILE}."
+    echo "Shows the repositories status in build-info format."
+}
+
+##echoerr##
+
+##is-git-repo##
+
+##proj-top-dir##
+
+SCRIPT=$(basename "$0")
+BUILD_INFO_FILE=build-info.txt
+SAVE_TO_FILE=false
+
+show_repo_status() {
+    local rootdir="$1"; shift
+    echo -------------------------------------------------
+    echo "Repository: $(basename "$PWD")"
+    echo "Remote: $(unset GIT_CONFIG && git config --get remote.origin.url)"
+    echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+    echo -n "Commit: $(git rev-parse HEAD)"
+    if ! git diff --name-only --exit-code HEAD > /dev/null; then
+        echo " (LOCAL CHANGES)"
+    elif [ "$(git ls-files . --exclude-standard --others | wc -l)" -gt 0 ]; then
+        echo " (DIRTY WORKSPACE)"
+    else
+        echo ""
+    fi
+    echo "Directory: ${PWD#"$rootdir"}"
+    echo "Message:"
+    git log -1 --pretty=%B
+}
+
+show_buildinfo_status() {
+    local topdir; topdir="$(proj_top_dir)"
+    local rootdir; rootdir="$(cd "$topdir"/.. && pwd)"/
+    cd "${topdir}"
+    echo "Time: $(date --rfc-3339=seconds)"
+    (cd "${topdir}" && show_repo_status "${rootdir}")
+    local external_repos; external_repos="$(print_external_repos)"
+    if [ ! -z "${external_repos}" ]; then
+        while read -r repo; do
+            (cd "${repo}" && show_repo_status "${rootdir}")
+        done <<< "${external_repos}"
+    fi
+}
+
+# This finds all git-repositories in the directory structure
+# not including proper sub-repositories.
+# This works because sub-repositories .git-directory is actually
+# a symlink to the top-repo's .git-directory and will hence not be found
+# by the find commands which is only looking for directories.
+print_external_repos() {
+    find . -mindepth 2 -name .git -type d -printf '%h\n'
+}
+
+if ! ARGS=$(getopt -o h -l "help,save" -n "$SCRIPT" -- "$@"); then
+    usage
+    exit 129
+fi
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            git help buildinfo-status "$@"
+            exit $?
+            ;;
+        --save)
+            shift
+            SAVE_TO_FILE=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+# assume at most one positional argument, and that it is path to save file.
+if [ ${#@} -gt 1 ]; then
+    echoerr "Incorrect number of positional arguments."
+    exit 129
+fi
+if [ ${#@} -eq 1 ] && ! ${SAVE_TO_FILE}; then
+    echoerr "Positional argument is only valid in conjunction with --save option."
+    exit 129
+fi
+if [ ${#@} -eq 1 ] && ${SAVE_TO_FILE}; then
+    BUILD_INFO_FILE="$1"
+    shift
+fi
+
+is_git_repo
+if ${SAVE_TO_FILE}; then
+    show_buildinfo_status 1>"${BUILD_INFO_FILE}"
+else
+    show_buildinfo_status
+fi

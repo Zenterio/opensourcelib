@@ -1,0 +1,29 @@
+REPORT:
+-------
+
+(ID-A) Title A
+--------------
+Multiline description
+of definition A
+
+  3: this text contains first match
+                        -----
+  5: and now the second match
+                 ------
+
+
+(ID-B) Title B
+--------------
+Multiline description
+of definition B
+
+  3: this text contains first match
+                        -----
+
+  6: and the first match again
+             -----
+
+SUMMARY:
+--------
+1 (ID-A) Title A
+2 (ID-B) Title B

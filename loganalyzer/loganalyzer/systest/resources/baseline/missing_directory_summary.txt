@@ -1,0 +1,7 @@
+usage: zloganalyzer [-h] [-V] [-i FILE] [-o FILE] [-s FILE] [-v] [-q]
+                    [--logfile FILE] [--config-check-only]
+                    [--encoding-check-only] [--set-encoding ENCODING]
+                    [--watchers-file FILE]
+                    [--watchers-separator WATCHERS_SEPARATOR]
+                    CONFIG_FILE
+zloganalyzer: error: argument -s/--summary: can't open 'BUILD_DIR/systest/invalid_dir/summary.txt': [Errno 2] No such file or directory: 'BUILD_DIR/systest/invalid_dir/summary.txt'

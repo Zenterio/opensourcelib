@@ -1,0 +1,3 @@
+zloganalyzer: Critical error, Configuration parse errors occurred:
+Multiple definitions share the ID "ID-A" 
+ - exiting application

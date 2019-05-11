@@ -1,0 +1,3 @@
+Used encoding: ISO-8859-1
+Detected encoding: ISO-8859-1
+Detected confidence: 0.8600035905838013

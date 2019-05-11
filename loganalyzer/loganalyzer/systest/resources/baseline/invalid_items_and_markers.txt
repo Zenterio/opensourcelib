@@ -1,0 +1,35 @@
+zloganalyzer: Critical error, Configuration parse errors occurred:
+REGEXP_ERROR_MESSAGE
+line 7:      - 'invalid (.*'
+
+item definition:
+'desc: DESCRIPTION
+extra_attribute: VALUE
+id: ID
+invalidators:
+- another (.* invalid
+samples: []
+tile: MISSPELLED TITLE
+watchers: []
+'
+Missing required attribute: 'title'
+
+Missing required attribute: 'markers'
+
+Invalid attribute: 'extra_attribute'
+
+Invalid attribute: 'tile'
+
+item definition:
+'desc: null
+id: ID B
+invalidators: []
+markers:
+- b
+samples: []
+title: TITLE B
+watchers: []
+'
+Invalid value type for attribute: 'desc'
+ 
+ - exiting application

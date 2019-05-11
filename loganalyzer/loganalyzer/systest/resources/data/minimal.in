@@ -1,0 +1,7 @@
+some text that should not match anything
+here is an invalidator
+this text contains first match
+some more text
+and now the second match
+and the first match again
+with some more text to wrap it up

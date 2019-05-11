@@ -1,0 +1,9 @@
+zloganalyzer: Critical error, Configuration parse errors occurred:
+REGEXP_ERROR_MESSAGE
+line 8:      - invalid reg ex (.* no closing parenthesis
+line 10:      - invalid reg ex (.* no closing parenthesis
+
+REGEXP_ERROR_MESSAGE
+line 9:      - second invalid reg ex (.*
+ 
+ - exiting application

@@ -1,0 +1,2 @@
+zloganalyzer: Critical error, Induced rule configuration error 
+ - exiting application

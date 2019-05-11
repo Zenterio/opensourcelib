@@ -1,0 +1,58 @@
+
+2016-03-21 19:36:38,029 DEBUG:K-FW: zids.bin gone
+
+2016-03-21 19:36:38,029 DEBUG:K-FW: browser gone
+
+2016-03-21 19:36:38,029 DEBUG:K-STB:E[19:36:37.971] page allocation failure
+
+2016-03-21 19:36:38,029 DEBUG:K-STB:E[19:36:37.971] out of memory: kill process 1 (process-name) score 1
+
+2016-03-21 19:36:38,029 DEBUG:K-STB:E[19:36:37.971] General error
+
+2016-03-21 19:36:38,029 DEBUG:K-FW: First hang for a while, will await some more
+2016-03-21 19:36:38,029 DEBUG:K-FW: It has now hung 5 consecutive times in the last 200 sec
+
+2016-03-21 19:36:38,029 DEBUG:K-FW: Failed to start Jasmine test.
+2016-03-21 19:36:38,029 DEBUG:K-FW: Failed to start browser again after Jasmine test.
+
+E[14:26:41.671] pf/mfw/ippump[30859] halDemux.cc:404 GetBuffer, NEXUS_Playpump_GetBuffer failed: 9, NEXUS_UNKNOWN, unknown
+2016-03-21 19:36:38,029 DEBUG:K-STB:W[19:36:37.971] nexusServer invoked oom-killer
+
+2016-03-21 19:36:38,029 DEBUG:K-STB:E[19:36:37.971] Event Queue blocked by SOME_EVENT.
+
+2016-03-21 19:36:38,029 DEBUG:K-STB:W[19:36:37.971] browser/EventLo[1079]: evtEventGenerator.cc[316] DispatchEvent,   with evt::EventThreadSynchronizerEvent took 233 ms
+
+# Example of deep standby on start, use remote to turn it on. Should not show up as an issue
+2016-05-20 19:00:52,458 WARNING:K-FW:The box seems to be offline. Trying to turn it on.
+2016-05-20 19:00:52,458 DEBUG:K-FW:Send key POWER using IR remote 27m
+2016-05-20 19:00:53,673 DEBUG:K-FW:STB_REBOOTED_EVENT (65537) posted
+2016-05-20 19:00:53,673 DEBUG:K-FW:Reboot detected
+2016-05-20 19:01:18,384 DEBUG:K-FW:STB_REBOOT_DONE_EVENT (65538) posted
+
+# Example of successful flashing. Should not show up as an issue
+2016-05-20 19:01:44,400 DEBUG:K-Flash:INFO:  The box will be upgraded using swupgrade -f @
+2016-05-20 19:01:44,596 DEBUG:K-Flash:INFO:  swupgrade @ -f
+2016-05-20 19:01:44,648 DEBUG:K-Flash:INFO:  iptables -I INPUT -p tcp -m tcp --dport 1111 -j ACCEPT
+2016-05-20 19:01:44,648 DEBUG:K-Flash:INFO:  / # swupgrade @ -f
+2016-05-20 19:01:44,731 DEBUG:K-Flash:INFO:  Found forced upgrade switch ...
+2016-05-20 19:01:55,465 DEBUG:K-Flash:INFO:  Upgrade finished!
+2016-05-20 19:01:55,465 DEBUG:K-Flash:INFO:  Rebooting after finished upgrade
+2016-05-20 19:01:57,118 DEBUG:K-FW:STB_REBOOTED_EVENT (65537) posted
+2016-05-20 19:01:18,384 DEBUG:K-FW:STB_REBOOT_DONE_EVENT (65538) posted
+
+# Example of spontaneous reboot
+2016-05-20 19:00:53,673 DEBUG:K-FW:STB_REBOOTED_EVENT (65537) posted
+2016-05-20 19:01:18,384 DEBUG:K-FW:STB_REBOOT_DONE_EVENT (65538) posted
+
+# Example of kazam read error aborting the test run
+2016-04-29 19:00:58,324 ERROR:K-FW:Too many read-parse errors. Aborting logservice after 1000 errors
+
+# Example of kazam connection check failure
+2016-05-19 19:27:19,778 CRITICAL:K-FW:Unable to start the tests. A required connection check failed: The box doesn't respond to RCU commands. Please check the box and event configuration!
+
+# Example of RiksTVs sysapp crashing
+M[14:16:35.265] pf/EventLoop[1127]: zacthriftServerSessionEventThreadService.cc[126] OnConnectionLost, Lost connection from RiksTvSysApp
+
+# Example of  STB Hanging Event causing an exception
+    raise STBHanging("Hang detected." + msg)
+kazam.exceptions.STBHanging: Hang detected. Jasmine test timeout 120s + 0

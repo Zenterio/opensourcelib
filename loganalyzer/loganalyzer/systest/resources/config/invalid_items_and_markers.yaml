@@ -1,0 +1,20 @@
+definitions:
+
+  - title: TITLE A
+    id: ID A
+    desc: DESCRIPTION A
+    markers:
+      - 'invalid (.*'
+
+  - tile: MISSPELLED TITLE
+    id: ID
+    desc: DESCRIPTION
+    extra_attribute: VALUE
+    invalidators:
+      - 'another (.* invalid'
+
+  - title: TITLE B
+    id: ID B
+    desc:
+    markers:
+      - 'b'

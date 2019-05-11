@@ -1,0 +1,13 @@
+definitions:
+
+  - title: Title A
+    id: ID-A
+    desc: |
+      Multiline description
+      of definition A
+    markers:
+      - 'first'
+    samples:
+      - line with first marker
+    watchers:
+      - not a valid email address

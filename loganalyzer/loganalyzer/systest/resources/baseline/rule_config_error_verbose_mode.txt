@@ -1,0 +1,13 @@
+zloganalyzer: Critical error, Induced rule configuration error 
+ - exiting application
+Stack trace: 
+Traceback (most recent call last):
+  File "BASE_DIR/loganalyzer/systest/localtests/systesterrormsgtouser.py", line 95, in test_rule_config_error_running_app_as_in_verbose_mode
+    app.run()
+  File "BASE_DIR/loganalyzer/loganalyzercli.py", line 89, in run
+    config = YAMLConfigReader(self.args.configfile, self.args.config_check).get_config()
+  File EXTERNAL_SOURCE, in __call__
+    return _mock_self._mock_call(*args, **kwargs)
+  File EXTERNAL_SOURCE, in _mock_call
+    raise effect
+loganalyzer.config.ConfigError: Induced rule configuration error

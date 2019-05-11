@@ -1,0 +1,8 @@
+definitions:
+  - title: Title A
+    id: ID-A
+    desc |
+      Multiline description
+      of definition A
+    markers:
+      - first

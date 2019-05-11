@@ -1,0 +1,5 @@
+zloganalyzer: Critical error, Configuration parse errors occurred:
+Invalid email address: 'not a valid email address'
+line 13:      - not a valid email address
+ 
+ - exiting application

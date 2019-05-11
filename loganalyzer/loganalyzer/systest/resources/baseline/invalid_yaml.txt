@@ -1,0 +1,5 @@
+zloganalyzer: Critical error, YAML Error (stream=BASE_DIR/loganalyzer/systest/resources/config/invalid_yaml.yaml): while scanning a simple key
+  in "BASE_DIR/loganalyzer/systest/resources/config/invalid_yaml.yaml", line 4, column 5
+could not found expected ':'
+  in "BASE_DIR/loganalyzer/systest/resources/config/invalid_yaml.yaml", line 7, column 5 
+ - exiting application

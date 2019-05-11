@@ -1,0 +1,42 @@
+usage: zloganalyzer [-h] [-V] [-i FILE] [-o FILE] [-s FILE] [-v] [-q]
+                    [--logfile FILE] [--config-check-only]
+                    [--encoding-check-only] [--set-encoding ENCODING]
+                    [--watchers-file FILE]
+                    [--watchers-separator WATCHERS_SEPARATOR]
+                    CONFIG_FILE
+
+zloganalyzer -- analyzes a log using a set of configurable rules.
+
+  Copyright 2016 Zenterio AB. All rights reserved.
+
+  Licensed under the Apache License 2.0
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Distributed on an "AS IS" basis without warranties
+  or conditions of any kind, either express or implied.
+
+positional arguments:
+  CONFIG_FILE           rule configuration file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -V, --version         show program's version number and exit
+  -i FILE, --in FILE    set log input path [default: stdin (-)]
+  -o FILE, --out FILE   set report output path [default: stdout (-)]
+  -s FILE, --summary FILE
+                        set summary output path [default: stdout (-)]
+  -v, --verbose         turn on verbose mode [default: False]
+  -q, --quiet           prevent errors from being printed to stderr [default:
+                        False]
+  --logfile FILE        set logfile output path [default: None]
+  --config-check-only   perform config check and exit [default: False]
+  --encoding-check-only
+                        perform encoding check of the input file and exit
+                        [default: False]
+  --set-encoding ENCODING
+                        Force encoding setting for input file. If not set,
+                        automatic detection of the input file is done.Encoding
+                        settings has no effect when reading from stdin.
+  --watchers-file FILE  Output affected watchers to file
+  --watchers-separator WATCHERS_SEPARATOR
+                        Separator between watchers in the watchers file

@@ -1,0 +1,10 @@
+definitions:
+  - title: Title A
+    id: ID-A
+    desc: |
+      Multiline description
+      of definition A
+    markers:
+      - invalid reg ex (.* no closing parenthesis
+      - second invalid reg ex (.*
+      - invalid reg ex (.* no closing parenthesis

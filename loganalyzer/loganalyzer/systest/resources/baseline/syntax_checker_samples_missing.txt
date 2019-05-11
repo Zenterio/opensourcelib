@@ -1,0 +1,5 @@
+zloganalyzer: Critical error, Configuration parse errors occurred:
+Missing sample for: 'second'
+line 10:      - 'second' # missing sample
+ 
+ - exiting application

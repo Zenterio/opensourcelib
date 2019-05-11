@@ -1,0 +1,2 @@
+zloganalyzer: Critical error, Induced data error 
+ - exiting application

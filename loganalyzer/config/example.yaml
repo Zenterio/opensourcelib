@@ -1,0 +1,204 @@
+#
+# Log Parser Configuration
+#
+# The log parser parses the log for matches against defined issues.
+# Issues are listed in "definitions" section and are defined by:
+# title, id, desc, markers and invalidators.
+# When a match exist for all the markers, an issues is considered complete and
+# added to the collection of found issues.
+# The invalidators are a mechanism for disqualifying a partially completed
+# issue.
+# It is usually a good idea to enclose markers and invalidators in single quotes.
+#
+# Example:
+#
+# definitions:
+#   - title: Title
+#     id: ID
+#     desc: Text
+#     markers:
+#       - 'reg-ex'
+#     invalidators:
+#       - 'reg-ex'
+#
+
+definitions:
+
+# Event Quene
+  - title: Event Queue Blocked
+    id: EQ-1
+    desc: Event Queue blocked by an event
+    markers:
+      - 'Event Queue blocked by (.*)'
+    samples:
+      - 'E[06:59:10.939] zinc/TimerTask[934]: evtEventManager.cc[249] AddEvent, Event Queue blocked by cal::Calendar::Callback(si::SITableEvent)'
+
+  - title: Event Queue Slow Handling
+    id: EQ-2
+    desc: Event took more than 200 ms to process
+    markers:
+      - 'W\[[0-9]+:[0-9]+:[0-9]+\.[0-9]+\].*DispatchEvent,.*with (.*) took ([0-9]+) ms'
+    samples:
+      - 'W[01:00:11.482] dizco/EventLoop[673]: evtEventGenerator.cc[329] DispatchEvent,   with cal::TimerEvent took 387 ms'
+
+# Generic Error
+  - title: Generic Error
+    id: Error-1
+    desc: Zids error-level log entry, E[TIMESTAMP] message
+    markers:
+      - 'E\[[0-9]+:[0-9]+:[0-9]+\.[0-9]+\]'
+    samples:
+      - ':E[01:00:09.232] Zipd[672]: cryptM2MKey.cc[46] CallM2MHandler, Could not access /dev/m2mhandler'
+
+# Out of Memory
+  - title: Out of Memory Page Allocation Failure
+    id: OOM-1
+    desc: Out of memory, page allocation failure
+    markers:
+      - page allocation failure
+    samples:
+      - page allocation failure
+
+  - title: Out of Memory Process Killed
+    id: OOM-2
+    desc: Out of memory, process killed
+    markers:
+      - '[Oo]ut of [Mm]emory: [Kk]ill process [0-9]+ \((.*)\) score [0-9]+'
+    samples:
+      - '[221818.647000] Out of memory: kill process 15166 (lxc-init) score 67200 or a child'
+
+# Process issues
+  - title: zids.bin not running
+    id: Proc-1
+    desc: During a kazam check, the zids.bin process could not be found.
+    markers:
+      - 'raise STBHanging\("zids\.bin gone"\)'
+    samples:
+      - '     raise STBHanging("zids.bin gone")'
+
+  - title: browser not running
+    id: Proc-2
+    desc: During a kazam check, the browser process could not be found.
+    markers:
+      - 'raise STBHanging\("browser gone"\)'
+    samples:
+      - '      raise STBHanging("browser gone")'
+
+  - title: RiksTV SysApp Crashed
+    id: RiksTV-1
+    desc: |
+      RiksTV products have a system application simply called RiksTvSysApp
+      that is used to handle licensis for playing IP-TV.
+    markers:
+      - 'OnConnectionLost, Lost connection from RiksTvSysApp'
+    samples:
+      - 'M[15:09:37.943] pf/EventLoop[1123]: zacthriftServerSessionEventThreadService.cc[126] OnConnectionLost, Lost connection from RiksTvSysApp'
+
+# General Hang
+  - title: General Hang
+    id: Hang-1
+    desc: |
+      General hang issue. Kazam has detected that the STB appears to hang.
+      It is unresponsive which prevents further testing. The STB will
+      shortly after be rebooted.
+    markers:
+      - 'First hang for a while, will await some more'
+      - 'It has now hung [0-9]+ consecutive times in the last .* sec'
+      - 'raise STBHanging\("Hang detected"\)'
+    samples:
+      - 'First hang for a while, will await some more'
+      - 'It has now hung 2 consecutive times in the last 30 sec'
+      - 'raise STBHanging("Hang detected")'
+
+  - title: Hang Check failed
+    id: Hang-2
+    desc: |
+      Some part of kazam identified a possible hang issue and posted
+      an "STB_HANGING_EVENT".
+      Kazam's central hang detector raised a hang exception in response.
+      See the exception message for more details.
+    markers:
+      - 'kazam\.exceptions\.STBHanging: Hang detected'
+    samples:
+      - 'kazam.exceptions.STBHanging: Hang detected'
+
+ # Jasmine
+  - title: Jasmine, failed to start test
+    id: Jasmine-1
+    desc: |
+      Jasmine test page failed to load. Tests where not run.
+      The most common reason for failing to load the test page is that the
+      browser did not start on time, or at all; or that kazam failed to start
+      the browser due to incorrect configuration.
+      Things to check for:
+      * browser crash during start-up
+      * failed to load the URL (incorrect URL)
+      * the browser start command has changed (incorrect configuration)
+    markers:
+      - 'Failed to start Jasmine test'
+    samples:
+      - 'Failed to start Jasmine test'
+
+  - title: Jasmine, start page load failure
+    id: Jasmine-2
+    desc: Start page could not be loaded after jasmine testing finished
+    markers:
+      - 'Failed to start browser again after Jasmine test'
+    samples:
+      - '2016-05-26 01:40:35,235 WARNING:K-FW:Failed to start browser again after Jasmine test.'
+
+# Nexus
+  - title: Nexus, OOM Killer
+    id: Nexus-1
+    desc: Nexus invoked the Out of memory (OOM) Killer
+    markers:
+      - 'nexusServer invoked oom-killer'
+    samples:
+      - 'W[19:36:37.971] nexusServer invoked oom-killer'
+
+  - title: Nexus Error
+    id: Nexus-2
+    desc: Nexus check failure
+    markers:
+      - 'E\[[0-9]+:[0-9]+:[0-9]+\.[0-9]+\].*pf\/mfw\/.*NEXUS.*failed\:\ (.*),(.*)'
+    samples:
+      - 'E[14:26:41.671] pf/mfw/ippump[30859] halDemux.cc:404 GetBuffer, NEXUS_Playpump_GetBuffer failed: 9, NEXUS_UNKNOWN, unknown'
+
+# STB Reboot
+  - title: STB Rebooted
+    id: Reboot-1
+    desc: The STB rebooted, probably due to a critical error
+    markers:
+      - 'K-FW:STB_REBOOTED_EVENT (.*) posted'
+    invalidators:
+      - '(The box seems to be offline\. Trying to turn it on\.|Upgrade finished\!)'
+      - 'K-FW:STB_REBOOTED_EVENT (.*) posted'
+    samples:
+      - '2016-05-20 19:01:57,118 DEBUG:K-FW:STB_REBOOTED_EVENT (65537) posted'
+      - '2016-05-20 19:00:52,458 WARNING:K-FW:The box seems to be offline. Trying to turn it on.'
+      - '2016-05-20 19:01:55,465 DEBUG:K-Flash:INFO:  Upgrade finished!'
+
+# Kazam
+  - title: Kazam Aborted Due to Read Errors
+    id: Kazam-1
+    desc: |
+      Kazam aborted the test run due to large amount of read errors on the
+      serial console. Read errors prevent log parsing that kazam
+      realy upon, making it impossible to recover and continue. The test
+      run was therefore prematurely stopped.
+    markers:
+      - 'K-FW:Too many read-parse errors\. Aborting logservice after (.*) errors'
+    samples:
+      - '2016-04-29 19:00:58,324 ERROR:K-FW:Too many read-parse errors. Aborting logservice after 1000 errors'
+
+  - title: Kazam Connection Check Failure
+    id: Kazam-2
+    desc: |
+      Kazam's connection checks failed. Kazam was unable to
+      establish a reliable connection with the STB and could  therefore not
+      start the tests. See the error message for more information about what
+      connection that failed.
+    markers:
+      - 'K-FW:Unable to start the tests\. A required connection check failed'
+    samples:
+      - "CRITICAL:K-FW:Unable to start the tests. A required connection check failed: The box doesn't respond to RCU commands. Please check the box and event configuration!"

@@ -1,0 +1,18 @@
+zloganalyzer: Critical error, Configuration parse errors occurred:
+root:
+'miss_spelled_definition:
+-   desc: 'Multiline description
+
+        of definition A
+
+        '
+    id: ID-A
+    markers:
+    - first
+    title: Title A
+'
+Missing required attribute: 'definitions'
+
+Invalid attribute: 'miss_spelled_definition'
+ 
+ - exiting application

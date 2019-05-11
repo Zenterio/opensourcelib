@@ -1,0 +1,79 @@
+znake:
+  info:
+    package: zchangelog
+    maintainer: Zenterio AB
+    maintainer_email: foss@zenterio.com
+    short_description: Tool to generate a changeog from git and jira
+    long_description: |
+      Assists the user in generating a changelog using git commits and jira descriptions
+    changelog:
+      - version: 1.0.0
+        changes:
+        - "First open source version"
+        date: Sat, 11 may 2019 18:00:00 +0000
+  license: 'Apache License 2.0'
+  classifiers:
+    - 'Development Status :: 3 - Alpha'
+    - 'Intended Audience :: Developers'
+    - 'Programming Language :: Python :: 3.6'
+  keywords: []
+  entry_points:
+    console_scripts:
+      - 'zchangelog = zchangelog.ui.__main__:main'
+  package_data:
+    - package: zchangelog
+  requirements:
+    - click==6.7
+    - gitpython==2.1.9
+    - coloredlogs==5.1.1
+    - jira==1.0.15
+    - dicttoxml==1.7.4
+  static:
+    packages:
+      - zchangelog
+      - systest
+  doc:
+    pre:
+      - mkdir -p build/doc/user_guide/generated/
+    targets:
+      - guide: user_guide
+  deb:
+    package: zenterio-zchangelog
+    dependencies:
+      - git
+      - zenterio-ca-certificates
+    links:
+      - target: /opt/venvs/zenterio-zchangelog/bin/zchangelog
+        link: /usr/bin/zchangelog
+    include:
+      - source: znaketools/zenterio-zchangelog-bash-completion.sh
+        target: /etc/bash_completion.d/
+  test:
+    packages:
+      - zchangelog
+    targets:
+      - name: local
+        image: local
+      - name: u14
+        image: k2runner.u14
+      - name: u16
+        image: k2runner.u16
+      - name: u18
+        image: k2runner.u18
+  systest:
+    packages:
+      - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml
+  debtest:
+    packages:
+      - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml
+dependencies:
+  "{build_dir}/doc/user_guide/html":
+    - doc/user_guide/**
+    - zchangelog/**
+  "{build_dir}/doc/user_guide/pdf":
+    - doc/user_guide/**
+    - zchangelog/**

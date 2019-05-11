@@ -1,0 +1,14 @@
+*~
+\#*\#
+.\#*
+/build/
+/output/
+*.egg-info/
+*.pyc
+.python-version
+__pycache__
+/.venv/
+/.idea/
+
+zchangelog/version.py
+setup.py

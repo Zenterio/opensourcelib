@@ -23,6 +23,7 @@ Components/Tools
 * K2, test framework
 * Log-Analyzer, tool for identifying patterns in text logs
 * ZAF, python application framework
+* zchangelog, generate change log from git and jira
 * zftrace, file tracing utility
 * Znake, python build-system
 * Zpider, document generation tool

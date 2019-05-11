@@ -12,7 +12,7 @@ znake:
         changes:
         - "First open source version."
         date: Sat, 11 May 2019 06:00:00 +0000
-  license: '© 2018-2019 Zenterio AB All rights reserved'
+  license: 'Apache License 2.0'
   classifiers:
     - 'Development Status :: 3 - Alpha'
     - 'Intended Audience :: Developers'

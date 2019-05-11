@@ -13,7 +13,7 @@ znake:
             changes:
               - 'First Open source release.'
             date: Fri, 10 May 2019 22:00:00 +0200
-    license: 'Apache 2.0'
+    license: 'Apache License 2.0'
     classifiers:
         - 'Development Status :: 5 - Production/Stable'
         - 'Intended Audience :: Developers'

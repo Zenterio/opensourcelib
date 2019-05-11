@@ -17,7 +17,7 @@ setup(
     maintainer='Zenterio AB',
     maintainer_email='foss@zenterio.com',
 
-    license='Apache 2.0',
+    license='Apache License 2.0',
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',

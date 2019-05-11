@@ -15,6 +15,7 @@ Components/Tools
 ----------------
 
 * citools
+* compiz
 * git-project
 * K2
 * ZAF

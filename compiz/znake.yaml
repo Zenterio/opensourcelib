@@ -1,0 +1,50 @@
+znake:
+    info:
+      package: compiz
+      maintainer: Zenterio AB
+      maintainer_email: foss@zenterio.com
+      short_description: This program is used to identify the code owner for files in repositories.
+      long_description: |
+          This program is used to identify the code owner for files in repositories.
+      changelog:
+        - version: 1.0.0
+          changes:
+            - "First open source version"
+          date: Sat, 11 May 2019 12:00:00 +0000
+    license: 'Apache License 2.0'
+    classifiers:
+      - 'Development Status :: 3 - Alpha'
+      - 'Intended Audience :: Developers'
+      - 'Topic :: Software Development :: Build Tools'
+      - 'License :: Other/Proprietary License'
+      - 'Programming Language :: Python :: 3.6'
+    keywords:
+      - compiz
+      - zcompiz
+      - zenterio-compiz
+      - zenterio-zcompiz
+    entry_points:
+        console_scripts:
+          - zcompiz = compiz.compiz:main
+    package_data: []
+    static:
+        packages:
+          - compiz
+    deb:
+        package: zenterio-zcompiz
+        dependencies:
+        links:
+          - target: /opt/venvs/zenterio-zcompiz/bin/zcompiz
+            link: /usr/bin/zcompiz
+    test:
+        packages:
+          - compiz
+    systest:
+        packages:
+          - compiz.systest.systest
+        coverage_flags: --with-coverage --cover-package compiz --cover-inclusive --cover-erase --cover-xml --cover-xml-file build/coverage/coverage-systest-{image}.xml
+        command_pattern: COVERAGE_FILE=build/coverage/.coverage-systest-{image} nosetests {coverage_flags} {packages}
+    debtest:
+        packages:
+          - compiz.systest.systest
+        command_pattern: nosetests {packages}

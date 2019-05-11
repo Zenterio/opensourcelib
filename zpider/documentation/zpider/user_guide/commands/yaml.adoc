@@ -1,0 +1,14 @@
+= YAML
+
+Command that generates YAML output.
+
+== output.yaml (--output-yaml)
+
+The output YAML file.
+
+default:: The name of the adoc.file argument but with .yaml instead of .adoc.
+
+== adoc.file (ADOC_FILE)
+
+The adoc file to convert to YAML.
+On command line this is given as a positional argument.

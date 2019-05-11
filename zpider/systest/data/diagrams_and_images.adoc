@@ -1,0 +1,5 @@
+= Diagrams and Images
+
+plantuml::plantUML/diagram.uml[]
+
+image::assets/zpider.png[]

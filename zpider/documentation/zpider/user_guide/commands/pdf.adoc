@@ -1,0 +1,26 @@
+= PDF
+
+Command that generates PDF output
+
+== output.pdf (--output-pdf)
+
+The output PDF file.
+
+default:: The name of the adoc.file argument but with .pdf instead of .adoc.
+
+== pdf.fonts (--pdf-fonts)
+
+Option that specifies which directory that includes fonts.
+
+default:: Internal zpider fonts.
+
+== pdf.styles (--pdf-styles)
+
+Option that specify which style YAML file that should be used.
+
+default:: Internal zpider Zenterio style.
+
+== adoc.file (ADOC_FILE)
+
+The adoc file to convert to PDF.
+On command line this is given as a positional argument.

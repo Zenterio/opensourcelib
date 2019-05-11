@@ -1,0 +1,51 @@
+= Levels
+
+Zpider adds the possibility to define document _levels_ and to be able to specify that the document
+generation should include and/or exclude different types of content for a specific level.
+
+Levels are controlled through the options
+<<option-levels-ids,levels.ids>>, <<option-levels-level-includes,levels.<level>.includes>>,
+<<option-levels-level-excludes,levels.<level>.excludes>> and <<option-magic-titles,magic.titles>>.
+
+For each level, it's possible to control the inclusion and exclusion of the content types summary, other and magic titles.
+
+== Definitions
+
+level:: A *level* is defined with the <<option-levels-ids,levels.ids>> option.
+level section:: A section marked with one of the defined *levels*. See <<level-syntax>>.
+summary:: A *summary* is the first paragraph of a *level section*.
+magic title:: A *magic title* is defined with the <<option-magic-titles,magic.titles>> option.
+magic title section:: A section with a title that matches one of the *magic titles*.
+other:: Any content that doesn't match any of the other content types.
+all:: Everything except *level sections*.
+
+== Controlling Inclusion/Exclusion
+
+For each *level* the inclusion and exclusions are defined with the <<option-levels-level-includes,levels.<level>.includes>>,
+<<option-levels-level-excludes,levels.<level>.excludes>> options.
+
+.Rules
+* Includes are by default *all*.
+* Excludes override includes.
+
+== Removing Empty Sections
+
+After excluding content, empty sections are removed by default.
+This can be controlled with the <<option-keep-empty-sections,keep-empty-sections>> option.
+
+== Examples
+
+.Document with only summary on feature level
+[source,yaml]
+----
+levels.ids: [feature]
+levels.feature.includes: [summary]
+----
+
+.Document that excludes Customization title on feature level
+[source,yaml]
+----
+magic.titles: [customatization]
+levels.ids: [feature]
+levels.feature.excludes: [customization]
+----

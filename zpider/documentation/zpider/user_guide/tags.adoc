@@ -1,0 +1,7 @@
+= Tags
+
+Zpider will in future versions have the possibility to specify tags on titles and to
+control inclusion/exclusion of the titles depending on the tags.
+
+Currently the only thing existing for tags is the specification of how to add them to the document.
+This is described in <<tag-syntax>>.

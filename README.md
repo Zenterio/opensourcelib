@@ -24,3 +24,4 @@ Components/Tools
 * Log-Analyzer, tool for identifying patterns in text logs.
 * ZAF, python application framework
 * Znake, python build-system
+* Zpider, document generation tool

@@ -1,0 +1,5 @@
+@startuml Diagram
+
+cookie -> cookie-monster
+
+@enduml

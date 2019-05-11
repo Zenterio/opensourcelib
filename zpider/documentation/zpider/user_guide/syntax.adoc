@@ -1,0 +1,76 @@
+= Syntax
+
+Zpider is based on the https://en.wikipedia.org/wiki/AsciiDoc[AsciiDoc] markup language and
+it uses the https://asciidoctor.org/[Asciidoctor] tool to generate the documentation.
+
+
+== AsciiDoc Syntax
+
+The https://asciidoctor.org/docs/user-manual[Asciidoctor User Guide] contains description of
+the complete AsciiDoc syntax including AsciiDoctor specific functionality.
+
+
+== Zpider Additions
+
+Zpider provides some added functionality through Asciidoctor plugins.
+
+
+[#level-syntax]
+=== Level Syntax
+
+Levels are marked with the https://asciidoctor.org/docs/user-manual/#role[Asciidoctor Role] syntax.
+
+Levels always begin with a dot (.).
+
+.Example of how to make a title as a Level with the name *mylevel*.
+----
+[.mylevel]
+== My Level Title
+----
+
+[#tag-syntax]
+=== Tag Syntax
+
+Tags are set using the *tags* attribute using the https://asciidoctor.org/docs/user-manual/#setting-attributes-on-an-element[Asciidoctor Element Attributes] syntax.
+The tags should be explicitly quoted with a comma between each tag.
+
+.Example of how to set tags on a title.
+----
+[tags="tag1,tag2"]
+== My Tagged Title
+----
+
+[#id-syntax]
+=== ID Syntax
+
+IDs are used to be able to create references to titles.
+This uses the builtin Asciidoctor ID functionality. For more information see https://asciidoctor.org/docs/user-manual/#xref[Asciidoctor Cross References]
+
+IDs always begin with a hash (#).
+
+
+It's recommended to use explicit ID assignment to be able to rename titles without affecting references in other places of the documentation.
+
+.Example of how to set an ID on a title.
+----
+[#my-id]
+== My Tagged Title
+----
+
+=== Combining Level, Tag and ID
+
+It's important to combine the different types of metadata in the correct way.
+
+.The order should be:
+. IDs
+. levels
+. Tags
+
+.Example of how to combine multiple IDs, levels and tags.
+----
+[#my-id1#my-id2.my-level1.my-level2, tags="tag1,tag2"]
+== My Tagged Title
+----
+
+The comma before the tags marks the beginning of the attribute list.
+IDs and Tags should not have any separator between them.

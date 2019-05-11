@@ -1,0 +1,35 @@
+= Getting Started
+
+== Installation
+
+.Zpider is installed from the Zenterio PPA using
+----
+sudo apt-get install zenterio-zpider
+----
+
+The Zpider installation requires Docker to work and will install the docker-ce package.
+
+.To get Docker to work the user needs to be a member of the *docker* group.
+----
+sudo adduser <user> docker
+reboot
+----
+
+*The group will take effect after reboot (sometimes a logout/login is enough)*
+
+== Running Zpider
+
+.The easiest way to run Zpider is to
+----
+cd <documentation_root_directory>
+zpider pdf <name of .adoc file>
+----
+
+.Example with how to generate a PDF from this User Guide
+----
+cd documentation/zpider
+zpider pdf --output-pdf user_guide.pdf user_guide.adoc
+----
+
+Currently it's only possible to store the output file inside the current working directory
+because it is generated inside a Docker container that doesn't have access to anything else.

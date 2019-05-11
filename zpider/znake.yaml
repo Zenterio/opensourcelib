@@ -1,0 +1,112 @@
+znake:
+  info:
+    package: zpider
+    maintainer: Engineering Services
+    maintainer_email: engineering-services@zenterio.com
+    short_description: Tool to do stuff with documentation
+    long_description: |
+      Documentation tool
+    changelog:
+      - version: 1.0.0
+        changes:
+        - "First open source version"
+        date: Sat, 11 May 2019 17:00:00 +0000
+  license: "Apache License 2.0"
+  classifiers:
+    - "Development Status :: 3 - Alpha"
+    - "Intended Audience :: Developers"
+    - "Topic :: Software Development :: Build Tools"
+    - "Programming Language :: Python :: 3.6"
+  keywords:
+    - documentation
+    - docker
+  entry_points:
+    console_scripts:
+      - zpider = zpider.__main__:main
+    zpider.addons:
+      - zpiderhtml = zpider.commands.html:HtmlCommand
+      - zpiderpdf = zpider.commands.pdf:PdfCommand
+      - zpideryaml = zpider.commands.yaml:YamlCommand
+      - zpiderasciidoctor = zpider.asciidoctor.asciidoctor:AsciidoctorExtension
+      - zpiderasciidoctorplugins = zpider.asciidoctor.plugins:AsciidoctorPlugins
+      - zpiderstructure = zpider.docstructure.docstructure:DocStructure
+      - zpiderhostenv = zpider.environments.host:HostEnvExtension
+      - zpiderdockerenv = zpider.environments.docker:DockerEnvExtension
+      - zpiderids = zpider.ids.ids:Ids
+  package_data:
+    - package: 'zpider.data.plugins'
+      include:
+        - '*.rb'
+    - package: 'zpider.data.plugins.zpider-tree-processor'
+      include:
+        - '*.rb'
+    - package: 'zpider.data.plugins.raw-block-macro'
+      include:
+        - '*.rb'
+    - package: 'zpider.data.fonts'
+      include:
+        - '*'
+    - package: 'zpider.data.logos'
+      include:
+        - '*'
+    - package: 'zpider.data.styles'
+      include:
+        - '*'
+    - package: 'zpider.data.docinfo.html'
+      include:
+        - '*'
+  requirements:
+    - zenterio-zaf==0.24.3
+  static:
+    packages:
+      - zpider
+      - systest
+  deb:
+    dependencies:
+      - docker-ce
+      - zenterio-ca-certificates
+    doc:
+      - user_guide
+    package: zenterio-zpider
+    links:
+      - target: /opt/venvs/zenterio-zpider/bin/zpider
+        link: /usr/bin/zpider
+    include:
+      - source: znaketools/zenterio-zpider-bash-completion.sh
+        target: /etc/bash_completion.d/
+  doc:
+    targets:
+      - guide: user_guide
+    html_command_pattern: >
+      pushd documentation/zpider &&
+      zpider --root html --output-html {target}.html {target}.adoc &&
+      popd &&
+      mkdir -p {doc_dir}/{target}/html &&
+      mv documentation/zpider/{target}.html {doc_dir}/{target}/html/index.html
+
+    pdf_command_pattern: >
+      pushd documentation/zpider &&
+      zpider --root pdf --output-pdf {target}.pdf {target}.adoc &&
+      popd &&
+      mkdir -p {doc_dir}/{target}/pdf &&
+      mv documentation/zpider/{target}.pdf {doc_dir}/{target}/pdf/{target}.pdf
+  test:
+    packages:
+      - zpider
+  systest:
+    packages:
+      - systest.tests
+      - systest.localtests
+    vars:
+      config_file: systest/systest_config.yaml
+  debtest:
+    packages:
+      - systest.debtests
+      - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml
+dependencies:
+  "{build_dir}/doc/user_guide/html":
+    - documentation/zpider/**
+  "{build_dir}/doc/user_guide/pdf":
+    - documentation/zpider/**

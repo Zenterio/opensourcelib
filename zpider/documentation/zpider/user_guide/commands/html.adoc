@@ -1,0 +1,15 @@
+= HTML
+
+Command that generates HTML output. The HTML file is entirely self-contained
+with all images etc. inlined using data URIs.
+
+== output.html (--output-html)
+
+The output HTML file.
+
+default:: The name of the adoc.file argument but with .html instead of .adoc.
+
+== adoc.file (ADOC_FILE)
+
+The adoc file to convert to HTML.
+On command line this is given as a positional argument.

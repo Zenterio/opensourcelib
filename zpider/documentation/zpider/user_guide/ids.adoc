@@ -1,0 +1,54 @@
+= IDs
+
+Zpider supports filtering sections using ID attributes.
+The ID attributes can be any string.
+
+== ID Attributes
+
+.ID Attributes are configure on Sections using ascidoc attributes.
+[source,yaml]
+----
+[.level,id="my-level-id"]
+== Section with ID
+----
+
+== ID Filtering
+
+Which IDs that should be included in the document can be configured with the <<option-include-ids,include.ids>>, <<option-exclude-ids,exclude.ids>> options.
+
+.The following rules are used
+. By default everything is included.
+. Specifying includes implicitly excludes everything not explicitly included.
+. Explicit excludes override includes.
+. Includes will include parent sections unless they are explicitly excluded.
+
+== Examples
+
+.Document with some IDs included
+[source,yaml]
+----
+include.ids: [feature1, feature2]
+----
+
+.Document with some IDs excluded
+[source,yaml]
+----
+exclude.ids: [feature1, feature2]
+----
+
+== ID Versioning
+
+IDs can be versioned.
+By default, only the latest version is included in the generated document.
+What versions to include can be controlled using the <<option-max-allowed-version,max.allowed.version>> and <<option-keep-all-versions,keep.all.versions>> options.
+
+== Examples
+
+[source,yaml]
+----
+[.level,id="my-feature",version="1"]
+== Section with ID version 1
+
+[.level,id="my-feature",version="2"]
+== Section with ID version 2
+----

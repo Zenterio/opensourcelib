@@ -1,0 +1,50 @@
+diff --git a/mwlib/rl/pdfstyles.py b/mwlib/rl/pdfstyles.py
+index 2b665c21..a72217ad 100755
+--- a/mwlib/rl/pdfstyles.py
++++ b/mwlib/rl/pdfstyles.py
+@@ -76,7 +76,7 @@ show_wiki_license = True
+ # since the documenatition is not guaranteed to be up to date, you might also want to check the docsting of the
+ # Paragraph class (reportlab/platypus/paragraph.py --> class Paragraph())
+ # e.g. the use of inline images is not included in the official documenation of reportlab
+-pagefooter = u''
++pagefooter = u'© Zenterio AB, 2014'
+ 
+ #### TITLE PAGE
+ 
+@@ -87,7 +87,7 @@ title_page_image_size = (12*cm, 17*cm) # max. width, height of image, aspect rat
+ # It is ensured that the image is not moved out of the page boundaries
+ title_page_image_pos = (None, None)
+ 
+-titlepagefooter = _(u'PDF generated using the open source mwlib toolkit. See http://code.pediapress.com/ for more information.')
++titlepagefooter = _(u'© Zenterio AB, 2014')
+ 
+ # toggle display of PDF generation date in title page footer
+ show_creation_date = True
+diff --git a/mwlib/rl/rlwriter.py b/mwlib/rl/rlwriter.py
+index d220f0f1..ba07d63a 100755
+--- a/mwlib/rl/rlwriter.py
++++ b/mwlib/rl/rlwriter.py
+@@ -94,6 +94,7 @@ except ImportError:
+     pass
+ 
+ from mwlib import advtree, writerbase
++from mwlib import plantuml
+ from mwlib.treecleaner import TreeCleaner
+ 
+ 
+@@ -2201,6 +2202,15 @@ class RlWriter(object):
+             return [Figure(img_path, '', text_style(), imgWidth=w, imgHeight=h)]
+         return []
+ 
++    def writePlantUml(self, node):
++        img_path = plantuml.drawUml(node.uml, self.tmpdir)
++        if img_path:
++            node.thumb = False
++            node.isInline = lambda : False
++            w, h = self.image_utils.getImageSize(node, img_path)
++            return [Figure(img_path, '', text_style(), imgWidth=w, imgHeight=h)]
++        return []
++
+ 
+     writeControl = ignore
+     writeVar = writeEmphasized

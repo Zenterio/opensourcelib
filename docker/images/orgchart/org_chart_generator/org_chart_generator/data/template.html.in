@@ -1,0 +1,36 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Organization Chart Plugin</title>
+    <link rel="stylesheet" href="./jquery.orgchart.css">
+    <style type="text/css">
+        #chart-container {
+            height: 620px;
+        }
+
+        .orgchart {
+            background: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart-container"></div>
+    <script type="text/javascript" src="./jquery.min.js"></script>
+    <script type="text/javascript" src="./jquery.orgchart.js"></script>
+    <script type="text/javascript">
+        $(function () {
+            var datascource = $data
+            ;
+            $('#chart-container').orgchart({
+                'data': datascource,
+                'nodeContent': 'title',
+                'verticalLevel': 3,
+                'visibleLevel': 4
+            });
+        });
+    </script>
+</body>
+
+</html>

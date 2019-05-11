@@ -1,0 +1,13 @@
+*~
+\#*\#
+.\#*
+/build/
+*.egg-info/
+*.pyc
+.python-version
+__pycache__
+/.venv/
+.idea/
+
+docs_fetcher/version.py
+setup.py

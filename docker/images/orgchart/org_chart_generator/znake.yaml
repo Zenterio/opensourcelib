@@ -1,0 +1,43 @@
+znake:
+  info:
+    package: org_chart_generator
+    maintainer: Engineering Services
+    maintainer_email: engineering-services@zenterio.com
+    short_description: Fetches organization information and generates a chart
+    long_description: Fetches organization information and generates a chart
+    changelog:
+      - version: 0.0.1
+        changes:
+          - RNDAP-86 Initial version.
+        date: Thu, 20 Mar 2019 12:00:00 +0000
+  license: '© 2019 Zenterio AB All rights reserved'
+  classifiers:
+    - 'Development Status :: 3 - Alpha'
+    - 'Intended Audience :: Developers'
+    - 'Topic :: Software Development :: Build Tools'
+    - 'License :: Other/Proprietary License'
+    - 'Programming Language :: Python :: 3.4'
+    - 'Programming Language :: Python :: 3.5'
+    - 'Programming Language :: Python :: 3.6'
+  keywords: []
+  entry_points:
+    console_scripts:
+      - org_chart_generator = org_chart_generator.__main__:main
+  requirements:
+    - click==7.0
+    - requests==2.21.0
+  static:
+    packages:
+      - org_chart_generator
+  doc:
+    targets: []
+  deb:
+    package: org_chart_generator
+  test:
+    packages:
+      - org_chart_generator
+  systest:
+    packages:
+        - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml

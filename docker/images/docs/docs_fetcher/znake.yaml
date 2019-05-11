@@ -1,0 +1,44 @@
+znake:
+  info:
+    package: docs_fetcher
+    maintainer: Zenterio AB
+    maintainer_email: foss@zenterio.com
+    short_description: Fetches and extracts documentation archives from Artifactory
+    long_description: Fetches and extracts documentation archives from Artifactory
+    changelog:
+      - version: 0.0.1
+        changes:
+          - First open source release.
+        date: Thu, 12 Mar 2018 12:00:00 +0000
+  license: 'Apache License 2.0'
+  classifiers:
+    - 'Development Status :: 3 - Alpha'
+    - 'Intended Audience :: Developers'
+    - 'Topic :: Software Development :: Build Tools'
+    - 'License :: Other/Proprietary License'
+    - 'Programming Language :: Python :: 3.4'
+    - 'Programming Language :: Python :: 3.5'
+    - 'Programming Language :: Python :: 3.6'
+  keywords:
+    - documentation
+  entry_points:
+    console_scripts:
+      - docs_fetcher = docs_fetcher.__main__:main
+  requirements:
+    - artifactory==0.1.17
+    - click==6.7
+  static:
+    packages:
+      - docs_fetcher
+  doc:
+    targets: []
+  deb:
+    package: docs_fetcher
+  test:
+    packages:
+      - docs_fetcher
+  systest:
+    packages:
+        - systest.tests
+    vars:
+      config_file: systest/systest_config.yaml

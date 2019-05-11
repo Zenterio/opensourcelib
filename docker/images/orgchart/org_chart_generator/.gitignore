@@ -1,0 +1,14 @@
+*~
+\#*\#
+.\#*
+/build/
+*.egg-info/
+*.pyc
+.python-version
+__pycache__
+/.venv/
+.idea/
+
+org_chart_generator/version.py
+index.html
+setup.py

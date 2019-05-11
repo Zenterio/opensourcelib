@@ -16,6 +16,7 @@ Components/Tools
 
 * citools
 * compiz
+* docker, various images and build-system
 * git-project
 * K2
 * ZAF

@@ -1,0 +1,15 @@
+
+# Update official_plugins.txt
+# Manually install the plugin to get all dependencies
+
+# Generate a new file
+goto https://<jenkins host>/script
+
+#Run the following script
+List<String> jenkinsPlugins = new ArrayList<String>(Jenkins.instance.pluginManager.plugins);
+jenkinsPlugins.sort { it.displayName }
+              .each { plugin ->
+                   println ("${plugin.shortName}:${plugin.version}")
+              }
+
+#Copy into official_plugins.txt

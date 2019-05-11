@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+set -eu
+
+usage() {
+    echo "Usage:"
+    echo "  $SCRIPT [-h|--help]"
+    echo "  $SCRIPT [-i] [-m] [-p] [LOG_FILE]"
+    echo ""
+    echo "  LOG_FILE: zftrace log file (optional)"
+    echo ""
+    echo "Options:"
+    echo "  -h              Print usage."
+    echo " --help           Print extended usage."
+    echo " -i               In-place editing, will overwrite LOG_FILE."
+    echo " -m               The log file contains checksum."
+    echo " -p               The log file contains proc-info."
+    echo ""
+    echo "Filters out extra information (checksum, proc-info), only leaving the file path."
+    echo "If LOGFILE is not provided, the $SCRIPT reads from stdin."
+    echo ""
+}
+
+extended_usage() {
+    usage
+    echo ""
+    echo "Example:"
+    echo ""
+    echo "User Alice has used zftrace and captured a log of important files in projectA,"
+    echo "using the options to include checksums and process information."
+    echo ""
+    echo "log file (zftrace.log) contains:"
+    echo "MD5CHECKSUM /home/alice/workspace/projectA/file1.txt command-line (PID)"
+    echo ""
+    echo "User Bob also has projectA, but checked-out in a different directory."
+    echo ""
+    echo "Bobs file system is:"
+    echo "/home/bob/ws/projectA/file1.txt"
+    echo ""
+    echo "Bob runs zftrace-filter on the file-list to filter out extra information."
+    echo "He doesn't care about the extra information and selects in-place edit."
+    echo "Since the file contains both MD5 checksum and proc-info, he uses the"
+    echo "extra options -m -p in addition to -i for in-place edit."
+    echo "Command used:"
+    echo "$ zftrace-filter -i -m -p zftrace.log"
+    echo ""
+    echo "Result:"
+    echo "/home/alice/workspace/projectA/file1.txt"
+    echo ""
+    echo "Making it possible to use the file with zftrace-cp and zftrace-ln."
+    echo ""
+}
+
+trap '{ test -f ${TEMPFILE} && rm -rf ${TEMPFILE}; } || true' 1 2 15 0
+
+SCRIPT=$(basename $0)
+CHECKSUM=false
+PROCINFO=false
+INPLACE=false
+TEMPFILE=
+
+set +e
+ARGS=$(getopt -o himp -l "help" -n "$SCRIPT" -- "$@");
+if [ $? -ne 0 ]; then
+    set -e
+    usage
+    exit 129
+fi
+set -e
+
+eval set -- "$ARGS";
+
+while true; do
+    case $1 in
+        -h)
+            shift
+            usage
+            exit 0
+            ;;
+        --help)
+            shift
+            extended_usage
+            exit 0
+            ;;
+        -i)
+            shift
+            INPLACE=true
+            ;;
+        -m)
+            shift
+            CHECKSUM=true
+            ;;
+        -p)
+            shift
+            PROCINFO=true
+            ;;
+        --)
+            shift;
+            break;
+            ;;
+    esac
+done
+
+echoerr() {
+    cat <<< "$@" 1>&2;
+}
+
+
+# $1 - source file
+# $2 - destination directory
+# $3 - source directory
+# $4 - base path
+zftrace_filter() {
+    local field=1
+    if ${CHECKSUM}; then
+        field=2
+    fi
+
+    cut -d$'\t' -f${field} -
+}
+
+if [ ${#@} -gt 1 ] ; then
+    echoerr "${SCRIPT} at most one positional argument LOG_FILE (optional)."
+    exit 129
+fi
+
+if [ ${#@} -gt 0 ] ; then
+    if [ ! -f "$1" ]; then
+        echoerr "$1: no such file."
+        exit 1
+    fi
+    LOG_FILE="$1"; shift
+    if ${INPLACE}; then
+        TEMPFILE=$(mktemp)
+        cp "${LOG_FILE}" "${TEMPFILE}"
+        cat "${TEMPFILE}" | zftrace_filter > "${LOG_FILE}"
+    fi
+    cat "${LOG_FILE}" | zftrace_filter
+else
+    zftrace_filter
+fi

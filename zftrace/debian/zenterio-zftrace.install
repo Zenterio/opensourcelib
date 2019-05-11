@@ -1,0 +1,4 @@
+build/zftrace usr/bin
+build/zftrace-cp usr/bin
+build/zftrace-ln usr/bin
+build/zftrace-filter usr/bin

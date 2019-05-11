@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_displays_help() {
+    print_test_name
+    output=$(${ZFTRACE_LN} -h 2>&1)
+    echo ${output} | grep 'Usage:' ||
+        { echo "$output"; fail_ 'zftrace-ln -h does not work'; }
+
+    output=$(${ZFTRACE_LN} --help 2>&1)
+    echo ${output} | grep 'Usage:' ||
+        { echo "$output"; fail_ 'zftrace-ln -h does not work'; }
+}
+
+test_link_files() {
+    print_test_name
+    local cmd;
+
+    cmd="$ZFTRACE_LN --base-path \$TEST_ROOT_DIR/data --src-path ${DATA_DIR}/ ${DATA_DIR}/default.report output/"
+    $cmd > check.log ||
+        { echo $cmd; cat check.log; fail_ 'zftrace-ln failed'; }
+
+     test -f output/files/1 > check.log ||
+        { cat check.log; fail_ 'files/1 does not exist, linking failed'; }
+
+     test -f output/files/2 > check.log ||
+        { cat check.log; fail_ 'files/2 does not exist, linking failed'; }
+
+     test -f output/files/3 > check.log ||
+        { cat check.log; fail_ 'files/3 does not exist, linking failed'; }
+
+    rm -rf output/files
+}
+
+test_symlink_files() {
+    print_test_name
+    local cmd;
+
+    cmd="$ZFTRACE_LN -s --base-path \$TEST_ROOT_DIR/data --src-path ${DATA_DIR}/ ${DATA_DIR}/default.report output/"
+    $cmd > check.log ||
+        { echo $cmd; cat check.log; fail_ 'zftrace-ln failed'; }
+
+     test -L output/files/1 > check.log ||
+        { cat check.log; fail_ 'symlink files/1 does not exist, symbolic linking failed'; }
+
+     test -L output/files/2 > check.log ||
+        { cat check.log; fail_ 'symlink files/2 does not exist, symbolic linking failed'; }
+
+     test -L output/files/3 > check.log ||
+        { cat check.log; fail_ 'symlink files/3 does not exist, symbolic linking failed'; }
+
+    rm -rf output/files
+}
+
+test_displays_help
+
+test_link_files
+test_symlink_files
+
+exit 0

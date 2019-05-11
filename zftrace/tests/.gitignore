@@ -1,0 +1,5 @@
+check.log
+test_*.log
+test_*.trs
+test-suite.log
+output

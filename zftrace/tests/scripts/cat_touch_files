@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+cd "$1"
+
+cat_files() {
+    for f in *;do
+        cat "$f" > /dev/null
+    done
+}
+
+touch_files() {
+    for f in *; do
+        touch "$f"
+    done
+
+}
+
+cat_files
+touch_files

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_run_proc() {
+    print_test_name
+    local cmd="${ZFTRACE} -s TEST_ROOT_DIR -p -o output/proc.report ${SCRIPT_DIR}/cat_files ${DATA_DIR}/files"
+    TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1 > /dev/null || fail_ "${cmd} does not work"
+
+    strip_report output/proc.report
+
+    sed -i -E "s/\(([0-9]+)\)/(PID)/g" output/proc.report
+    diff --ignore-space-change ${DATA_DIR}/proc.report output/proc.report >> check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+test_run_proc
+
+exit 0

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+count=$1
+
+for i in $(seq 1 $count); do
+    echo $i
+    sleep 1
+done

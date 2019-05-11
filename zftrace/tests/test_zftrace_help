@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_displays_help_using_h() {
+    print_test_name
+    output=$(${ZFTRACE} -h 2>&1)
+    echo ${output} | grep 'usage: zftrace' ||
+        { echo "$output"; fail_ 'zftrace -h does not work'; }
+}
+
+test_displays_help_using_h
+
+exit 0

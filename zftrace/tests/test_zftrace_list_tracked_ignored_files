@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -ex
+
+. "${srcdir=.}/init.sh"
+
+create_files() {
+    mkdir -p output/tracked
+    for i in $(seq 1 1);do
+        echo $i > output/tracked/$i
+    done
+}
+
+test_list_tracked_ignored_files_is_in_report_by_default() {
+    print_test_name
+    local cmd="${ZFTRACE} -s TEST_ROOT_DIR \
+         -o output/tracked.report \
+         -q output/tracked.ignored \
+         ${SCRIPT_DIR}/cat_touch_files output/tracked"
+    TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1 >> check.log ||
+        { cat check.log; fail_ "${cmd} does not work"; }
+
+    grep "output/tracked/1" output/tracked.ignored ||
+        { cat check.log; fail_ "precondition failed: ignored not in ignore-list"; }
+
+    grep "output/tracked/1" output/tracked.report ||
+        { cat check.log; fail_ "ignored file not in report"; }
+}
+
+test_list_tracked_ignored_files_shown_on_stderr_with_e_option() {
+    print_test_name
+    local cmd="${ZFTRACE} -e \
+        -s TEST_ROOT_DIR \
+        -o output/tracked.report \
+        -q output/tracked.ignored \
+        ${SCRIPT_DIR}/cat_touch_files output/tracked"
+    output=$(TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1) ||
+        { echo $output >> check.log; cat check.log; fail_ "${cmd} does not work"; }
+
+    grep "output/tracked/1" output/tracked.ignored ||
+        { cat check.log; fail_ "precondition failed: ignored not in ignore-list"; }
+
+    test -z "${output##*output/tracked/1}" ||
+        { echo $output >> check.log; cat check.log; fail_ "Output did not contain tracked-ignored file"; }
+
+    grep "output/tracked/1" output/tracked.report ||
+        { cat check.log; fail_ "ignored file not in report"; }
+}
+
+test_list_tracked_ignored_files_excluded_from_report_with_t_option() {
+    print_test_name
+    local cmd="${ZFTRACE} -t \
+        -s TEST_ROOT_DIR \
+        -o output/tracked.report \
+        -q output/tracked.ignored \
+        ${SCRIPT_DIR}/cat_touch_files output/tracked"
+    TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1 >> check.log ||
+        { cat check.log; fail_ "${cmd} does not work"; }
+
+    grep "output/tracked/1" output/tracked.ignored ||
+        { cat check.log; fail_ "precondition failed: ignored not in ignore-list"; }
+
+    set +e
+    grep "output/tracked/1" output/tracked.report &&
+        { cat check.log; fail_ "ignored file found in report"; }
+    set -e
+}
+
+rm -rf output/tracked
+
+create_files
+
+test_list_tracked_ignored_files_is_in_report_by_default
+test_list_tracked_ignored_files_shown_on_stderr_with_e_option
+test_list_tracked_ignored_files_excluded_from_report_with_t_option
+
+rm -rf output/tracked
+
+exit 0

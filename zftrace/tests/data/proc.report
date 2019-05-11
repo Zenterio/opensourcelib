@@ -1,0 +1,5 @@
+$TEST_ROOT_DIR/data/files/1	cat (PID)
+$TEST_ROOT_DIR/data/files/2	cat (PID)
+$TEST_ROOT_DIR/data/files/3	cat (PID)
+$TEST_ROOT_DIR/data/files/A	cat (PID)
+$TEST_ROOT_DIR/data/files/a	cat (PID)

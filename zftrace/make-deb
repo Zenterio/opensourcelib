@@ -1,0 +1,11 @@
+#!/bin/bash -e
+ZFTRACE_VERSION="$(cat VERSION)+${BUILD_NUMBER:-0}"
+export ZFTRACE_VERSION
+cd "$(dirname "$0")"
+sed "s/@ZFTRACE_VERSION@/${ZFTRACE_VERSION}/" CHANGELOG > debian/changelog
+autoreconf -i
+make distclean || true
+dpkg-buildpackage -i -uc -us -b
+mkdir -p ./dist
+mv ../zenterio-zftrace_*.deb ./dist/
+mv ../zenterio-zftrace_*.changes ./dist/

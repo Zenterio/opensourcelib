@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_displays_help() {
+    print_test_name
+    output=$(${ZFTRACE_FILTER} -h 2>&1)
+    echo ${output} | grep 'Usage:' ||
+        { echo "$output"; fail_ 'zftrace-filter -h does not work'; }
+
+    output=$(${ZFTRACE_FILTER} --help 2>&1)
+    echo ${output} | grep 'Usage:' ||
+        { echo "$output"; fail_ 'zftrace-filter -h does not work'; }
+}
+
+
+
+test_filter_checksum() {
+    print_test_name
+    local cmd;
+
+    cmd="$ZFTRACE_FILTER -m ${DATA_DIR}/checksum.report"
+    $cmd > output/filter.checksum.report ||
+        { echo $cmd; fail_ 'zftrace-filter failed'; }
+
+    diff --ignore-space-change ${DATA_DIR}/default.report output/filter.checksum.report > check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+test_filter_proc() {
+    print_test_name
+    local cmd;
+
+    cmd="$ZFTRACE_FILTER -p ${DATA_DIR}/proc.report"
+    $cmd > output/filter.proc.report ||
+        { echo $cmd; fail_ 'zftrace-filter failed'; }
+
+    diff --ignore-space-change ${DATA_DIR}/default.report output/filter.proc.report > check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+test_filter_checksum_proc() {
+    print_test_name
+    local cmd;
+
+    cmd="$ZFTRACE_FILTER -m -p ${DATA_DIR}/checksum-proc.report"
+    $cmd > output/filter.checksum-proc.report ||
+        { echo $cmd; fail_ 'zftrace-filter failed'; }
+
+    diff --ignore-space-change ${DATA_DIR}/default.report output/filter.checksum-proc.report > check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+test_filter_default() {
+    print_test_name
+    local cmd;
+
+    cmd="$ZFTRACE_FILTER ${DATA_DIR}/default.report"
+    $cmd > output/filter.default.report ||
+        { echo $cmd; fail_ 'zftrace-filter failed'; }
+
+    diff --ignore-space-change ${DATA_DIR}/default.report output/filter.default.report > check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+
+test_filter_inplace() {
+    print_test_name
+    local cmd;
+    cp "${DATA_DIR}/checksum.report" output/filter.inplace.report && chmod ug+w output/filter.inplace.report
+    cmd="$ZFTRACE_FILTER -i -m output/filter.inplace.report"
+    $cmd ||
+        { echo $cmd; fail_ 'zftrace-filter failed'; }
+
+    diff --ignore-space-change ${DATA_DIR}/default.report output/filter.inplace.report > check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+
+test_displays_help
+test_filter_checksum
+test_filter_proc
+test_filter_checksum_proc
+test_filter_default
+test_filter_inplace
+
+exit 0

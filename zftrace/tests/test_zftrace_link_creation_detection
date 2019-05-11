@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_link_creation_dectection() {
+    print_test_name
+    local cmd="${ZFTRACE} -s TEST_ROOT_DIR -o output/ln.report ln ${DATA_DIR}/files/1 output/linking/hard_1"
+    TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1 > /dev/null || fail_ "${cmd} does not work"
+
+    strip_report output/ln.report
+
+    diff --ignore-space-change ${DATA_DIR}/ln.report output/ln.report >> check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+test_symlink_creation_dectection() {
+    print_test_name
+    local cmd="${ZFTRACE} -s TEST_ROOT_DIR -o output/lns.report ln -s ${DATA_DIR}/files/1 output/linking/sym_1"
+    TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1 > /dev/null || fail_ "${cmd} does not work"
+
+    strip_report output/lns.report
+
+    diff --ignore-space-change ${DATA_DIR}/lns.report output/lns.report >> check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+}
+
+rm -rf output/linking
+mkdir -p output/linking
+
+test_link_creation_dectection
+test_symlink_creation_dectection
+
+rm -rf output/linking
+
+exit 0

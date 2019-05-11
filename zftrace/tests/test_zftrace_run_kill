@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_run_kill() {
+    print_test_name
+    local cmd;
+
+    # No match
+    cmd="${ZFTRACE} -k ${DATA_DIR}/match_no_file.txt -o output/kill.report \
+        ${SCRIPT_DIR}/cat_files ${DATA_DIR}/files"
+    ${cmd} 2>&1 > output/kill.output ||
+        { fail_ "${cmd} was unexpectedly killed (exit code $?)"; }
+
+    # Match
+    cmd="${ZFTRACE} -k ${DATA_DIR}/match_on_file_2.txt -o output/kill.report \
+        ${SCRIPT_DIR}/cat_files ${DATA_DIR}/files"
+    set +e
+    ${cmd} 2>&1 > output/kill.output &&
+        { fail_ "${cmd} was not killed (exit code $?)"; }
+    set -e
+
+    # Match with environmental variables
+    cmd="${ZFTRACE} -s TEST_ROOT_DIR \
+        -k ${DATA_DIR}/match_on_file_2.txt -o output/kill.report \
+        ${SCRIPT_DIR}/cat_files ${DATA_DIR}/files"
+    TEST_ROOT_DIR="${TEST_ROOT_DIR}" ${cmd} 2>&1 > output/kill.output &&
+        { fail_ "${cmd} was not killed (exit code $?)"; }
+
+    strip_report output/kill.report
+
+    diff --ignore-space-change ${DATA_DIR}/kill.report output/kill.report >> check.log ||
+        { cat check.log; fail_ "report did not look as expected."; }
+    diff --ignore-space-change ${DATA_DIR}/kill.output output/kill.output >> check.log ||
+        { cat check.log; fail_ "output did not look as expected."; }
+}
+
+test_run_kill

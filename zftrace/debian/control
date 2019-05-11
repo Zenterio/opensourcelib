@@ -1,0 +1,16 @@
+Source: zenterio-zftrace
+Maintainer: Zenterio AB - Enginering Services <engineering-services@zenterio.com>
+Section: utils
+Priority: optional
+Build-Depends: libc6-dev (>= 2.2.2) [!alpha !ia64], libc6.1-dev (>= 2.2.2) [alpha ia64], gcc-multilib [i386 powerpc s390 sparc], debhelper (>= 7.0.0), libmhash-dev, libglib2.0-dev
+Standards-Version: 0.2-alpha
+Homepage: http://zenterio.com
+
+Package: zenterio-zftrace
+Architecture: alpha amd64 arm armeb armel armhf hppa i386 ia64 m68k mips mipsel powerpc powerpcspe ppc64 s390 s390x sh4 sparc sparc64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A file use tracer
+ ftrace is a file use tracer, i.e. a debugging tool which prints out
+ a log of all the files used by a another process/program.
+ The program to be traced need not be recompiled for this, so you can
+ use it on binaries for which you don't have source.

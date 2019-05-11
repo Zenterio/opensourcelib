@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+
+. "${srcdir=.}/init.sh"
+
+test_displays_version_using_v() {
+    print_test_name
+    output=$(${ZFTRACE} -v 2>&1)
+    test -z "${output##*zftrace -- version*}" ||
+        { echo "$output"; fail_ 'zftrace -v does not work'; }
+}
+
+test_displays_version_using_v
+
+exit 0

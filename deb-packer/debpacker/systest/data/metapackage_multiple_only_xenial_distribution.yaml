@@ -1,0 +1,8 @@
+name: metapackage-xenial
+version: 1.0.0
+short_description: This is the short description
+long_description: This is the long description which has multiple lines
+distributions: [xenial]
+dependencies:
+  - dependency1
+  - dependency2

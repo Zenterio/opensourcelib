@@ -1,0 +1,2 @@
+Some text with template1: ${TEMPLATE1}
+Some more text with ${TEMPLATE2} and after more text

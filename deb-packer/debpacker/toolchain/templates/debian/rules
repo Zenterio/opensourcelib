@@ -1,0 +1,38 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+%:
+	dh $$@
+
+override_dh_strip:
+	dh_strip --exclude=${PACKAGE_NAME}
+
+override_dh_makeshlibs:
+	dh_makeshlibs --exclude=${PACKAGE_NAME}
+
+override_dh_shlibdeps:
+	dh_shlibdeps --exclude=${PACKAGE_NAME}
+
+override_dh_fixperms:
+	@echo "Skipping dh_fixperms"
+
+override_dh_auto_build:
+	@echo "Skipping dh_auto_build"
+
+override_dh_auto_clean:
+	@echo "Skipping dh_auto_clean"
+
+override_dh_auto_configure:
+	@echo "Skipping dh_auto_configure"
+
+override_dh_auto_install:
+	@echo "Skipping dh_auto_install"
+
+override_dh_auto_test:
+	@echo "Skipping dh_auto_test"
+
+override_dh_strip_nondeterminism:
+	@echo "Skipping dh_strip_nondeterminism"

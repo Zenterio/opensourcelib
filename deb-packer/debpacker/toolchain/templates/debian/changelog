@@ -1,0 +1,5 @@
+${PACKAGE_NAME} (${VERSION}) unstable; urgency=low
+
+  * The creation of the ${PACKAGE_NAME} package
+
+ -- Zenterio AB <foss@zenterio.com>  ${TIME}

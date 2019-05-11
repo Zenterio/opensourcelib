@@ -1,0 +1,10 @@
+/build/
+/debian/
+*.egg-info/
+.idea/
+*.pyc
+__pycache__
+.vscode/
+.venv/
+/**/version.py
+setup.py

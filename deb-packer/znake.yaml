@@ -1,0 +1,71 @@
+znake:
+    info:
+      package: debpacker
+      maintainer: Zenterio AB
+      maintainer_email: foss@zenterio.com
+      short_description: This program is used to create Zenterio developer kit packages
+      long_description: |
+          This program is used to create Zenterio developer kit packages
+      changelog:
+        - version: 1.0.0
+          changes:
+            - "First open source version"
+          date: Sat, 11 May 2019 16:00:00 +0000
+    license: 'Apache License 2.0'
+    classifiers:
+      - 'Development Status :: 3 - Alpha'
+      - 'Intended Audience :: Developers'
+      - 'Topic :: Software Development :: Build Tools'
+      - 'Programming Language :: Python :: 3.6'
+    keywords:
+      - zdebpacker
+      - debian
+      - package
+    entry_points:
+        console_scripts:
+          - 'zdeb-packer=debpacker.__main__:entry_point'
+    package_data:
+      - package: debpacker
+        include:
+          - 'toolchain/templates/debian/*'
+          - 'metapackage/templates/debian_template.equivs'
+          - 'python/templates/debian_config/*'
+          - 'python/templates/vagrant_provisioning/*'
+          - 'python/templates/**/*.py'
+          - 'python/templates/setup.py.template'
+          - 'python/templates/.gitignore'
+          - 'python/templates/Makefile'
+          - 'python/templates/Vagrantfile'
+    requirements:
+      - click==6.6
+      - PyYAML==3.12
+      - voluptuous==0.9.3
+      - progressbar2==3.10.1
+      - requests==2.11.1
+      - requests-mock==1.0.0
+    static:
+        packages:
+          - debpacker
+    deb:
+        package: zenterio-zdeb-packer
+        dependencies:
+          - dpkg (>= 1.16.1)
+          - equivs (>= 2.0.9)
+          - debhelper (>= 9)
+        links:
+          - target: /opt/venvs/zenterio-zdeb-packer/bin/zdeb-packer
+            link: /usr/bin/zdeb-packer
+    test:
+        packages:
+          - debpacker
+        command_pattern: "{coverage_flags} python3 -m unittest"
+        coverage_flags: COVERAGE_FILE=build/coverage/.coverage-{image} coverage run --include "zdkpacker/*" -m unittest && COVERAGE_FILE=build/coverage/.coverage-{image} coverage report -m && true
+    systest:
+        packages:
+          - debpacker.systest.systest
+        command_pattern: "{coverage_flags} python3 -m unittest discover -s {packages} -p '*.py'"
+        coverage_flags: COVERAGE_FILE=build/coverage/.coverage-systest-{image} coverage run --include "zdkpacker/*" -m unittest discover -s {packages} -p '*.py' && COVERAGE_FILE=build/coverage/.coverage-systest-{image} coverage report -m && true
+    debtest:
+        packages:
+          - debpacker.systest.debtest
+        command_pattern: python3 -m unittest discover -s {packages} -p '*.py' -v

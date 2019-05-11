@@ -1,0 +1,1 @@
+debian/zdeb-packer-bash-completion.sh /etc/bash_completion.d/

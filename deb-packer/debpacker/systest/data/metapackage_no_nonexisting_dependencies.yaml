@@ -1,0 +1,9 @@
+name: zenterio-metapackage2
+version: 1.0.0
+short_description: This is the short description
+long_description: |
+ This is the long description
+ which has multiple lines
+dependencies:
+  - gdebi-core
+  - python3

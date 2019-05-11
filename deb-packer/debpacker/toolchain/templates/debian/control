@@ -1,0 +1,13 @@
+Source: ${PACKAGE_NAME}
+Section: devel
+Priority: extra
+Maintainer: Zenterio AB <foss@zenterio.com>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.5
+
+Package: ${PACKAGE_NAME}
+Architecture: all
+Pre-Depends: dpkg (>= 1.16.1)
+Depends: ${DEPENDS}
+Description: ${SHORT_DESCRIPTION}
+ ${LONG_DESCRIPTION}

@@ -15,7 +15,8 @@ Components/Tools
 ----------------
 
 * citools, Zenterio Jenkins CI Seed Tool
-* compiz, Commandline tool for marking code ownership in source trees
+* compiz, commandline tool for marking code ownership in source trees
+* deb-packer, tool for simplifying creation of debian packages
 * docker, various images and build-system
 * git-project, makes it easier to work with submodules
 * Hydra, web-application for running git-repo content on a web-server.

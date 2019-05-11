@@ -1,0 +1,11 @@
+name: ${NAME1}
+url: ${URL1}
+paths:
+ - /tmp/dummy/tool1
+version: 2.0.0
+---
+name: ${NAME2}
+url: ${URL2}
+paths:
+ - /tmp/dummy/tool2
+version: 2.0.0

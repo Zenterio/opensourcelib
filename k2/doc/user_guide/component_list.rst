@@ -1,0 +1,1 @@
+../build/user_guide/generated/component_list.rst

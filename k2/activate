@@ -1,0 +1,5 @@
+# Source this file to create and activate venv
+make prepare_node_local || { echo "Failed to prepare build environment - aborting!" && return 1; }
+source .venv/bin/activate
+echo
+echo .venv/ automatically activated

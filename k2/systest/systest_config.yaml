@@ -1,0 +1,33 @@
+log.warning: [nose]
+plugins.paths:
+  - systest/systest_plugins
+ext.connectioncheck.enabled: false
+ext.coredumps.enabled: false
+ext.gtestrunner.enabled: false
+ext.healthcheck.enabled: false
+ext.iprcu.enabled: false
+ext.iprcucc.enabled: false
+ext.linuxmonitor.enabled: false
+ext.monitor.enabled: false
+ext.powermeter.enabled: false
+ext.powermetercc.enabled: false
+ext.powermonitor.enabled: false
+ext.powerswitch.enabled: false
+ext.powerswitchcc.enabled: false
+ext.rcu.enabled: false
+ext.stbrecover.enabled: false
+ext.sut.enabled: false
+ext.sutevents.enabled: false
+ext.telnet.enabled: false
+ext.telnetcc.enabled: false
+ext.zserial.enabled: false
+ext.zserialcc.enabled: false
+
+logdefaults.enabled: true
+remoteclient.enabled: true
+systestutils.enabled: true
+host.shell.exec.enabled: true
+
+log.info: [k2.extension.pyproc]
+
+profiling.report.json: true

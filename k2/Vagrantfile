@@ -1,0 +1,40 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+
+  config.vm.box_download_insecure = true
+  config.vm.synced_folder ".", "/vagrant"
+  config.vm.synced_folder ".", "/home/vagrant/k2", type: "rsync", rsync__exclude: [".git/", ".venvs/", "debian", "__pychache__", "*.egg-info", "doc/"]
+  config.vm.synced_folder "~/.cache/pip", "/home/vagrant/.cache/pip", create: true
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 2048
+    v.cpus = 4
+  end
+
+  config.vm.define "u14" do |u14|
+    u14.vm.box = "zenterio/ubuntu-14"
+    u14.vm.hostname = "vagrant-u14"
+    u14.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-14/metadata.json"
+    u14.vm.provision :shell, path: "systest/test_runner_provisioning.sh"
+  end
+
+  config.vm.define "u16" do |u16|
+    u16.vm.box = "zenterio/ubuntu-16"
+    u16.vm.hostname = "vagrant-u16"
+    u16.vm.box_url = "https://vagrant.zenterio.lan/zenterio-ubuntu-16/metadata.json"
+    u16.vm.provision :shell, path: "systest/test_runner_provisioning.sh"
+  end
+
+  config.vm.define "u14_deb_builder" do |u14_deb_builder|
+    u14_deb_builder.vm.box = "zenterio/es-dev-14"
+    u14_deb_builder.vm.box_url = "https://vagrant.zenterio.lan/zenterio-es-dev-14/metadata.json"
+  end
+
+  config.vm.define "u16_deb_builder" do |u16_deb_builder|
+    u16_deb_builder.vm.box = "zenterio/es-dev-16"
+    u16_deb_builder.vm.box_url = "https://vagrant.zenterio.lan/zenterio-es-dev-16/metadata.json"
+  end
+
+end
+

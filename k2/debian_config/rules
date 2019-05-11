@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python-virtualenv --python /usr/bin/python3.6 --sourcedirectory=k2
+
+override_dh_shlibdeps:
+	dh_shlibdeps --exclude=numpy --exclude=matplotlib --exclude=pandas --exclude=selenium
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym || dh_strip
+
+override_dh_virtualenv:
+	dh_virtualenv \
+		--python /usr/bin/python3.6 \
+		--upgrade-pip \
+		--builtin-venv \
+		--extra-pip-arg "--force-reinstall" \
+		--extra-pip-arg "--trusted-host" \
+		--extra-pip-arg "pip.zenterio.lan" \
+		--index-url http://pip.zenterio.lan/simple \
+		--extra-index-url https://pypi.org/simple

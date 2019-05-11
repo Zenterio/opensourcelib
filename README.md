@@ -15,5 +15,6 @@ Components/Tools
 ----------------
 
 * git-project
+* K2
 * ZAF
 * Znake

@@ -1,0 +1,13 @@
+Source: zenterio-zk2
+Section: python
+Priority: extra
+Maintainer: Zenterio AB <foss@zenterio.com>
+Build-Depends: debhelper (>= 9), python, dh-virtualenv (>= 1.0)
+Standards-Version: 3.9.5
+
+Package: zenterio-zk2
+Architecture: any
+Pre-Depends: dpkg (>= 1.16.1), python3.6-venv, python3.6-minimal | python3.6, ${misc:Pre-Depends}
+Depends: socat, git, ${python:Depends}, ${misc:Depends}
+Description: Zenterio K2 automated asynchronous test framework
+ Zenterio K2 is an automated asynchronous test framework

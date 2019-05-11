@@ -1,0 +1,4 @@
+log.level: warning
+log.warning: [nose]
+profiling.report.csv: true
+#profiling.report.csv.path: ${profiling.dir}/profile_${internal.command}.csv

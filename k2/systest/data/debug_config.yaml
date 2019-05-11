@@ -1,0 +1,13 @@
+log.level: debug
+plugins.paths:
+  - systest/data/plugins
+log.warning: [nose]
+
+
+
+log.file.ids: [debug]
+
+log.file.debug.enabled: true
+log.file.debug.path: ${log.dir}/debug.log
+log.file.debug.log.level: debug
+log.file.debug.loggers: [k2, systest]

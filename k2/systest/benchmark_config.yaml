@@ -1,0 +1,44 @@
+additional.config.file.pattern: [systest/systest_config.yaml]
+ 
+reports.testng: true
+
+metrics.dir: ${output.dir}/reports/metrics
+
+metrics.text.ids: [all]
+
+metrics.text.all.dir: .
+metrics.text.all.filename: .benchmark
+metrics.text.all.namespace: benchmark
+metrics.text.all.rename.from: benchmark.
+
+metrics.csv.ids: [1600events, 1600requests, 40events, 40requests, event, request]
+
+metrics.csv.1600events.dir: ${metrics.dir}
+metrics.csv.1600events.filename: metrics_trigger_1600_events.csv
+metrics.csv.1600events.namespace: benchmark.trigger_1600_events
+metrics.csv.1600events.rename.from: benchmark.trigger_1600_events.
+
+metrics.csv.1600requests.dir: ${metrics.dir}
+metrics.csv.1600requests.filename: metrics_trigger_1600_requests.csv
+metrics.csv.1600requests.namespace: benchmark.trigger_1600_requests
+metrics.csv.1600requests.rename.from: benchmark.trigger_1600_requests.
+
+metrics.csv.40events.dir: ${metrics.dir}
+metrics.csv.40events.filename: metrics_trigger_40_events.csv
+metrics.csv.40events.namespace: benchmark.trigger_40_events
+metrics.csv.40events.rename.from: benchmark.trigger_40_events.
+
+metrics.csv.40requests.dir: ${metrics.dir}
+metrics.csv.40requests.filename: metrics_trigger_40_requests.csv
+metrics.csv.40requests.namespace: benchmark.trigger_40_requests
+metrics.csv.40requests.rename.from: benchmark.trigger_40_requests.
+
+metrics.csv.event.dir: ${metrics.dir}
+metrics.csv.event.filename: metrics_trigger_events.csv
+metrics.csv.event.namespace: benchmark.trigger_event
+metrics.csv.event.rename.from: benchmark.trigger_event.
+
+metrics.csv.request.dir: ${metrics.dir}
+metrics.csv.request.filename: metrics_trigger_request.csv
+metrics.csv.request.namespace: benchmark.trigger_request
+metrics.csv.request.rename.from: benchmark.trigger_request.

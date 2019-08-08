@@ -1,5 +1,8 @@
 import logging
 import signal
+import sys
+import threading
+import traceback
 
 from zaf.application.signalhandler import SignalHandler
 from zaf.extensions.extension import AbstractExtension, FrameworkExtension
@@ -18,6 +21,7 @@ class ApplicationSignalHandler(SignalHandler):
         self.register_handler(signal.SIGINT, self._handle_sigint)
         self.register_handler(signal.SIGABRT, self._handle_sigabrt)
         self.register_handler(signal.SIGTERM, self._handle_sigterm)
+        self.register_handler(signal.SIGUSR1, self._handle_sigusr1)
 
     def _handle_sigint(self, sig, frame):
         logger.debug('sigint')
@@ -36,6 +40,16 @@ class ApplicationSignalHandler(SignalHandler):
     def _handle_sigterm(self, sig, frame):
         logger.debug('sigterm')
         self.messagebus.trigger_event(CRITICAL_ABORT, K2_APPLICATION_ENDPOINT)
+
+    def _handle_sigusr1(self, sig, frame):
+        logger.debug('sigusr1')
+
+        for th in threading.enumerate():
+            print(th)
+            try:
+                print(''.join(traceback.format_stack(sys._current_frames()[th.ident])))
+            except KeyError:
+                print('Error getting stack frames\n')
 
 
 @FrameworkExtension(

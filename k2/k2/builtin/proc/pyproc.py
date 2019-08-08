@@ -88,18 +88,21 @@ class PyProcExtension(AbstractExtension):
                 :return: Process object
                 """
 
-                if coverage_enabled:
-                    coverage = 'COVERAGE_FILE={coverage_file} coverage run {config_file_arg} --parallel-mode'.format(
-                        coverage_file=coverage_report, config_file_arg=config_file_arg)
-                else:
-                    coverage = ''
-
                 entry_point = subprocess.check_output(
                     ['which', self.name], universal_newlines=True).strip()
 
-                command = '{prefix} {coverage} {entry_point} {arguments}'.format(
+                if coverage_enabled:
+                    binary = 'COVERAGE_FILE={coverage_file} coverage run {config_file_arg} --parallel-mode'.format(
+                        coverage_file=coverage_report, config_file_arg=config_file_arg)
+                elif 'python3' in entry_point:
+                    binary = ''
+                else:
+                    entry_point = os.path.realpath(entry_point)
+                    binary = os.path.join(os.path.dirname(entry_point), 'python3')
+
+                command = '{prefix} {binary} {entry_point} {arguments}'.format(
                     prefix=command_prefix,
-                    coverage=coverage,
+                    binary=binary,
                     entry_point=entry_point,
                     arguments=arguments)
 

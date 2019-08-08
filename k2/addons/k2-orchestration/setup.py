@@ -22,7 +22,9 @@ setup(
             'ansiblemanager = orchestration.ansible.manager:AnsibleManager',
             'ansibleaddsutcans = orchestration.ansible.manager:AnsibleAddSutCansExtension',
             'ansiblesuts = orchestration.ansible.manager:AnsibleSuts',
+            'ansibleinitializesuts = orchestration.ansible.initialize:InitializeAnsibleSuts',
             'ansiblesutsconfig = orchestration.ansible.manager:AnsibleSutsConfig',
+            'ansibledocker = orchestration.ansible.backends.docker:DockerAnsibleExtension',
         ],
     },
 )

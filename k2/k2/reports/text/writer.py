@@ -60,7 +60,7 @@ def generate_report(test_result, template, show_owner=False):
               Execution time: {total_duration}
               """)
     verdict_counts = defaultdict(int)
-    max_name_length = get_max_testname_length(test_result.test_results)
+    max_name_length = _get_max_testname_length(test_result.test_results)
 
     testcases = testcases.format(
         suite_name=test_result.run_result.name, verdict=test_result.run_result.verdict.name)
@@ -71,8 +71,7 @@ def generate_report(test_result, template, show_owner=False):
             name=test_result.run_result.name, message=test_result.run_result.message)
 
     for test_case in test_result.test_results:
-        name = test_case.name + '[' + ', '.join(
-            test_case.params) + ']' if test_case.params else test_case.name
+        name = _get_name_with_params(test_case)
         verdict = test_case.verdict
         verdict_counts[verdict] += 1
         duration = test_case.duration
@@ -117,5 +116,10 @@ def generate_report(test_result, template, show_owner=False):
     return result
 
 
-def get_max_testname_length(test_results):
-    return max([0] + list(map(lambda tc: len(tc.name), test_results)))
+def _get_name_with_params(test_case):
+    return test_case.name + '[' + ', '.join(
+        test_case.params) + ']' if test_case.params else test_case.name
+
+
+def _get_max_testname_length(test_results):
+    return max([0] + list(map(lambda tc: len(_get_name_with_params(tc)), test_results)))

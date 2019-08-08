@@ -33,7 +33,7 @@ test_all: test_$(1)
 systest_$(1): SHELL := $$(NODE_$(1)_SHELL)
 systest_$(1): .SHELLFLAGS := $$(NODE_$(1)_SHELLFLAGS)
 systest_$(1): prepare_node_$(1) cleancov_systest
-	zk2 $$(ADDITIONAL_SYSTEST_ARGUMENTS) --output-dir $$(OUTPUT_DIR)-$(1) --config-file-pattern systest/systest_config.yaml run --parallel-workers $(SYSTEST_PARALLEL_WORKERS) --exitcode-from-verdict true $$(if $$(filter $$(COVERAGE),y), --coverage-enabled --coverage-report .coverage-systest-$(1) --coverage-config-file .coveragerc $$(if $$(filter $$(COVERAGE_XML_REPORT),y),--coverage-xml-report coverage-systest.xml)) $$(if $$(filter $$(SYSTEST_REPORT),y),--reports-testng true) --suite-name systest.$(1) $$(FEATURE_SYSTESTS)
+	zk2 $$(ADDITIONAL_SYSTEST_ARGUMENTS) --output-dir $$(OUTPUT_DIR)-$(1) --config-file-pattern systest/systest_config.yaml run --parallel-workers $(SYSTEST_PARALLEL_WORKERS) --exitcode-from-verdict true $$(if $$(filter $$(COVERAGE),y), --coverage-enabled --coverage-report .coverage-systest-$(1) --coverage-config-file .coveragerc $$(if $$(filter $$(COVERAGE_XML_REPORT),y),--coverage-xml-report coverage-systest.xml)) $$(if $$(filter $$(SYSTEST_REPORT),y),--reports-testng true --reports-junit true) --suite-name k2.systest.$(1) $$(FEATURE_SYSTESTS)
 
 systest_all: systest_$(1)
 
@@ -99,7 +99,7 @@ debtest_$(NODE_$(1)_CODENAME): BASH_ENV :=
 debtest_$(NODE_$(1)_CODENAME): $$($(1)_deb_builder_DIST) ./docker/markers/docker_node_$(1)_built.marker
 	sudo apt-get update && \
 	sudo gdebi --quiet --non-interactive $$$$(ls -t ./dist/$$(NODE_$(1)_CODENAME)/*.deb | head -1) && \
-	zk2 $$(ADDITIONAL_SYSTEST_ARGUMENTS) --output-dir $$(OUTPUT_DIR)-$(1) --config-file-pattern systest/systest_config.yaml run --parallel-workers $(SYSTEST_PARALLEL_WORKERS) --exitcode-from-verdict true $$(if $$(filter $$(SYSTEST_REPORT),y),--reports-testng true) --suite-name debtest.$(1) $$(DEB_SYSTESTS)
+	zk2 $$(ADDITIONAL_SYSTEST_ARGUMENTS) --output-dir $$(OUTPUT_DIR)-$(1) --config-file-pattern systest/systest_config.yaml run --parallel-workers $(SYSTEST_PARALLEL_WORKERS) --exitcode-from-verdict true $$(if $$(filter $$(SYSTEST_REPORT),y),--reports-testng true  --reports-junit true) --suite-name k2.debtest.$(1) $$(DEB_SYSTESTS)
 
 debtest: debtest_$(NODE_$(1)_CODENAME)
 

@@ -10,15 +10,13 @@ logger = logging.getLogger(get_logger_name('k2', 'systestuils', 'workspace'))
 logger.addHandler(logging.NullHandler())
 
 
-@component(name='Workspace', provided_by_extension='systestutils')
-@requires(context='ComponentContext')
-@requires(config='Config')
-class Workspace(object):
+class BaseWorkspace(object):
+    """Base class implementing workspace functionality."""
 
-    def __init__(self, context, config):
+    def __init__(self, name, config):
         output_dir = os.path.abspath(config.get(OUTPUT_DIR))
         workspace_root = os.path.join(output_dir, 'workspace')
-        self.name = context.callable_qualname
+        self.name = name
         self.workspace = os.path.join(workspace_root, self.name)
 
     def __enter__(self):
@@ -82,3 +80,28 @@ class Workspace(object):
     @property
     def path(self):
         return self.workspace
+
+
+@component(name='Workspace', provided_by_extension='systestutils')
+@requires(context='ComponentContext')
+@requires(config='Config')
+class CallableWorkspace(BaseWorkspace):
+    """Workspace named using the component contexts callable."""
+
+    def __init__(self, context, config):
+        super().__init__(context.callable_qualname, config)
+
+
+@component(name='Workspace', provided_by_extension='systestutils', priority=1)
+@requires(context='TestContext')
+@requires(config='Config')
+class TestWorkspace(BaseWorkspace):
+    """
+    Workspace named using the test contexts name with parameters.
+
+    This is important to use when using @foreach decorator and parallelism
+    because otherwise there will be a name collision.
+    """
+
+    def __init__(self, context, config):
+        super().__init__(context.filename_with_params, config)

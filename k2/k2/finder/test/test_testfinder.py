@@ -206,3 +206,43 @@ class TestOfFinderForEach(unittest.TestCase):
         with self.assertRaises(Exception) as ctx:
             Finder(self.component_manager)._test_cases_from_suite(suite)
         self.assertIn("'int' object is not iterable", str(ctx.exception))
+
+
+def run_function():
+    pass
+
+
+class TestTestCaseDefinition(unittest.TestCase):
+
+    def test_str_returns_name_when_name_is_specified_and_there_are_no_params(self):
+        self.assertEqual(str(TestCaseDefinition(run_function, name='name')), 'name')
+
+    def test_str_returns_run_function_name_when_name_is_not_specified_and_there_are_no_params(self):
+        self.assertEqual(str(TestCaseDefinition(run_function)), 'run_function')
+
+    def test_str_returns_appends_list_of_params_to_name(self):
+        self.assertEqual(
+            str(
+                TestCaseDefinition(
+                    run_function,
+                    params=[
+                        TestCaseParam('param1', 'value1', str, False),
+                        TestCaseParam('param2', 'value2', str, False)
+                    ])), 'run_function[param1=value1,param2=value2]')
+
+    def test_filename_with_params_joins_name_and_params_with_dash_and_replaces_equal_with_underscore(
+            self):
+        self.assertEqual(
+            TestCaseDefinition(
+                run_function,
+                params=[
+                    TestCaseParam('param1', 'value1', str, False),
+                    TestCaseParam('param2', 'value2', str, False)
+                ]).filename_with_params, 'run_function-param1_value1-param2_value2')
+
+    def test_filename_with_params_without_params_returns_name(self):
+        self.assertEqual(TestCaseDefinition(run_function).filename_with_params, 'run_function')
+
+    def test_filename_with_params_removes_non_recommended_filename_characters(self):
+        self.assertEqual(
+            TestCaseDefinition(run_function, name='a!"#!)¤?#¤#.-').filename_with_params, 'a.-')

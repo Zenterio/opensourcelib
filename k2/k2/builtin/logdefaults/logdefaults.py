@@ -4,14 +4,17 @@ import logging
 import os
 from collections import defaultdict
 
+from zaf.builtin.docgen import GET_CUSTOM_LOGGING_DOCS, DocTemplate
+from zaf.builtin.docgen.docgen import DOCGEN_COMMAND
 from zaf.builtin.logging import EXTENSION_LOG_LEVEL, LOG_DIR, LOG_FILE_DEBUG, LOG_FILE_FORMAT, \
     LOG_FILE_INFO, LOG_FILE_LEVEL, LOG_FILE_LOGGERS, LOG_FILE_PATH, LOG_FILE_ROTATE_SCOPE, \
     LOG_FILE_TYPE, LOG_FILE_WARNING, LOG_FILES, LOG_LEVEL
 from zaf.commands import COMMAND
 from zaf.config.options import ConfigOption
 from zaf.extensions import ENABLED_EXTENSIONS
-from zaf.extensions.extension import AbstractExtension, ExtensionConfig, FrameworkExtension, \
-    get_logger_name
+from zaf.extensions.extension import AbstractExtension, CommandExtension, ExtensionConfig, \
+    FrameworkExtension, get_logger_name
+from zaf.messages.decorator import callback_dispatcher
 
 from . import LOGDEFAULTS_ENABLED
 
@@ -141,3 +144,11 @@ class LogDefaults(AbstractExtension):
 
         extension_configs[log_file_loggers_config_name] = ['']
         extension_configs[log_file_level_config_name] = default_level
+
+
+@CommandExtension(name='logdefaults', groups=['logging'], extends=[DOCGEN_COMMAND])
+class LogDefaultsDocs(AbstractExtension):
+
+    @callback_dispatcher([GET_CUSTOM_LOGGING_DOCS])
+    def get_custom_logging_docs(self, message):
+        return [DocTemplate('k2.builtin.logdefaults', 'templates', 'logdefaults.rst')]

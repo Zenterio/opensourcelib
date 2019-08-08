@@ -22,7 +22,7 @@ class Zk2Component(AbstractExtension):
 
         @component
         @requires(zk2='PyProc', args=['zk2'])
-        @requires(context='ComponentContext')
+        @requires(context='TestContext')
         class Zk2(object):
 
             logdir_tests = config.get(LOG_DIR_TESTS)
@@ -84,7 +84,7 @@ class Zk2Component(AbstractExtension):
                         enabled_extensions=' '.join(extension_args),
                         command=command,
                         filelog='' if not file_logging else ' '.join(file_logging_args),
-                        logdir=os.path.join(self.logdir_tests, self.context.callable_qualname))
+                        logdir=os.path.join(self.logdir_tests, self.context.filename_with_params))
 
                 return self.zk2(
                     zk2_args, expected_exit_code=expected_exit_code, wait=wait, timeout=timeout)

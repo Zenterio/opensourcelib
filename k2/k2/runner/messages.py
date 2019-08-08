@@ -5,7 +5,6 @@ from zaf.builtin.logging import ENTER_LOG_SCOPE, EXIT_LOG_SCOPE, LOG_END_POINT, 
 from k2 import ABORT
 from k2.runner import ABORT_TEST_CASE_REQUEST, RUNNER_ENDPOINT, TEST_CASE_FINISHED, \
     TEST_CASE_SKIPPED, TEST_CASE_STARTED, TEST_RUN_FINISHED, TEST_RUN_STARTED
-from k2.utils.string import make_valid_filename
 
 
 class TestCaseStarted(object):
@@ -232,7 +231,7 @@ def trigger_test_run_finished(messagebus, verdict, message):
 
 
 def trigger_test_case_started(messagebus, test_case):
-    test_case_name = _test_case_name_with_params(test_case)
+    test_case_name = test_case.filename_with_params
     messagebus.send_request(
         ENTER_LOG_SCOPE, LOG_END_POINT,
         data=LogScopeMessageData('testcase', name=test_case_name)).wait(timeout=10)
@@ -255,7 +254,7 @@ def trigger_test_case_finished(messagebus, test_case):
         data=TestCaseFinished(
             test_case.execution_id, test_case.name, datetime.datetime.now(), test_case.verdict,
             test_case.exception, test_case.stacktrace))
-    test_case_name = _test_case_name_with_params(test_case)
+    test_case_name = test_case.filename_with_params
     messagebus.send_request(
         EXIT_LOG_SCOPE,
         LOG_END_POINT,
@@ -270,10 +269,3 @@ def trigger_test_case_skipped(messagebus, test_case, reason):
         data=TestCaseSkipped(
             test_case.execution_id, test_case.name, test_case.qualified_name,
             datetime.datetime.now(), reason))
-
-
-def _test_case_name_with_params(test_case):
-    test_case_name = test_case.name + '-' + '-'.join([str(param) for param in test_case.params
-                                                      ]) if test_case.params else test_case.name
-    test_case_name = test_case_name.replace('=', '_')
-    return make_valid_filename(test_case_name)

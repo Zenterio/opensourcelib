@@ -70,5 +70,5 @@ class TestAnsibleConfigProperties(TestCase):
         self.assertEqual(None, ac.log_path)
 
     def test_extra_vars_file(self):
-        ac = AnsibleConfig('ansible.cfg', 'playbook', extra_vars_file='vars_file')
-        self.assertEqual('vars_file', ac.extra_vars_file)
+        ac = AnsibleConfig('ansible.cfg', 'playbook', extra_vars=['var1', '@vars_file1'])
+        self.assertEqual(['var1', '@vars_file1'], ac.extra_vars)

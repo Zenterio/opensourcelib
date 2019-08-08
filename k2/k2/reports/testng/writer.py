@@ -6,6 +6,7 @@ from zaf.extensions.extension import get_logger_name
 
 from k2.results.results import TestCaseResult
 from k2.runner.testcase import Verdict
+from k2.utils.string import strip_ansi_escapes
 
 VERDICT_TO_TESTNG_STATUS_MAPPING = {
     Verdict.PASSED: 'PASS',
@@ -132,7 +133,8 @@ def generate_testng_report(test_result):
     generated_xml = etree.tostring(testng_results, 'unicode')
     logger.debug('Generated XML before prettifying:\n{xml}'.format(xml=generated_xml))
 
-    return parseString(generated_xml).toprettyxml(indent='    ', encoding='utf-8')
+    return parseString(strip_ansi_escapes(generated_xml)).toprettyxml(
+        indent='    ', encoding='utf-8')
 
 
 def format_time(time):

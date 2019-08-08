@@ -6,7 +6,7 @@ from zaf.component.decorator import requires
 
 
 @requires(zk2='Zk2')
-def test_xml_report(zk2):
+def test_testng_xml_report(zk2):
     with TemporaryDirectory() as tmpdir:
         xml_report_file = os.path.join(tmpdir, 'testng-results.xml')
         zk2(
@@ -25,6 +25,41 @@ def test_xml_report(zk2):
             assert contents.count('status="FAIL"') == 3
             assert contents.count('status="SKIP"') == 2
             assert contents.count('status="PASS"') == 1
+
+
+@requires(zk2='Zk2')
+def test_junit_xml_report(zk2):
+    with TemporaryDirectory() as tmpdir:
+        xml_report_file = os.path.join(tmpdir, 'junit-results.xml')
+        zk2(
+            [
+                'runcommand', 'testrunner', 'testfinder', 'testscheduler', 'testresults',
+                'junitreport'
+            ],
+            'run systest.data.suites.test_verdicts '
+            '--reports-junit true '
+            '--reports-junit-file {xml_report_file}'.format(xml_report_file=xml_report_file))
+
+        assert os.path.exists(xml_report_file)
+        with open(xml_report_file) as f:
+            contents = f.read()
+
+            # 1 failed and 1 error
+            assert contents.count('status="FAILED"') == 2, contents
+
+            # 1 passed, 1 skipped and 1 ignored
+            assert contents.count('status="SUCCESSFUL"') == 3, contents
+
+            # 1 error
+            assert contents.count('type="error"') == 1, contents
+
+            # 1 failed
+            assert contents.count('type="failure"') == 1, contents
+
+            # 1 skipped and 1 ignored
+            assert contents.count('type="skipped"') == 2, contents
+
+            # Run verdict is not included as test case because there is no message
 
 
 @requires(zk2='Zk2')

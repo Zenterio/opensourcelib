@@ -7,7 +7,7 @@ from zaf.extensions.extension import AbstractExtension, CommandExtension, get_lo
 from k2.cmd.run import RUN_COMMAND
 
 from .remoteclient import SystestRemoteClient  # noqa
-from .workspace import Workspace  # noqa
+from .workspace import CallableWorkspace, TestWorkspace  # noqa
 
 logger = logging.getLogger(get_logger_name('k2', 'systestutils'))
 logger.addHandler(logging.NullHandler())

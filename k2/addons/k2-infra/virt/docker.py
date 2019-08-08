@@ -17,7 +17,6 @@ from zaf.config.options import ConfigOption, ConfigOptionId
 from zaf.config.types import Entity, Flag
 from zaf.extensions.extension import AbstractExtension, CommandExtension, get_logger_name
 
-from k2.cmd.run import RUN_COMMAND
 from k2.sut import SUT
 
 logger = logging.getLogger(get_logger_name('k2', 'docker'))
@@ -373,7 +372,7 @@ class DockerContainerExec(object):
 
 @CommandExtension(
     name='docker',
-    extends=[RUN_COMMAND],
+    extends=['sut'],
     config_options=[
         ConfigOption(DOCKER_IMAGE_PULL, required=True),
         ConfigOption(DOCKER_IMAGE_REGISTRY, required=False),

@@ -2,6 +2,9 @@ import unittest
 from unittest.mock import Mock, patch
 
 import requests
+from zaf.config.manager import ConfigManager
+
+from k2_jenkins import JENKINS_START_TIMEOUT
 
 from ..jenkins import JenkinsComponent, JenkinsException
 
@@ -19,7 +22,7 @@ class TestJenkins(unittest.TestCase):
 
         jenkins_node = Mock()
         jenkins_node.ip = '1.2.3.4'
-        jenkins_component = JenkinsComponent(jenkins_node=jenkins_node)
+        jenkins_component = create_jenkins_component(jenkins_node=jenkins_node)
 
         with patch('requests.get', side_effect=mock_responses) as requests_mock, \
                 patch('jenkins.Jenkins', return_value=create_jenkins_mock()), \
@@ -33,7 +36,7 @@ class TestJenkins(unittest.TestCase):
         _503.status_code = 503
         jenkins_node = Mock()
         jenkins_node.ip = '1.2.3.4'
-        jenkins_component = JenkinsComponent(start_timeout=0, jenkins_node=jenkins_node)
+        jenkins_component = create_jenkins_component(timeout=0, jenkins_node=jenkins_node)
 
         with patch('requests.get', return_value=_503), \
                 patch('jenkins.Jenkins', return_value=create_jenkins_mock()), \
@@ -46,7 +49,7 @@ class TestJenkins(unittest.TestCase):
         _200.status_code = 200
         jenkins_node = Mock()
         jenkins_node.ip = '1.2.3.4'
-        jenkins_component = JenkinsComponent(jenkins_node=jenkins_node)
+        jenkins_component = create_jenkins_component(jenkins_node=jenkins_node)
 
         with patch('requests.get', return_value=_200), \
                 patch('jenkins.Jenkins', return_value=create_jenkins_mock(normal_op=False)), \
@@ -56,14 +59,14 @@ class TestJenkins(unittest.TestCase):
 
     def test_jenkins_component_build_job_returns_build_info_object_with_result(self):
         with patch('time.sleep'):
-            jenkins_component = JenkinsComponent()
+            jenkins_component = create_jenkins_component()
             jenkins_component._server = create_jenkins_mock()
 
             self.assertEqual(jenkins_component.build_job('name').result, 'SUCCESS')
 
     def test_jenkins_component_build_job_polls_queue_item_until_job_started(self):
         with patch('time.sleep'):
-            jenkins_component = JenkinsComponent()
+            jenkins_component = create_jenkins_component()
             jenkins_mock = create_jenkins_mock(polls_before_job_started=3)
             jenkins_component._server = jenkins_mock
 
@@ -72,7 +75,7 @@ class TestJenkins(unittest.TestCase):
 
     def test_jenkins_component_build_job_polls_build_info_until_job_done(self):
         with patch('time.sleep'):
-            jenkins_component = JenkinsComponent()
+            jenkins_component = create_jenkins_component()
             jenkins_mock = create_jenkins_mock(polls_before_job_done=7)
             jenkins_component._server = jenkins_mock
 
@@ -83,7 +86,7 @@ class TestJenkins(unittest.TestCase):
 
     def test_jenkins_component_build_job_times_out_before_done(self):
         with patch('time.sleep'):
-            jenkins_component = JenkinsComponent()
+            jenkins_component = create_jenkins_component()
             jenkins_mock = create_jenkins_mock(polls_before_job_done=7)
             jenkins_component._server = jenkins_mock
 
@@ -92,7 +95,7 @@ class TestJenkins(unittest.TestCase):
 
     def test_jenkins_component_build_info_contains_build_information(self):
         with patch('time.sleep'):
-            jenkins_component = JenkinsComponent()
+            jenkins_component = create_jenkins_component()
             jenkins_mock = create_jenkins_mock()
             jenkins_component._server = jenkins_mock
 
@@ -101,6 +104,12 @@ class TestJenkins(unittest.TestCase):
                 jenkins_component.build_job('name').artifacts, ['artifact1', 'dir/artifact2'])
             self.assertEqual(
                 jenkins_component.build_job('name').console_log, 'console log\nFinished: SUCCESS')
+
+
+def create_jenkins_component(timeout=120, jenkins_node=None):
+    config = ConfigManager()
+    config.set(JENKINS_START_TIMEOUT, timeout)
+    return JenkinsComponent(config=config, jenkins_node=jenkins_node)
 
 
 def create_jenkins_mock(normal_op=True, polls_before_job_started=0, polls_before_job_done=0):

@@ -11,6 +11,7 @@ from zaf.component.factory import ExitScopeResult
 from zaf.extensions.extension import get_logger_name
 
 from k2.runner import EXTENSION_NAME, messages
+from k2.runner.components import TestContext
 from k2.runner.exceptions import DisabledException, ExecutionPausedTooLong, ScopeChangeException, \
     SkipException, TestCaseAborted
 from k2.runner.testcase import RunnerTestCase, Verdict
@@ -97,7 +98,8 @@ class TestRunner(object):
         for i in range(worker_count):
             self._post_command(Command(Command.next_test_case, self.runner_scope))
 
-        with ThreadPoolExecutor(max_workers=worker_count) as self.executor:
+        with ThreadPoolExecutor(max_workers=worker_count,
+                                thread_name_prefix='testcase_thread') as self.executor:
             while self._running:
                 command = self._command_queue.get(timeout=self.QUEUE_TIMEOUT_SECONDS)
                 self._check_execution_allowed()
@@ -137,7 +139,8 @@ class TestRunner(object):
             for test_case in self.running_test_cases:
                 if test_case.execution_id == request.execution_id:
                     logger.info('Aborting test case {name}'.format(name=test_case))
-                    _async_raise(test_case.execution_context.thread_id, request.exception_type)
+                    if test_case.execution_context.thread_id is not None:
+                        _async_raise(test_case.execution_context.thread_id, request.exception_type)
                     return
         logger.warning(
             'Could not find a running test case with execution id {id}'.format(
@@ -154,7 +157,8 @@ class TestRunner(object):
         self._abort = True
         with self.running_test_cases.lock:
             for test_case in self.running_test_cases:
-                _async_raise(test_case.execution_context.thread_id, TestCaseAborted)
+                if test_case.execution_context.thread_id is not None:
+                    _async_raise(test_case.execution_context.thread_id, TestCaseAborted)
         self.resume_execution()
 
     def pause_execution(self):
@@ -176,7 +180,7 @@ class TestRunner(object):
         The runner will be stopped after the currently running test cases have
         completed.
         """
-        logger.info('Stopping test run')
+        logger.debug('Stopping test run')
         self._post_command(Command(Command.stop_running, current_scope))
 
     def _check_execution_allowed(self):
@@ -291,7 +295,13 @@ class TestRunner(object):
                             }
                             kwargs.update(extra_kwargs)
                             self.component_factory.call(
-                                current_test_case.run, scope, *args, extra_req=extra_req, **kwargs)
+                                current_test_case.run,
+                                scope,
+                                *args,
+                                extra_req=extra_req,
+                                pre_instantiated=self.create_pre_instantiated_components(
+                                    current_test_case),
+                                **kwargs)
                         finally:
                             result = self.component_factory.exit_scope(scope)
                             scope = result.scope
@@ -312,6 +322,10 @@ class TestRunner(object):
         logger.info('Test case started: {name}'.format(name=current_test_case.full_name))
         messages.trigger_test_case_started(self._messagebus, current_test_case)
         self._submit_to_thread_pool(run_test_case, [test_completed_callback])
+
+    def create_pre_instantiated_components(self, test_case_definition):
+        """Create the pre-instantiated TestContext instance."""
+        return {'TestContext': TestContext(test_case_definition)}
 
     def _find_parent_exception_of_type(self, exception, exception_type):
         """

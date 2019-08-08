@@ -16,6 +16,7 @@ from zaf.messages.decorator import callback_dispatcher
 
 from k2.cmd.list import LIST_COMMAND
 from k2.cmd.run import RUN_COMMAND
+from k2.utils.string import make_valid_filename
 
 from . import FIND_TEST_CASES, FINDER_ENDPOINT, TEST_SOURCES
 
@@ -201,7 +202,7 @@ class TestCaseDefinition(object):
 
     def __init__(self, run_function, name=None, always_included=False, params=None):
         self.run_function = run_function
-        self.name = name
+        self.name = run_function.__name__ if name is None else name
         self.always_included = always_included
         self.params = params if params else []
 
@@ -213,6 +214,15 @@ class TestCaseDefinition(object):
         if self.params:
             name += '[{params}]'.format(params=','.join([str(p) for p in self.params]))
         return name
+
+    @property
+    def filename_with_params(test_case):
+        parts = [test_case.name]
+        parts.extend([str(param) for param in test_case.params])
+
+        test_case_name = '-'.join(parts)
+        test_case_name = test_case_name.replace('=', '_')
+        return make_valid_filename(test_case_name)
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__ and isinstance(other, self.__class__)

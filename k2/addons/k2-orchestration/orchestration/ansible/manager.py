@@ -20,8 +20,9 @@ from zaf.extensions.extension import AbstractExtension, CommandExtension, Extens
 from k2.cmd.run import PRE_TEST_RUN, RUN_COMMAND
 from k2.sut import SUT
 from orchestration.ansible import ANSIBLE_BACKEND, ANSIBLE_CONFIG_FILE, ANSIBLE_CONFIGS, \
-    ANSIBLE_ENABLED, ANSIBLE_ENDPOINT, ANSIBLE_EXTRA_VARS_FILE, ANSIBLE_LOG_DIR, ANSIBLE_NODE, \
-    ANSIBLE_NODES, ANSIBLE_PLAYBOOK, ANSIBLE_REMOTE_USER, SUT_ANSIBLE_TEST_NODE
+    ANSIBLE_ENABLED, ANSIBLE_ENDPOINT, ANSIBLE_EXTRA_VARS, ANSIBLE_LOG_DIR, ANSIBLE_NODE, \
+    ANSIBLE_NODES, ANSIBLE_PLAYBOOK, ANSIBLE_REMOTE_USER, ANSIBLE_SKIP_PLAYBOOK, \
+    SUT_ANSIBLE_TEST_NODE
 from orchestration.ansible.config import AnsibleConfig
 
 logger = logging.getLogger(get_logger_name('k2', 'ansible'))
@@ -104,7 +105,8 @@ class AnsibleSuts(AbstractExtension):
         ConfigOption(ANSIBLE_LOG_DIR, required=False),
         ConfigOption(ANSIBLE_PLAYBOOK, required=False),
         ConfigOption(ANSIBLE_REMOTE_USER, required=False),
-        ConfigOption(ANSIBLE_EXTRA_VARS_FILE, required=False),
+        ConfigOption(ANSIBLE_EXTRA_VARS, required=False),
+        ConfigOption(ANSIBLE_SKIP_PLAYBOOK, required=False),
     ],
     endpoints_and_messages={ANSIBLE_ENDPOINT: [PRE_TEST_RUN]},
     groups=['orchestration'],
@@ -125,7 +127,7 @@ class AnsibleManager(AbstractExtension):
                 log_dir=config.get(ANSIBLE_LOG_DIR),
                 environmental_config=config.get(ANSIBLE_CONFIGS),
                 remote_user=config.get(ANSIBLE_REMOTE_USER),
-                extra_vars_file=config.get(ANSIBLE_EXTRA_VARS_FILE))
+                extra_vars=config.get(ANSIBLE_EXTRA_VARS))
             self._backend_name = config.get(ANSIBLE_BACKEND)
             self._backend = get_backend(self._backend_name, self._ansible_config)
 

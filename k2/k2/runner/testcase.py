@@ -12,6 +12,7 @@ from zaf.extensions.extension import get_logger_name
 from k2.runner import EXTENSION_NAME
 from k2.runner.exceptions import DisabledException, SkipException
 from k2.runner.timeout import get_timeout
+from k2.utils.string import make_valid_filename
 
 logger = logging.getLogger(get_logger_name('k2', EXTENSION_NAME, 'testcase'))
 logger.addHandler(logging.NullHandler())
@@ -63,9 +64,11 @@ class RunnerTestCase(object):
 
     __test__ = False
 
-    def __init__(self, run_function, name=None, params=None):
+    def __init__(self, run_function, name=None, params=None, filename_with_params=None):
         self.run = run_function
         self._name = run_function.__name__ if name is None else name
+        self._filename_with_params = make_valid_filename(
+            self._name) if filename_with_params is None else filename_with_params
         self._disabled = getattr(run_function, '_k2_disabled', False)
         self._disabled_message = getattr(run_function, '_k2_disabled_message', '')
         self.verdict = Verdict.PENDING
@@ -84,6 +87,10 @@ class RunnerTestCase(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def filename_with_params(self):
+        return self._filename_with_params
 
     @property
     def params(self):
@@ -172,4 +179,4 @@ class RunnerTestCase(object):
     def from_test_case_definition(cls, test_case_definition):
         return RunnerTestCase(
             test_case_definition.run_function, test_case_definition.name,
-            test_case_definition.params)
+            test_case_definition.params, test_case_definition.filename_with_params)

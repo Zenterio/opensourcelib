@@ -17,7 +17,7 @@ setup(
     maintainer='Zenterio AB',
     maintainer_email='foss@zenterio.com',
 
-    license='Apache License 2.0',
+    license='Apache 2.0',
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -37,6 +37,7 @@ setup(
         'pytracing<1.0,>=0',
         'requests<3.0,>=2',
         'zenterio-zaf<2.0',
+        'junit-xml<2.0,>=1.8',
     ],
 
     entry_points={
@@ -54,6 +55,8 @@ setup(
 
             'testresults = k2.results.results:TestResults',
             'testcasetimeout = k2.runner.timeout:TestCaseTimeout',
+
+            'junitreport = k2.reports.junit.junit:JUnitReporter',
             'testngreport = k2.reports.testng.testng:TestNgReporter',
             'textreport = k2.reports.text.text:TextReporter',
             'z2reportgenerator = k2.reports.z2.z2:ReportGenerator',
@@ -72,7 +75,14 @@ setup(
             'pyproc = k2.builtin.proc.pyproc:PyProcExtension',
             'commandtimeout = k2.builtin.commandtimeout.commandtimeout:CommandTimeout',
             'logdefaults = k2.builtin.logdefaults.logdefaults:LogDefaults',
+            'logdefaultsdocs = k2.builtin.logdefaults.logdefaults:LogDefaultsDocs',
             'waitfor = k2.builtin.waitfor.common:WaitFor',
+            'k2docs = k2.builtin.docgen.docgen:K2Docs',
         ]
+    },
+
+    package_data={
+        'k2.builtin.docgen': ['templates/*.rst', 'files/*.*'],
+        'k2.builtin.logdefaults': ['templates/*.rst'],
     },
 )

@@ -52,11 +52,12 @@ ANSIBLE_REMOTE_USER = ConfigOptionId(
     option_type=str,
 )
 
-ANSIBLE_EXTRA_VARS_FILE = ConfigOptionId(
-    'ansible.extravarsfile',
-    'Ansible extra vars file',
+ANSIBLE_EXTRA_VARS = ConfigOptionId(
+    'ansible.extravars', (
+        'Ansible extra vars. Forwarded directly to ansible as --extra-vars.'
+        ' See ansible documentation for supported formats'),
     option_type=str,
-)
+    multiple=True)
 
 SUT_ANSIBLE_TEST_NODE = ConfigOptionId(
     'ansible.testnode',
@@ -77,4 +78,20 @@ ANSIBLE_NODE = ConfigOptionId(
     'Specify one or more nodes to run test cases for.',
     option_type=ConfigChoice(ANSIBLE_NODES),
     multiple=True,
+)
+
+ANSIBLE_SKIP_PLAYBOOK = ConfigOptionId(
+    'ansible.skip.playbook',
+    'If true the ansible playbook will not be run. '
+    'This is good for iterating test case implementation on an already deployed system.',
+    option_type=Flag(),
+    default=False,
+)
+
+ANSIBLE_PARALLEL_RUNS = ConfigOptionId(
+    'ansible.parallel.runs',
+    'Configure the number of parallel Ansible runs. '
+    'If not set the ansible runs will be performed when needed instead of before the test run.',
+    option_type=int,
+    default=None,
 )

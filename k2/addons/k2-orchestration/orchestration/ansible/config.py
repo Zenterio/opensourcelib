@@ -15,13 +15,13 @@ class AnsibleConfig(object):
             log_dir=None,
             environmental_config=None,
             remote_user=None,
-            extra_vars_file=None):
+            extra_vars=[]):
         self._ansible_file = ansible_file
         self._playbook = playbook
         self._env = OrderedDict()
         self._log_dir = log_dir
         self._remote_user = remote_user
-        self._extra_vars_file = extra_vars_file
+        self._extra_vars = extra_vars
 
         self._env['ANSIBLE_CONFIG'] = self._ansible_file
         if remote_user:
@@ -34,7 +34,7 @@ class AnsibleConfig(object):
         logger.debug('remoteuser: {ru}'.format(ru=self.remote_user))
         logger.debug('environmental_config: {envcfg}'.format(envcfg=environmental_config))
         logger.debug('env_str: {env_str}'.format(env_str=self.env_str))
-        logger.debug('extra_vars_file: {ev}'.format(ev=self.extra_vars_file))
+        logger.debug('extra_vars: {ev}'.format(ev=self.extra_vars))
 
     @property
     def env(self):
@@ -57,8 +57,8 @@ class AnsibleConfig(object):
         return self._remote_user
 
     @property
-    def extra_vars_file(self):
-        return self._extra_vars_file
+    def extra_vars(self):
+        return self._extra_vars
 
     @property
     def log_dir(self):

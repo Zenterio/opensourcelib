@@ -1,4 +1,4 @@
-VERSION_NUMBER := 1.0.0
+VERSION_NUMBER := 1.1.0
 
 ifndef BUILD_NUMBER
 	BUILD_NUMBER := 0
@@ -10,6 +10,8 @@ PYTHON := python3.6
 
 PY_SOURCES := $(shell find k2 -type f -name '*.py')
 PY_SOURCES += $(shell find addons -type f -name '*.py')
+RST_SOURCES := $(shell find k2 -type f -name '*.rst')
+RST_SOURCES += $(shell find addons -type f -name '*.rst')
 FORMAT_SOURCES := $(shell find k2 addons systest -name '*.py' -not -path '*syntaxerror*' -not -path '*generated*' -not -path '*__pycache__*')
 
 ifeq ($(findstring vagrant, $(shell hostname)), )

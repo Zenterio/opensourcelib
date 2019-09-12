@@ -1,0 +1,141 @@
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body onload="load()">
+  <script>
+    var ports;
+    var networks;
+
+
+
+    function findNetwork(key, value) {
+      for (var i=0; i < networks.length; i++) {
+        if (networks[i][key] === value) {
+          return networks[i];
+        }
+      }
+      return null;
+    }
+
+    function findPort(key, value) {
+      for (var i=0; i < ports.length; i++) {
+        if (ports[i][key] === value) {
+          return ports[i];
+        }
+      }
+      return null;
+    }
+
+    function setupNetworks(available) {
+      select = document.getElementById('network');
+      while(select.children.length > 0) {
+        select.removeChild(select.children[0]);
+      }
+      if(available) {
+        for(var i = 0; i < networks.length; i++) {
+          var option = document.createElement('option');
+          option.setAttribute('value', networks[i].network);
+          option.innerHTML = networks[i].description;
+          select.appendChild(option);
+        }
+      } else {
+        var option = document.createElement('option');
+        select.appendChild(option);
+      }
+    }
+
+    function setupOutlets(available) {
+      select = document.getElementById('outlet');
+      while(select.children.length > 0) {
+        select.removeChild(select.children[0]);
+      }
+      if(available) {
+        for(var i = 0; i < ports.length; i++) {
+          var option = document.createElement('option');
+          option.setAttribute('value', ports[i].port);
+          option.innerHTML = ports[i].description;
+          select.appendChild(option);
+        }
+      } else {
+        var option = document.createElement('option');
+        select.appendChild(option);
+      }
+    }
+
+    function setup(callback) {
+      rest('GET', '/api/ports', function(json) {
+        ports = json.ports;
+        rest('GET', '/api/networks', function(json) {
+          networks = json.networks;
+          setupNetworks(true);
+          if(callback) callback();
+        });
+      });
+    }
+
+    function load() {
+      setup(function() {
+        setupOutlets(true);
+      });
+    }
+
+    function search() {
+      setup(function() {
+        try {
+          var port = findPort('port', document.getElementById('outlet').value, true);
+          var networkElement = document.getElementById('network');
+          if(port === null) {
+            setupNetworks(false);
+            networkElement.value = '';
+            return;
+          }
+          setupNetworks(true);
+          var network = findNetwork('network', port.network);
+          networkElement.value = network.network;
+        } catch(e) {
+          alert(e);
+        }
+      })
+    }
+
+    function apply() {
+      var port = findPort('port', document.getElementById('outlet').value);
+      var networkElement = document.getElementById('network');
+      rest('POST', '/api/port/' + port.port, null, {'network': networkElement.value}, true);
+    }
+
+    function rest(method, api, callback, data, sync) {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          if(callback) {
+            callback(JSON.parse(this.responseText));
+          }
+        }
+      };
+      xhttp.open(method, api, sync !== null);
+      xhttp.setRequestHeader('Content-type', 'application/json');
+      xhttp.send(JSON.stringify(data));
+    }
+  </script>
+  <div class="frame">
+    <h1 class="title">Network Outlet Configuration</h1>
+    <form>
+      <div class="mb-3">
+        <label for="outlet">Outlet:</label>
+        <select id="outlet" class="custom-select d-block w-100" onchange="search()"></select>
+      </div>
+      <label for=network>Network:</label>
+      <select id="network" class="custom-select d-block w-100" onchange="apply()">
+      </select>
+    </form>
+    <div class="logo"></div>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,56 @@
+znake:
+    info:
+        package: zit
+        maintainer: Engineering Services
+        maintainer_email: engineering-services@zenterio.com
+        short_description: TODO Description of the tool
+        long_description: |
+          TODO Longer description of the tool
+        changelog:
+          - version: 0.0.1
+            changes:
+              - "ZMT-XXXX Initial release of zenterio-zit."
+            date: Tue, 11 Jun 2019 16:00:00 +0000
+    license: "Apache License 2.0"
+    classifiers:
+      - "Development Status :: 3 - Alpha"
+      - "Intended Audience :: Developers"
+      - "License :: Other/Proprietary License"
+      - "Programming Language :: Python :: 3.6"
+    keywords: []
+    entry_points:
+        console_scripts:
+          - zit = zit.__main__:main
+    package_data: []
+    requirements:
+      - click<8.0,>=7
+      - Flask==1.0.3
+      - paramiko==2.5.0
+    static:
+        packages:
+          - zit
+          - systest
+    deb:
+        dependencies:
+        package: zenterio-zit
+        links:
+          - target: /opt/venvs/zenterio-zit/bin/zit
+            link: /usr/bin/zit
+        include:
+          - source: znaketools/zenterio-zit-bash-completion.sh
+            target: /etc/bash_completion.d/
+    test:
+        packages:
+          - zit
+    systest:
+        packages:
+          - systest.hosttests
+          - systest.tests
+        vars:
+            config_file: systest/systest_config.yaml
+    debtest:
+        packages:
+          - systest.tests
+          - systest.debtests
+        vars:
+            config_file: systest/systest_config.yaml

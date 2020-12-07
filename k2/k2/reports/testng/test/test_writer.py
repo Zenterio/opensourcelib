@@ -4,6 +4,8 @@ import datetime
 import unittest
 from textwrap import dedent
 
+from xmldiff import main
+
 from k2.results.results import ResultsCollection, TestCaseResult, TestRunResult
 from k2.runner.testcase import Verdict
 
@@ -16,71 +18,80 @@ class TestWriter(unittest.TestCase):
         self.maxDiff = None
 
         time_index = 1
-        self.assertEqual(
-            writer.generate_testng_report(results([tc(Verdict.PASSED,
-                                                      time_index)])).decode('utf-8'),
-            no_exception(time_index, 'PASS'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(results([tc(Verdict.PASSED, time_index)])),
+                no_exception(time_index, 'PASS')))
 
     def test_failed_test_case_with_exception(self):
         self.maxDiff = None
 
         time_index = 1
-        self.assertEqual(
-            writer.generate_testng_report(
-                results(
-                    [tc(Verdict.FAILED, time_index, AssertionError('assert failed'),
-                        'stacktrace')])).decode('utf-8'),
-            with_exception(time_index, 'FAIL', 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(
+                    results(
+                        [
+                            tc(
+                                Verdict.FAILED, time_index, AssertionError('assert failed'),
+                                'stacktrace')
+                        ])), with_exception(time_index, 'FAIL', 'stacktrace')))
 
     def test_error_mapped_to_fail(self):
         self.maxDiff = None
 
         time_index = 2
-        self.assertEqual(
-            writer.generate_testng_report(
-                results(
-                    [tc(Verdict.ERROR, time_index, AssertionError('assert failed'),
-                        'stacktrace')])).decode('utf-8'),
-            with_exception(time_index, 'FAIL', 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(
+                    results(
+                        [
+                            tc(
+                                Verdict.ERROR, time_index, AssertionError('assert failed'),
+                                'stacktrace')
+                        ])), with_exception(time_index, 'FAIL', 'stacktrace')))
 
     def test_skipped(self):
         self.maxDiff = None
 
         time_index = 0
-        self.assertEqual(
-            writer.generate_testng_report(
-                results(
-                    [
-                        tc(
-                            Verdict.SKIPPED, time_index, AssertionError('assert failed'),
-                            'stacktrace')
-                    ])).decode('utf-8'), with_exception(time_index, 'SKIP', 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(
+                    results(
+                        [
+                            tc(
+                                Verdict.SKIPPED, time_index, AssertionError('assert failed'),
+                                'stacktrace')
+                        ])), with_exception(time_index, 'SKIP', 'stacktrace')))
 
     def test_ignored_mapped_to_skip(self):
         self.maxDiff = None
 
         time_index = 2
-        self.assertEqual(
-            writer.generate_testng_report(
-                results(
-                    [
-                        tc(
-                            Verdict.IGNORED, time_index, AssertionError('assert failed'),
-                            'stacktrace')
-                    ])).decode('utf-8'), with_exception(time_index, 'SKIP', 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(
+                    results(
+                        [
+                            tc(
+                                Verdict.IGNORED, time_index, AssertionError('assert failed'),
+                                'stacktrace')
+                        ])), with_exception(time_index, 'SKIP', 'stacktrace')))
 
     def test_pending_mapped_to_fail(self):
         self.maxDiff = None
 
         time_index = 2
-        self.assertEqual(
-            writer.generate_testng_report(
-                results(
-                    [
-                        tc(
-                            Verdict.PENDING, time_index, AssertionError('assert failed'),
-                            'stacktrace')
-                    ])).decode('utf-8'), with_exception(time_index, 'FAIL', 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(
+                    results(
+                        [
+                            tc(
+                                Verdict.PENDING, time_index, AssertionError('assert failed'),
+                                'stacktrace')
+                        ])), with_exception(time_index, 'FAIL', 'stacktrace')))
 
     def test_test_case_with_params(self):
         self.maxDiff = None
@@ -88,10 +99,11 @@ class TestWriter(unittest.TestCase):
         tc = TestCaseResult('tc1', 'a.b.tc1', times[0][0], params=['value1', 'value2'])
         tc.set_finished(times[0][2], Verdict.PASSED, None, '')
 
-        self.assertEqual(
-            writer.generate_testng_report(results([tc])).decode('utf-8'),
-            dedent(
-                """\
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(results([tc])),
+                dedent(
+                    """\
                 <?xml version="1.0" encoding="utf-8"?>
                 <testng-results version="1.0">
                     <reporter-output/>
@@ -121,7 +133,7 @@ class TestWriter(unittest.TestCase):
                         </test>
                     </suite>
                 </testng-results>
-                """))
+                """).encode('utf-8')))
 
     def test_multiple_test_cases_with_different_verdicts(self):
         self.maxDiff = None
@@ -138,10 +150,11 @@ class TestWriter(unittest.TestCase):
 
         test_results = results([tc1, tc2, tc3])
 
-        self.assertEqual(
-            writer.generate_testng_report(test_results).decode('utf-8'),
-            dedent(
-                """\
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(test_results),
+                dedent(
+                    """\
             <?xml version="1.0" encoding="utf-8"?>
             <testng-results version="1.0">
                 <reporter-output/>
@@ -188,15 +201,16 @@ class TestWriter(unittest.TestCase):
                     </test>
                 </suite>
             </testng-results>
-            """))
+            """).encode('utf-8')))
 
     def test_run_verdict_mapped_to_test_case(self):
         self.maxDiff = None
-        self.assertEqual(
-            writer.generate_testng_report(
-                results([tc(Verdict.PASSED, 0)], run_verdict=Verdict.FAILED)).decode('utf-8'),
-            dedent(
-                """\
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(
+                    results([tc(Verdict.PASSED, 0)], run_verdict=Verdict.FAILED)),
+                dedent(
+                    """\
                 <?xml version="1.0" encoding="utf-8"?>
                 <testng-results version="1.0">
                     <reporter-output/>
@@ -233,7 +247,7 @@ class TestWriter(unittest.TestCase):
                         </test>
                     </suite>
                 </testng-results>
-                """))
+                """).encode('utf-8')))
 
     def test_test_case_with_owner(self):
         self.maxDiff = None
@@ -246,10 +260,11 @@ class TestWriter(unittest.TestCase):
             stacktrace=None,
             owner=('Owner <owner@zenterio.com>'))
 
-        self.assertEqual(
-            writer.generate_testng_report(results([tc])).decode('utf-8'),
-            dedent(
-                """\
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(results([tc])),
+                dedent(
+                    """\
                 <?xml version="1.0" encoding="utf-8"?>
                 <testng-results version="1.0">
                     <reporter-output/>
@@ -262,7 +277,7 @@ class TestWriter(unittest.TestCase):
                         </test>
                     </suite>
                 </testng-results>
-                """))
+                """).encode('utf-8')))
 
     def test_test_case_with_colons(self):
         self.maxDiff = None
@@ -270,10 +285,11 @@ class TestWriter(unittest.TestCase):
         tc = TestCaseResult('a:b', 'b:c', times[0][0])
         tc.set_finished(times[0][2], Verdict.PASSED, exception=None, stacktrace=None)
 
-        self.assertEqual(
-            writer.generate_testng_report(results([tc], suite_name='c:d')).decode('utf-8'),
-            dedent(
-                """\
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_testng_report(results([tc], suite_name='c:d')),
+                dedent(
+                    """\
                 <?xml version="1.0" encoding="utf-8"?>
                 <testng-results version="1.0">
                     <reporter-output/>
@@ -286,7 +302,7 @@ class TestWriter(unittest.TestCase):
                         </test>
                     </suite>
                 </testng-results>
-                """))
+                """).encode('utf-8')))
 
 
 times = [
@@ -321,7 +337,7 @@ def no_exception(time_index, verdict):
             started_at=times[time_index][1],
             finished_at=times[time_index][3],
             duration=times[time_index][4],
-            verdict=verdict)
+            verdict=verdict).encode('utf-8')
 
 
 def with_exception(time_index, verdict, stacktrace):
@@ -359,7 +375,7 @@ def with_exception(time_index, verdict, stacktrace):
             finished_at=times[time_index][3],
             duration=times[time_index][4],
             verdict=verdict,
-            stacktrace=stacktrace)
+            stacktrace=stacktrace).encode('utf-8')
 
 
 def results(tcs, suite_name='Name of Suite', run_verdict=Verdict.PASSED):

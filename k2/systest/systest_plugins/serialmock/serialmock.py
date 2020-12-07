@@ -2,10 +2,9 @@ import logging
 import subprocess
 from tempfile import mktemp
 
+from serial import Serial
 from zaf.component.decorator import component
 from zaf.extensions.extension import CommandExtension, get_logger_name
-
-from serial import Serial
 
 logger = logging.getLogger(get_logger_name('k2', 'serialmock'))
 logger.addHandler(logging.NullHandler())

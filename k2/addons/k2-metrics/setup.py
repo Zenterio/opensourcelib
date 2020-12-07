@@ -17,9 +17,9 @@ setup(
             'systest'
         ]),
     install_requires=[
-        'numpy==1.13.3',
-        'matplotlib==2.1.1',
-        'pandas==0.20.1',
+        'numpy==1.19.4',
+        'matplotlib==3.3.3',
+        'pandas==1.1.4',
     ],
     entry_points={
         'k2.addons': [

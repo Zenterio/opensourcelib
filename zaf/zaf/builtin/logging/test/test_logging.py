@@ -97,7 +97,7 @@ class RootLoggerTest(unittest.TestCase):
 
         config = ConfigManager()
         config.set(LOG_LEVEL, 'warning')
-        config.set(LOG_FORMAT, 'hej')
+        config.set(LOG_FORMAT, None)
         config.set(LOG_DIR, '.')
         config.set(APPLICATION_NAME, 'k2')
         config.set(ENABLED_EXTENSIONS, ['extensionname'])

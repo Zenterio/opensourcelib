@@ -119,12 +119,15 @@ def create_service(messagebus_arg):
     class MessageBusService(rpyc.Service):
         messagebus = messagebus_arg
 
-        def on_connect(self):
+        @classmethod
+        def on_connect(self, conn):
             pass
 
-        def on_disconnect(self):
+        @classmethod
+        def on_disconnect(self, conn):
             pass
 
+        @classmethod
         def exposed_trigger_event(
                 self, serialized_message_id, serialized_endpoint_id, serialized_entity,
                 serialized_data):
@@ -139,6 +142,7 @@ def create_service(messagebus_arg):
 
             self.messagebus.trigger_event(message_id, endpoint_id, entity, data)
 
+        @classmethod
         def exposed_send_request(
                 self,
                 serialized_message_id,
@@ -162,6 +166,7 @@ def create_service(messagebus_arg):
             if not is_async:
                 return futures
 
+        @classmethod
         def exposed_local_message_queue(
                 self, serialized_message_ids, serialized_endpoint_ids, serialized_entities):
             message_ids = pickle.loads(serialized_message_ids)
@@ -170,6 +175,7 @@ def create_service(messagebus_arg):
 
             return LocalMessageQueue(self.messagebus, message_ids, endpoint_ids, entities)
 
+        @classmethod
         def exposed_define_endpoints_and_messages(self, serialized_endpoints_and_messages):
             endpoints_and_messages = pickle.loads(serialized_endpoints_and_messages)
 

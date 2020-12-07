@@ -120,9 +120,9 @@ class FileLoggerHarness(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.getlogger_patch.__exit__()
-        self.handler_constructor_patch.__exit__()
-        self.harness.__exit__()
+        self.getlogger_patch.__exit__(exc_type, exc_val, exc_tb)
+        self.handler_constructor_patch.__exit__(exc_type, exc_val, exc_tb)
+        self.harness.__exit__(exc_type, exc_val, exc_tb)
 
 
 def mock_logger(level=logging.INFO):

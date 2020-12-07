@@ -76,21 +76,21 @@ class RemoteServiceTest(unittest.TestCase):
 
     def test_exposed_trigger_event_depickles_message_info_and_forwards_event(self):
         messagebus = Mock()
-        service = create_service(messagebus)(Mock())
+        service = create_service(messagebus)
         service.exposed_trigger_event(
             PICKLED_MESSAGE, PICKLED_ENDPOINT, PICKLED_ENTITY, PICKLED_DATA)
         messagebus.trigger_event.assert_called_with(MESSAGE, ENDPOINT, ENTITY, DATA)
 
     def test_exposed_send_request_depickles_message_info_and_forwards_request(self):
         messagebus = Mock()
-        service = create_service(messagebus)(Mock())
+        service = create_service(messagebus)
         service.exposed_send_request(
             PICKLED_MESSAGE, PICKLED_ENDPOINT, PICKLED_ENTITY, PICKLED_DATA)
         messagebus.send_request.assert_called_with(MESSAGE, ENDPOINT, ENTITY, DATA)
 
     def test_exposed_local_message_queue_depickles_message_info_and_returns_a_queue(self):
         messagebus = Mock()
-        service = create_service(messagebus)(Mock())
+        service = create_service(messagebus)
         queue = service.exposed_local_message_queue(
             PICKLED_MESSAGES, PICKLED_ENDPOINTS, PICKLED_ENTITIES)
         self.assertEqual(type(queue), LocalMessageQueue)

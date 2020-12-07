@@ -1,4 +1,4 @@
-DOCKER_REGISTRY := docker.zenterio.lan
+DOCKER_REGISTRY := quay.io
 image_14 := zenterio/pythontest.u14
 image_16 := zenterio/pythontest.u16
 image_18 := zenterio/pythontest.u18
@@ -46,12 +46,13 @@ define TEST_NODE
 ./docker/markers/docker_node_$(1)_venv.marker: ./docker/markers/docker_node_$(1)_built.marker requirements.txt requirements-dev.txt setup.py addons/*/setup.py
 	rm -rf .venv/*
 	${PYTHON} -m venv .venv
+	cp pip.conf .venv/
 	.venv/bin/${PYTHON} .venv/bin/pip install --upgrade setuptools
 	.venv/bin/${PYTHON} .venv/bin/pip install --upgrade --force-reinstall pip
 	cp pip.conf .venv/pip.conf
-	cat requirements.txt requirements-dev.txt | grep -v trusted-host | grep -v addons | xargs -L1 -P1 .venv/bin/${PYTHON} .venv/bin/pip --trusted-host pip.zenterio.lan install
-	cat requirements.txt requirements-dev.txt | grep -v trusted-host | grep addons | xargs -L1 -P1 .venv/bin/${PYTHON} .venv/bin/pip --trusted-host pip.zenterio.lan install -e
-	.venv/bin/${PYTHON} .venv/bin/pip --trusted-host pip.zenterio.lan install -e .
+	cat requirements.txt requirements-dev.txt | grep -v trusted-host | grep -v addons | xargs -L1 -P1 .venv/bin/${PYTHON} .venv/bin/pip install
+	cat requirements.txt requirements-dev.txt | grep -v trusted-host | grep addons | xargs -L1 -P1 .venv/bin/${PYTHON} .venv/bin/pip install -e
+	.venv/bin/${PYTHON} .venv/bin/pip install -e .
 	touch $$@
 
 prepare_node_$(1): ./docker/markers/docker_node_$(1)_venv.marker

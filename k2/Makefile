@@ -6,7 +6,7 @@ endif
 
 VERSION_STRING := ${VERSION_NUMBER}+${BUILD_NUMBER}
 
-PYTHON := python3.6
+PYTHON := python3
 
 PY_SOURCES := $(shell find k2 -type f -name '*.py')
 PY_SOURCES += $(shell find addons -type f -name '*.py')

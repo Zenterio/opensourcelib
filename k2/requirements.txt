@@ -1,4 +1,3 @@
---trusted-host pip.zenterio.lan
 addons/k2-addon
 addons/k2-connectioncheck
 addons/k2-consolerunner
@@ -15,21 +14,22 @@ addons/k2-profiling
 addons/k2-serial
 addons/k2-telnet
 addons/k2-zelenium
-numpy==1.13.3 --only-binary numpy
+numpy==1.19.4 --only-binary numpy
 arrow==0.12.1
 docker-pycreds==0.4.0
 docker==3.7.0
 fastentrypoints==0.10
 GitPython==2.1.9
-httpretty==0.9.5
+httpretty==1.0.3
 jinja2==2.9.6
-matplotlib==2.1.1 --only-binary matplotlib
+junit-xml==1.8
+matplotlib==3.3.3 --only-binary matplotlib
 nose-timer==0.7.3
 nose==1.3.7
-pandas==0.20.1 --only-binary pandas
+pandas==1.1.4 --only-binary pandas
 pretenders==1.4.4
+pyserial==3.5
 python-jenkins==1.4.0
-junit-xml==1.8
 pytracing==0.2
 selenium==3.9.0
 simple-websocket-server==0.4.0
@@ -37,4 +37,4 @@ testinfra==1.16.0 --only-binary testinfra
 thrift==0.10.0
 wakeonlan==1.1.6
 websocket-client==0.55.0
-zenterio-zaf==0.28.1
+zenterio-zaf

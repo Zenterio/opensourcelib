@@ -4,6 +4,8 @@ import datetime
 import unittest
 from textwrap import dedent
 
+from xmldiff import main
+
 from k2.results.results import ResultsCollection, TestCaseResult, TestRunResult
 from k2.runner.testcase import Verdict
 
@@ -16,56 +18,69 @@ class TestWriter(unittest.TestCase):
         self.maxDiff = None
 
         time_index = 0
-        self.assertEqual(
-            writer.generate_junit_report(results([tc(Verdict.PASSED, time_index)])),
-            no_exception(time_index, Verdict.PASSED))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(results([tc(Verdict.PASSED,
+                                                         time_index)])).encode('utf-8'),
+                no_exception(time_index, Verdict.PASSED)))
 
     def test_failed_test_case_with_exception(self):
         self.maxDiff = None
 
         time_index = 0
-        self.assertEqual(
-            writer.generate_junit_report(
-                results([tc(Verdict.FAILED, time_index, AssertionError('Message'), 'stacktrace')])),
-            with_exception(time_index, Verdict.FAILED, 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(
+                    results(
+                        [tc(Verdict.FAILED, time_index, AssertionError('Message'),
+                            'stacktrace')])).encode('utf-8'),
+                with_exception(time_index, Verdict.FAILED, 'stacktrace')))
 
     def test_error_test_case_with_exception(self):
         self.maxDiff = None
 
         time_index = 0
-        self.assertEqual(
-            writer.generate_junit_report(
-                results([tc(Verdict.ERROR, time_index, AssertionError('Message'), 'stacktrace')])),
-            with_exception(time_index, Verdict.ERROR, 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(
+                    results(
+                        [tc(Verdict.ERROR, time_index, AssertionError('Message'),
+                            'stacktrace')])).encode('utf-8'),
+                with_exception(time_index, Verdict.ERROR, 'stacktrace')))
 
     def test_skipped(self):
         self.maxDiff = None
 
         time_index = 0
-        self.assertEqual(
-            writer.generate_junit_report(
-                results([tc(Verdict.SKIPPED, time_index, AssertionError('Message'),
-                            'stacktrace')])),
-            with_exception(time_index, Verdict.SKIPPED, 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(
+                    results(
+                        [tc(Verdict.SKIPPED, time_index, AssertionError('Message'),
+                            'stacktrace')])).encode('utf-8'),
+                with_exception(time_index, Verdict.SKIPPED, 'stacktrace')))
 
     def test_ignored_mapped_to_skip(self):
         self.maxDiff = None
 
         time_index = 0
-        self.assertEqual(
-            writer.generate_junit_report(
-                results([tc(Verdict.IGNORED, time_index, AssertionError('Message'),
-                            'stacktrace')])),
-            with_exception(time_index, Verdict.IGNORED, 'stacktrace'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(
+                    results(
+                        [tc(Verdict.IGNORED, time_index, AssertionError('Message'),
+                            'stacktrace')])).encode('utf-8'),
+                with_exception(time_index, Verdict.IGNORED, 'stacktrace')))
 
     def test_params_appended_to_test_case_name(self):
         self.maxDiff = None
 
         tc = TestCaseResult('tc1', 'a.b.tc1', times[0][0], params=['value1', 'value2'])
         tc.set_finished(times[0][2], Verdict.PASSED, None, '[value1, value2]')
-        self.assertEqual(
-            writer.generate_junit_report(results([tc])),
-            no_exception(0, Verdict.PASSED, name_suffix='[value1, value2]'))
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(results([tc])).encode('utf-8'),
+                no_exception(0, Verdict.PASSED, name_suffix='[value1, value2]')))
 
     def test_multiple_test_cases_with_different_verdicts(self):
         self.maxDiff = None
@@ -82,11 +97,11 @@ class TestWriter(unittest.TestCase):
 
         test_results = results([tc1, tc2, tc3])
 
-        self.assertEqual(
-            writer.generate_junit_report(test_results),
-            dedent(
-                f"""\
-                <?xml version="1.0" encoding="utf-8"?>
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(test_results).encode('utf-8'),
+                dedent(
+                    f"""\
                 <testsuites disabled="0" errors="0" failures="1" tests="3" time="54.102">
                 \t<testsuite disabled="0" errors="0" failures="1" file="None" log="None" name="Name of Suite" skipped="1" tests="3" time="54.102" timestamp="{times[0][1]}" url="None">
                 \t\t<testcase classname="a.b" name="tc1" status="SUCCESSFUL" time="{times[0][4]}" timestamp="{times[0][1]}"/>
@@ -98,16 +113,16 @@ class TestWriter(unittest.TestCase):
                 \t\t</testcase>
                 \t</testsuite>
                 </testsuites>
-                """))
+                """)))
 
     def test_run_verdict_mapped_to_test_case(self):
         self.maxDiff = None
-        self.assertEqual(
-            writer.generate_junit_report(
-                results([tc(Verdict.PASSED, 0)], run_verdict=Verdict.FAILED)),
-            dedent(
-                f"""\
-                <?xml version="1.0" encoding="utf-8"?>
+        self.assertFalse(
+            main.diff_texts(
+                writer.generate_junit_report(
+                    results([tc(Verdict.PASSED, 0)], run_verdict=Verdict.FAILED)).encode('utf-8'),
+                dedent(
+                    f"""\
                 <testsuites disabled="0" errors="0" failures="1" tests="2" time="18.034">
                 \t<testsuite disabled="0" errors="0" failures="1" file="None" log="None" name="Name of Suite" skipped="0" tests="2" time="18.034" timestamp="{times[0][1]}" url="None">
                 \t\t<testcase classname="a.b" name="tc1" status="SUCCESSFUL" time="{times[0][4]}" timestamp="{times[0][1]}"/>
@@ -116,7 +131,7 @@ class TestWriter(unittest.TestCase):
                 \t\t</testcase>
                 \t</testsuite>
                 </testsuites>
-                """))
+                """)))
 
 
 times = [
@@ -144,7 +159,7 @@ def no_exception(time_index, verdict, name_suffix=''):
         \t\t<testcase classname="a.b" name="tc1{name_suffix}" status="{'FAILED' if verdict in [Verdict.FAILED, Verdict.ERROR] else 'SUCCESSFUL'}" time="{times[time_index][4]}" timestamp="{times[time_index][1]}"/>
         \t</testsuite>
         </testsuites>
-        """)
+        """).encode('utf-8')
 
 
 def with_exception(time_index, verdict, stacktrace):
@@ -158,7 +173,7 @@ def with_exception(time_index, verdict, stacktrace):
         \t\t</testcase>
         \t</testsuite>
         </testsuites>
-        """)
+        """).encode('utf-8')
 
 
 def results(tcs, suite_name='Name of Suite', run_verdict=Verdict.PASSED):

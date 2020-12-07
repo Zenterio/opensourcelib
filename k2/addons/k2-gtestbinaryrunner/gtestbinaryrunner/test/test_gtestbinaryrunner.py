@@ -8,8 +8,7 @@ from zaf.messages.dispatchers import LocalMessageQueue
 
 from k2.runner import TEST_CASE_FINISHED, TEST_CASE_STARTED, TEST_RUN_FINISHED, TEST_RUN_STARTED
 from k2.runner.testcase import Verdict
-from multirunner import MULTI_RUNNER_ENDPOINT
-from multirunner.multirunner import TEST_SUBRUN
+from multirunner import MULTI_RUNNER_ENDPOINT, TEST_SUBRUN
 
 from .. import GTEST_BINARY_PATH, GTEST_FILTER, GTEST_XML_REPORT_PATH, GTEST_binaryid
 from ..gtestbinaryrunner import GtestBinaryRunner

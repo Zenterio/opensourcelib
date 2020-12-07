@@ -159,16 +159,19 @@ class MetricsNamespace(DataDefinition):
         return self.__getattr__(name)
 
     def __iter__(self):
-        if self.is_leaf and self._metrics is not None:
-            if self._is_single_value():
-                yield self._metrics
+        try:
+            if self.is_leaf and self._metrics is not None:
+                if self._is_single_value():
+                    yield self._metrics
+                else:
+                    yield from self._metrics
+                raise StopIteration()
             else:
-                yield from self._metrics
-            raise StopIteration()
-        else:
-            for metric in self._children.values():
-                if isinstance(metric, MetricsNamespace):
-                    yield metric
+                for metric in self._children.values():
+                    if isinstance(metric, MetricsNamespace):
+                        yield metric
+        except StopIteration:
+            return
 
     def store_series(self, value):
         """
@@ -249,7 +252,7 @@ class FlatMetricsNamespaceDataView(DataDefinition):
     def get_data(self):
         import pandas
 
-        flat_data = pandas.io.json.json_normalize(self._namespace.get_data()).to_dict(orient='list')
+        flat_data = pandas.json_normalize(self._namespace.get_data()).to_dict(orient='list')
         flat_data = self._extend_keys_with_qualified_name(flat_data)
 
         if self._key_filter is not None:

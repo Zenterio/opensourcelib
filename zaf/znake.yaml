@@ -96,7 +96,7 @@ znake:
         - nose-timer<1.0,>=0
         - ordered-set<3.0,>=2
         - pytracing<1.0,>=0
-        - rpyc<4.0,>=3
+        - rpyc>=4.0
         - ruamel.yaml<1.0,>=0
         - voluptuous<1.0,>=0
     requirements_dev:

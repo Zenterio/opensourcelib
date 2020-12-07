@@ -9,7 +9,7 @@ from zaf.messages.dispatchers import LocalMessageQueue
 
 from k2.runner import TEST_CASE_FINISHED, TEST_CASE_STARTED, TEST_RUN_FINISHED, TEST_RUN_STARTED
 from k2.runner.testcase import Verdict
-from multirunner import MULTI_RUNNER_ENDPOINT
+from multirunner import MULTI_RUNNER_ENDPOINT, TEST_SUBRUN
 
 from .. import CONSOLE_BINARY_FAILED_PATTERN, CONSOLE_BINARY_PASSED_PATTERN, CONSOLE_BINARY_PATH, \
     CONSOLE_BINARY_TIMEOUT, CONSOLE_binaryid
@@ -35,8 +35,10 @@ class TestConsoleRunner(TestCase):
         return ExtensionTestHarness(
             ConsoleRunner,
             endpoints_and_messages={
-                MULTI_RUNNER_ENDPOINT:
-                [TEST_RUN_STARTED, TEST_RUN_FINISHED, TEST_CASE_STARTED, TEST_CASE_FINISHED]
+                MULTI_RUNNER_ENDPOINT: [
+                    TEST_RUN_STARTED, TEST_RUN_FINISHED, TEST_CASE_STARTED, TEST_CASE_FINISHED,
+                    TEST_SUBRUN
+                ]
             },
             config=config,
         )

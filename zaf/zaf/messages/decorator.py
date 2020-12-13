@@ -5,8 +5,8 @@ The purpose of these decorators is to provide a short-hand for defining dispatch
 of the boilerplate code associated with setting up dispatchers.
 
 
-Example:
-
+Example
+-------
 .. code-block:: python
 
     # Simple extension with a single dispatcher, set up manually:
@@ -41,7 +41,9 @@ the resulting dispatcher object is owned by the extension manager and can not ea
 from an extension instance.
 
 Both methods of setting up dispatchers may be combined in a single extension.
+
 """
+
 import inspect
 
 from .dispatchers import CallbackDispatcher, ConcurrentDispatcher, SequentialDispatcher, \

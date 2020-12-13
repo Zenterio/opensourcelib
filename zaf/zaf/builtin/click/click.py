@@ -215,10 +215,7 @@ class ClickCommandWithConfigOptions(click.MultiCommand):
         self.config = config
         self._application_context = application_context
         self._command = command
-        self._all_commands = [
-            command for command in get_applicable_commands(all_commands, self._application_context)
-        ]
-
+        self._all_commands = list(get_applicable_commands(all_commands, self._application_context))
         self._command_config_options = command_config_options
         self._ignore_hidden = ignore_hidden
         self._disable_required = disable_required

@@ -250,7 +250,7 @@ class ExtensionManager(object):
             commandid_extends = extends - command_capability_extends
 
             if (command is None or command in commandid_extends
-                    or command in {cmd.name for cmd in commandid_extends}
+                    or command in (cmd.name for cmd in commandid_extends)
                     or (command_capability_extends and command_capability_extends <= uses)):
                 matching_extensions.append(extension)
 

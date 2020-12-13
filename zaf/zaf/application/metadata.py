@@ -108,11 +108,7 @@ class ZafMetadata(object):
                             command for command in sorted(ext_class.commands, key=lambda c: c.name)
                             if self._metadata_filter.include_command(command)
                         ],
-                        [
-                            endpoint
-                            for endpoint in sorted(
-                                ext_class.endpoints_and_messages.keys(), key=lambda e: e.name)
-                        ],
+                        sorted(ext_class.endpoints_and_messages.keys(), key=lambda e: e.name),
                         [
                             message
                             for endpoint in ext_class.endpoints_and_messages.keys()

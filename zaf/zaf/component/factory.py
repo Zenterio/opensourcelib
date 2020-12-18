@@ -122,7 +122,15 @@ class Factory(object):
         self._component_manager = component_manager
         self._builder = DependencyGraphBuilder(component_manager.COMPONENT_REGISTRY)
 
-    def call(self, callable, scope, *args, fixated_entities=None, extra_req=None, **kwargs):
+    def call(
+            self,
+            callable,
+            scope,
+            *args,
+            fixated_entities=None,
+            extra_req=None,
+            pre_instantiated=None,
+            **kwargs):
         """
         Call a callable with a scope.
 
@@ -136,9 +144,13 @@ class Factory(object):
                                  for matching entity components or None
         :param extra_req: List (or None) of extra requirements in addition to
                           those declared on the callable.
+        :param pre_instantiated: dict (or None) from name to pre-created
+                                 instance that should be used instead of trying to
+                                 instantiate the component inside the factory
         :return: the return value of the call to the callable
         """
         fixated_entities = [] if fixated_entities is None else fixated_entities
+        pre_instantiated = {} if pre_instantiated is None else pre_instantiated
         dependency_graph = self._builder.create_dependency_graph(
             callable, scope, extra_req, *args, **kwargs)
         fixated_entity_mapping = self._component_manager.component_name_to_entity_mapping(
@@ -148,7 +160,8 @@ class Factory(object):
 
         callable_information = CallableInformation(callable)
         kwargs = dict(kwargs)
-        instances = self.instantiate(dependency_graph, scope, callable_information)
+        instances = self.instantiate(
+            dependency_graph, scope, callable_information, pre_instantiated)
         kwargs.update(instances)
 
         kwargs = self._strip_unused_kwargs(callable, kwargs)
@@ -204,15 +217,18 @@ class Factory(object):
 
         return result
 
-    def instantiate(self, dependency_graph, scope, callable_information):
+    def instantiate(self, dependency_graph, scope, callable_information, pre_instantiated):
         """
         Instantiate all the selected components in the graph.
 
         :param dependency_graph: The complete dependency graph
         :param scope: the scope to use when instantiating components
+        :param callable_information: Information about the top level callable
+        :param pre_instantiated: dict mapping from component name to pre-created
+                                 component instances
         """
         return self._instantiate_requirements_for_callable(
-            dependency_graph.root, scope, callable_information)
+            dependency_graph.root, scope, callable_information, pre_instantiated)
 
     def _strip_unused_kwargs(self, callable, kwargs):
         signature = inspect.signature(callable)
@@ -226,23 +242,28 @@ class Factory(object):
                     kwargs.pop(k)
         return kwargs
 
-    def _instantiate_requirements_for_callable(self, callable_node, scope, callable_information):
+    def _instantiate_requirements_for_callable(
+            self, callable_node, scope, callable_information, pre_instantiated):
         """
         Instantiate the selected callable for each of the requirements for the callable using the scope.
 
         :param callable_node: the callable to instantiate the requirements for
         :param scope: the scope to use when instantiating components
+        :param callable_information: Information about the top level callable
+        :param pre_instantiated: dict mapping from component name to pre-created
+                                 component instances
         :return: a dict from the argument name to the instantiated component
         """
         kwargs = OrderedDict()
         for argument, requirement in self._sort_requirements_in_scope_order(
                 callable_node.requirements, scope).items():
             kwargs[argument] = self._recursively_instantiate(
-                requirement, scope, callable_node, callable_information)
+                requirement, scope, callable_node, callable_information, pre_instantiated)
         return self._strip_unused_kwargs(callable_node.callable, kwargs)
 
     def _recursively_instantiate(
-            self, requirement, parent_scope, parent_callable, callable_information):
+            self, requirement, parent_scope, parent_callable, callable_information,
+            pre_instantiated):
         callable = requirement.selected()
         selected_instantiation_scope = parent_scope.find_ancestor(callable.selected_scope)
 
@@ -250,12 +271,13 @@ class Factory(object):
             return callable.callable
         else:
             kwargs = self._instantiate_requirements_for_callable(
-                callable, selected_instantiation_scope, callable_information)
+                callable, selected_instantiation_scope, callable_information, pre_instantiated)
 
             try:
                 return self._get_instance(
                     callable.callable, selected_instantiation_scope, requirement.args, kwargs,
-                    requirement.argument, parent_callable, callable_information)
+                    requirement.argument, parent_callable, callable_information, pre_instantiated,
+                    callable.component_name)
             except Exception as e:
                 raise ComponentInstanceException(
                     "Error occurred when instantiating '{comp}' for requirement '{req}' on '{name}': {msg}".
@@ -267,7 +289,7 @@ class Factory(object):
 
     def _get_instance(
             self, callable_to_instantiate, scope, args, kwargs, argument_name, parent_callable,
-            callable_information):
+            callable_information, pre_instantiated, component_name):
 
         def prepare_instance(context):
             if is_generator(context):
@@ -311,6 +333,8 @@ class Factory(object):
         # it needs state from the factory
         if callable_to_instantiate == ComponentContext:
             return ComponentContext(callable_information)
+        elif component_name in pre_instantiated:
+            return pre_instantiated[component_name]
         else:
             return find_or_create_instance()
 

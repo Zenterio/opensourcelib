@@ -170,34 +170,29 @@ class Application(object):
                     logger.debug(th)
 
     def execute_command(self):
+        logger.debug(
+            'Executing command {command} for application {application} with version {version}'.
+            format(
+                command=self.command.name,
+                application=self.app_config.name,
+                version=self.app_config.version))
+        self._activate_signalhandler()
+        self.messagebus.trigger_event(BEFORE_COMMAND, APPLICATION_ENDPOINT, data=self.command.name)
+        result = 0
         try:
-            logger.debug(
-                'Executing command {command} for application {application} with version {version}'.
-                format(
-                    command=self.command.name,
-                    application=self.app_config.name,
-                    version=self.app_config.version))
-            self._activate_signalhandler()
-            self.messagebus.trigger_event(
-                BEFORE_COMMAND, APPLICATION_ENDPOINT, data=self.command.name)
-            result = 0
-            try:
-                result = self.component_factory.call(
-                    self.command.callable, self.session_scope, self)
-                return result if result is not None else 0
-            finally:
-                logger.debug(
-                    'Command {command} exited with exit code {result}'.format(
-                        command=self.command.name, result=result).format(
-                            command=self.command.name,
-                            application=self.app_config.name,
-                            version=self.app_config.version))
-
-                self.component_factory.exit_scope(self.session_scope)
-                self.messagebus.trigger_event(
-                    AFTER_COMMAND, APPLICATION_ENDPOINT, data=self.command.name)
+            result = self.component_factory.call(self.command.callable, self.session_scope, self)
+            return result if result is not None else 0
         finally:
-            self._deactivate_signalhandler()
+            logger.debug(
+                'Command {command} exited with exit code {result}'.format(
+                    command=self.command.name, result=result).format(
+                        command=self.command.name,
+                        application=self.app_config.name,
+                        version=self.app_config.version))
+
+            self.component_factory.exit_scope(self.session_scope)
+            self.messagebus.trigger_event(
+                AFTER_COMMAND, APPLICATION_ENDPOINT, data=self.command.name)
 
     def gather_metadata(self, metadata_filter=None):
         return ZafMetadata(

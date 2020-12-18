@@ -114,17 +114,21 @@ class ThreadPoolDispatcher(Dispatcher):
         self._handle_message = handle_message
         self._max_workers = max_workers
         self._executor = None
-        self._stopped = False
+        self._stopped = True
 
     def start(self):
         self._stopped = False
         self._executor = ThreadPoolExecutor(
-            max_workers=self._max_workers if self._max_workers is not None else (
-                os.cpu_count() or 1) * 5)
+            max_workers=self._max_workers
+            if self._max_workers is not None else (os.cpu_count() or 1) * 5,
+            thread_name_prefix='{name}-{id}-'.format(
+                name=self.log_repr(), id=id(self._handle_message)))
 
     def stop(self, timeout=10):
         if self._executor is not None:
             self._executor.shutdown(wait=False)
+        self._executor = None
+        self._stopped = True
 
     def dispatch(self, message):
         logger.debug(
@@ -205,7 +209,8 @@ class CallbackDispatcher(Dispatcher):
         if message.future is not None:
             wrapped_handle_message = wrap_with_future(wrapped_handle_message)
         if self._wrap_with_thread:
-            wrapped_handle_message = wrap_with_thread(wrapped_handle_message)
+            wrapped_handle_message = wrap_with_thread(
+                wrapped_handle_message, self.log_repr(), id(self._handle_message))
 
         wrapped_handle_message(message)
 
@@ -271,10 +276,13 @@ def wrap_with_future(handle_message):
     return wrapped
 
 
-def wrap_with_thread(handle_message):
+def wrap_with_thread(handle_message, dispatcher_name, id):
 
     def wrapped(message):
-        thread = Thread(target=handle_message, args=[message])
+        thread = Thread(
+            target=handle_message,
+            args=[message],
+            name='{name}-{id}'.format(name=dispatcher_name, id=id))
         thread.start()
 
     return wrapped

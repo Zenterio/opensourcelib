@@ -9,16 +9,31 @@ znake:
           events, plugins/addons, metric collection, logging, configuration and
           command line argument parsing.
         changelog:
+          - version: 1.1.0
+            changes:
+              - 'Do not deactivate the applications signal handler when command is complete.'
+              - 'Name dispatcher threads to improve trouble shooting.'
+              - 'Config does not filter out duplicate multiple values when coming from the same source.'
+              - 'Dispatcher shutdown more reliable.'
+              - 'Move all documentation to docgen using new request interface.'
+              - 'Fixed package_data to include conf.py for docgen to work.'
+              - 'Fixed package data to include plantuml.'
+              - 'Fixed filtering out content from generated index.rst based on config.'
+              - 'Component factory can take pre-made instances.'
+              - 'Fix for finding site-packages in generated documentation config.'
+            date: Sat, 19 Dec 2020 00:00:00 +0200
           - version: 1.0.0
             changes:
               - 'First Open source release.'
             date: Fri, 10 May 2019 22:00:00 +0200
-    license: 'Apache License 2.0'
+    license: 'Apache 2.0'
     classifiers:
         - 'Development Status :: 5 - Production/Stable'
         - 'Intended Audience :: Developers'
         - 'Topic :: Software Development :: Build Tools'
         - 'License :: OSI Approved :: Apache Software License'
+        - 'Programming Language :: Python :: 3.4'
+        - 'Programming Language :: Python :: 3.5'
         - 'Programming Language :: Python :: 3.6'
     keywords:
         - zaf
@@ -35,6 +50,7 @@ znake:
             - zafclickcli = zaf.builtin.click.click:ClickParseCli
             - zafclicktrycli = zaf.builtin.click.click:ClickTryParseCli
             - zafdocgencommand = zaf.builtin.docgen.docgen:DocGenCommand
+            - zafcustomdocs = zaf.builtin.docgen.docgen:ZafCustomDocs
             - zafmessagescommand = zaf.builtin.messages:MessagesCommand
             - zafextensionscommand = zaf.builtin.extensions:ExtensionsCommand
             - zafendpointscommand = zaf.builtin.endpoints:EndpointsCommand
@@ -62,10 +78,13 @@ znake:
             - zafchangelogcommand = zaf.builtin.changelog.command:ChangeLogCommandExtension
         zaf.test_addons:
             - testcommandaddon = zaf.extensions.test.addons.testcommandaddon:TestCommandAddon
+
     package_data:
       - package: zaf.builtin.docgen
         include:
           - 'templates/*.rst'
+          - 'templates/*.py'
+          - 'tools/*.*'
     requirements:
         - click<8.0,>=7
         - coverage<5.0,>=4
@@ -96,6 +115,16 @@ znake:
           - zaf docgen --doc-dir build/doc/user_guide/generated/
         targets:
             - guide: user_guide
+        html_command_pattern: >
+          {sphinx_build} -E -a -b html build/doc/{target}/generated/ {doc_dir}/{target}/html &&
+          touch {doc_dir}/{target}/html
+
+        pdf_command_pattern: >
+          {sphinx_build} -E -a -b latex build/doc/{target}/generated/ {doc_dir}/{target}/pdf &&
+          pushd {doc_dir}/{target}/pdf &&
+          make PDFLATEX="pdflatex -interaction=batchmode" all-pdf &&
+          popd &&
+          touch {doc_dir}/{target}/pdf
     deb:
         package: zenterio-zaf
         dependencies:
@@ -122,8 +151,6 @@ znake:
             config_file: systest/systest_config.yaml
 dependencies:
   "{build_dir}/doc/user_guide/html/index.html":
-    - doc/user_guide/**
     - zaf/**
   "{build_dir}/doc/user_guide/pdf/user_guide.pdf":
-    - doc/user_guide/**
     - zaf/**

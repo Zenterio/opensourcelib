@@ -75,7 +75,7 @@ class TestSequentialDispatcher(unittest.TestCase):
         dispatcher.start()
         self.assertIsNotNone(dispatcher._executor)
         dispatcher.stop(timeout=1)
-        self.assertTrue(dispatcher._executor._shutdown)
+        self.assertTrue(dispatcher._stopped)
 
     def test_message_triggers_handle_message(self):
         messagebus = create_messagebus()

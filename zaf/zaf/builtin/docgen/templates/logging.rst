@@ -51,6 +51,7 @@ The following config options can be used to configure the command line logging.
 :ref:`option-log.error`:
     Loggers that should be logged on error level to the command line handler.
 
+{% if application_context == 'EXTENDABLE' %}
 Extensions
 ==========
 
@@ -59,6 +60,7 @@ Setting the log level for an extension means that no messages on a lower level w
 
 :ref:`option-ext.<enabled>.log.level`:
     Sets the log level for an enabled extension.
+{% endif %}
 
 Log files
 =========

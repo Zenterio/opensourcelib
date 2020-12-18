@@ -484,6 +484,17 @@ class TestAllowUnknownOptions(unittest.TestCase):
             with patch('sys.argv', ['zaf', 'command', '--unknown']):
                 self.plugin.get_config(self.config, [], {COMMAND: []})
 
+    def test_duplicate_unknown_options_are_kept(self):
+        with patch('sys.argv', ['zaf', 'command-unknown', '--duplicate1', '--duplicate1', '-d',
+                                '-d', 'duplicate2', 'duplicate2']):
+            extension_config = self.plugin.get_config(
+                self.config, [], {
+                    COMMAND_ALLOW_AND_CAPTURE_UNKNOWN: [MULTIPLE_ARGUEMENTS]
+                })
+            self.assertEqual(
+                extension_config.config['multiple.args'],
+                ('--duplicate1', '--duplicate1', '-d', '-d', 'duplicate2', 'duplicate2'))
+
 
 class TestCount(unittest.TestCase):
 
@@ -572,3 +583,11 @@ PARENT_COMMAND = CommandId('parent', '', callable=None, config_options=[])
 CHILD_COMMAND = CommandId('child', '', callable=None, config_options=[], parent=PARENT_COMMAND)
 GRAND_CHILD_COMMAND = CommandId(
     'grandchild', '', callable=None, config_options=[], parent=CHILD_COMMAND)
+MULTIPLE_ARGUEMENTS = ConfigOption(
+    ConfigOptionId('multiple.args', '', argument=True, multiple=True), required=True)
+COMMAND_ALLOW_AND_CAPTURE_UNKNOWN = CommandId(
+    'command-unknown',
+    '',
+    callable=None,
+    config_options=[MULTIPLE_ARGUEMENTS],
+    allow_unknown_options=True)

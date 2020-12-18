@@ -167,6 +167,20 @@ enforced. Currently supported types are:
 
 Each type may provide a self-check mechanism that performs sanity checks on provided configuraiton. Such sanity-checks are performed by the :py:class:`zaf.builtin.config.validator.ConfigurationValidator` framework extension.
 
+Multiple
+--------
+
+Config options can be specified as multiple to allow for lists of values.
+Multiple values will be merged between config sources and priority will be used for sorting the values.
+Duplicates are kept when they come from the same source but duplicates from different sources are filtered out.
+In practice this means that the highest priority source of the duplicate value decides if there will be duplicate entries in the result.
+
+A multiple option is specified multiple times on command line like this
+
+..code-block:: shell
+
+    command --option value1 --option value2
+
 Config Option Expansion
 -----------------------
 

@@ -12,6 +12,7 @@ addons/k2-monitor
 addons/k2-orchestration
 addons/k2-power
 addons/k2-profiling
+addons/k2-telnet
 addons/k2-zelenium
 numpy==1.13.3 --only-binary numpy
 arrow==0.12.1

@@ -1,6 +1,7 @@
-def render_sphinx_template(template_name, **kwargs):
+def render_sphinx_template(
+        template_name, package='zaf.builtin.docgen', template_dir='templates', **kwargs):
     import jinja2
-    env = jinja2.Environment(loader=jinja2.PackageLoader('zaf.builtin.docgen', 'templates'), )
+    env = jinja2.Environment(loader=jinja2.PackageLoader(package, template_dir), )
     env.filters['ref'] = create_reference
     return env.get_template(template_name).render(**kwargs)
 

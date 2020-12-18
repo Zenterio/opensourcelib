@@ -1161,3 +1161,21 @@ class TestFactory(unittest.TestCase):
             return lambda: a()  # noqa
 
         self.assertEqual(self.f.call(function_component, scope=self.scope)(), 'A')
+
+    def test_factory_uses_pre_created_instances_when_they_exist_instead_of_instantiating_components(
+            self):
+
+        @component(name='PreInstantiated', component_manager=self.component_manager)
+        def pre_instantiated():
+            raise AssertionError('This should never be called to instantiate the component')
+
+        @requires(p='PreInstantiated')
+        def f(p):
+            return p
+
+        instance = 'my instance'
+
+        self.assertEqual(
+            self.f.call(f, self.scope, pre_instantiated={
+                'PreInstantiated': instance
+            }), instance)

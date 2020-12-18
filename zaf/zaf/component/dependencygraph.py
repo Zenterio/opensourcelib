@@ -132,6 +132,10 @@ class InstanceCallableNode(object):
         return self.callable._zaf_component_priority
 
     @property
+    def component_name(self):
+        return self.callable._zaf_component_name
+
+    @property
     def fulfilled(self):
         return self._fulfilled
 

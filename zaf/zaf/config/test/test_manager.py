@@ -64,7 +64,7 @@ class TestGetSetConfig(unittest.TestCase):
         self.config.set(multiple, ['e'], priority=1)
         self.assertEqual(self.config.get(multiple), ('d', 'a', 'b', 'c', 'e'))
 
-    def test_get_multiple_filters_duplicates(self):
+    def test_get_multiple_filters_duplicates_when_coming_from_different_sources(self):
         self.config.set(multiple, ['a', 'b'], priority=1)
         self.assertEqual(self.config.get(multiple), ('a', 'b'))
         self.config.set(multiple, ['b'], priority=1)
@@ -73,6 +73,16 @@ class TestGetSetConfig(unittest.TestCase):
         self.assertEqual(self.config.get(multiple), ('a', 'b'))
         self.config.set(multiple, ['b'], priority=2)
         self.assertEqual(self.config.get(multiple), ('b', 'a'))
+
+    def test_get_multiple_keeps_duplicates_when_coming_from_same_source(self):
+        self.config.set(multiple, ['a', 'a', 'b'], priority=2)
+        self.assertEqual(self.config.get(multiple), ('a', 'a', 'b'))
+
+    def test_get_multiple_keeps_duplicates_only_from_highest_priorty_source(self):
+        self.config.set(multiple, ['a', 'a', 'b'], priority=2)
+        self.assertEqual(self.config.get(multiple), ('a', 'a', 'b'))
+        self.config.set(multiple, ['a', 'b', 'b'], priority=1)
+        self.assertEqual(self.config.get(multiple), ('a', 'a', 'b'))
 
     def test_get_multiple_includes_default_values(self):
         self.config.set(multiple_with_defaults, ['a', 'b'], priority=1)

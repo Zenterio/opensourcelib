@@ -6,8 +6,7 @@ setup(
     name='k2-telnet',
     version='0.0.1+' + os.getenv('BUILD_NUMBER', '0'),
     description='Telnet support for K2',
-    long_description=(
-        'Allows K2 to use telnet to connect to and execute commands on SUT.'),
+    long_description=('Allows K2 to use telnet to connect to and execute commands on SUT.'),
     maintainer='Zenterio AB',
     maintainer_email='foss@zenterio.com',
     license='Apache 2.0',

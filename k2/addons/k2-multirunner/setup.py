@@ -7,7 +7,8 @@ setup(
     version='0.0.1+' + os.getenv('BUILD_NUMBER', '0'),
     description='K2 Multirunner',
     long_description=(
-        'Alternative runner to the built-in runner. Allows multiple sub-runners to collectively generate a vertict.'),
+        'Alternative runner to the built-in runner. Allows multiple sub-runners to collectively generate a vertict.'
+    ),
     maintainer='Zenterio AB',
     maintainer_email='foss@zenterio.com',
     license='Apache 2.0',

@@ -6,8 +6,7 @@ setup(
     name='k2-gude',
     version='0.0.1+' + os.getenv('BUILD_NUMBER', '0'),
     description='K2 Gude Power Control',
-    long_description=(
-        'Interact with Gude Power Control unit.'),
+    long_description=('Interact with Gude Power Control unit.'),
     maintainer='Zenterio AB',
     maintainer_email='foss@zenterio.com',
     license='Apache 2.0',

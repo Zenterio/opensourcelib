@@ -15,6 +15,7 @@ ext.powermonitor.enabled: false
 ext.powerswitch.enabled: false
 ext.powerswitchcc.enabled: false
 ext.rcu.enabled: false
+ext.sispmpowerswitch.enabled: false
 ext.stbrecover.enabled: false
 ext.sut.enabled: false
 ext.sutevents.enabled: false

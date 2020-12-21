@@ -16,6 +16,7 @@ addons/k2-orchestration
 addons/k2-power
 addons/k2-profiling
 addons/k2-serial
+addons/k2-sispmpowerswitch
 addons/k2-sutevents
 addons/k2-telnet
 addons/k2-zelenium

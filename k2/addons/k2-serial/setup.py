@@ -22,6 +22,7 @@ setup(
         'k2.addons': [
             'zserial = zserial.serial:SerialExtension',
             'zserialcc = zserial.serialcc:SerialConnectionCheck',
+            'zserialcommand = zserial.serialcommand:SerialFrameworkExtension',
         ],
     },
 )

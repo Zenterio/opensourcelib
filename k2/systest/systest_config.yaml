@@ -3,6 +3,7 @@ plugins.paths:
   - systest/systest_plugins
 ext.connectioncheck.enabled: false
 ext.coredumps.enabled: false
+ext.dummypowermeter.enabled: false
 ext.gtestrunner.enabled: false
 ext.healthcheck.enabled: false
 ext.iprcu.enabled: false

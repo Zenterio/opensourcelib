@@ -3,16 +3,20 @@ addons/k2-addon
 addons/k2-connectioncheck
 addons/k2-consolerunner
 addons/k2-gitrepo
-addons/k2-jenkins
+addons/k2-gtestbinaryrunner
+addons/k2-healthcheck
 addons/k2-infra
+addons/k2-jenkins
 addons/k2-linuxutils
 addons/k2-looper
 addons/k2-metrics
 addons/k2-monitor
+addons/k2-networking
 addons/k2-orchestration
 addons/k2-power
 addons/k2-profiling
 addons/k2-serial
+addons/k2-sutevents
 addons/k2-telnet
 addons/k2-zelenium
 numpy==1.13.3 --only-binary numpy

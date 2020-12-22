@@ -5,12 +5,22 @@ from zaf.component.decorator import component, requires
 from zaf.messages.message import EndpointId
 
 from gudemock.gudemock import GudeMock
+from k2.runner.exceptions import SkipException
 from k2.sut import SUT_RECOVERY_PERFORM
+from powermeter import AVAILABLE_POWER_METERS
 
 SYSTEST = EndpointId('systest', 'systest endpoint')
 
 
+@component(name='SkipIfGudePowerMeterIsUnavailable')
+@requires(config='Config')
+def skip_if_gude_power_meter_is_unavailable(config):
+    if 'gude' not in config.get(AVAILABLE_POWER_METERS):
+        raise SkipException('Gude power meter not available')
+
+
 @component
+@requires(prereq='SkipIfGudePowerMeterIsUnavailable')
 @requires(zk2='Zk2')
 class zk2PowerMeter(object):
 
@@ -50,6 +60,7 @@ def test_powermeter_state_json_format(powermeter):
         json.loads(result.stdout)
 
 
+@requires(prereq='SkipIfGudePowerMeterIsUnavailable')
 @requires(zk2='Zk2')
 @requires(remote_client='SystestRemoteClient')
 def test_powermeter_connection_check(zk2, remote_client):

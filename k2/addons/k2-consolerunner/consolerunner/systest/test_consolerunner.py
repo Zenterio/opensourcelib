@@ -1,6 +1,16 @@
-from zaf.component.decorator import requires
+from zaf.component.decorator import component, requires
+
+from k2.runner.exceptions import SkipException
 
 
+@component(name='SkipIfMultiRunnerIosMissing')
+@requires(manager='ExtensionManager')
+def skip_if_multi_runner_is_missing(manager):
+    if not manager.extensions_with_name('multirunner'):
+        raise SkipException('Multirunner is missing')
+
+
+@requires(prereq='SkipIfMultiRunnerIosMissing')
 @requires(zk2='Zk2')
 def test_console_runner_with_no_patterns(zk2):
     result = zk2(
@@ -17,6 +27,7 @@ def test_console_runner_with_no_patterns(zk2):
     assert 'Failed:  0' in result.stdout
 
 
+@requires(prereq='SkipIfMultiRunnerIosMissing')
 @requires(zk2='Zk2')
 def test_console_runner_with_a_failure(zk2):
     result = zk2(
@@ -34,6 +45,7 @@ def test_console_runner_with_a_failure(zk2):
     assert 'Failed:  1' in result.stdout
 
 
+@requires(prereq='SkipIfMultiRunnerIosMissing')
 @requires(zk2='Zk2')
 def test_console_runner_with_a_success(zk2):
     result = zk2(
@@ -51,6 +63,7 @@ def test_console_runner_with_a_success(zk2):
     assert 'Failed:  0' in result.stdout
 
 
+@requires(prereq='SkipIfMultiRunnerIosMissing')
 @requires(zk2='Zk2')
 def test_console_runner_with_mixed_results(zk2):
     result = zk2(
@@ -69,6 +82,7 @@ def test_console_runner_with_mixed_results(zk2):
     assert 'Failed:  1' in result.stdout
 
 
+@requires(prereq='SkipIfMultiRunnerIosMissing')
 @requires(zk2='Zk2')
 def test_console_runner_with_multiple_binaries(zk2):
     result = zk2(
@@ -90,6 +104,7 @@ def test_console_runner_with_multiple_binaries(zk2):
     assert 'Failed:  1' in result.stdout
 
 
+@requires(prereq='SkipIfMultiRunnerIosMissing')
 @requires(zk2='Zk2')
 def test_console_runner_all_verdicts(zk2):
     result = zk2(

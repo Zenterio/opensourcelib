@@ -5,12 +5,22 @@ from zaf.component.decorator import component, requires
 from zaf.messages.message import EndpointId
 
 from gudemock.gudemock import GudeMock
+from k2.runner.exceptions import SkipException
 from k2.sut import SUT_RECOVERY_PERFORM
+from powerswitch import AVAILABLE_POWER_SWITCHES
 
 SYSTEST = EndpointId('systest', 'systest endpoint')
 
 
+@component(name='SkipIfGudePowerSwitchIsUnavailable')
+@requires(config='Config')
+def skip_if_gude_power_switch_is_unavailable(config):
+    if 'gude' not in config.get(AVAILABLE_POWER_SWITCHES):
+        raise SkipException('Gude power switch not available')
+
+
 @component
+@requires(prereq='SkipIfGudePowerSwitchIsUnavailable')
 @requires(zk2='Zk2')
 class zk2PowerSwitch(object):
 
@@ -94,6 +104,7 @@ def test_powerswitch_state_changed(powerswitch):
         assert json.loads(result.stdout)['box']['changed']
 
 
+@requires(prereq='SkipIfGudePowerSwitchIsUnavailable')
 @requires(zk2='Zk2')
 @requires(remote_client='SystestRemoteClient')
 def test_powerswitch_connection_check(zk2, remote_client):

@@ -14,6 +14,7 @@ implements the :ref:`exec <exec-label>` interface.
 
 import logging
 import time
+from contextlib import contextmanager
 
 from zaf.application import APPLICATION_ENDPOINT, BEFORE_COMMAND
 from zaf.component.decorator import component, requires
@@ -30,8 +31,8 @@ from sutevents import LOG_LINE_RECEIVED
 from zserial import SERIAL_RAW_LINE, SERIAL_RECONNECT
 
 from . import SERIAL_BAUDRATE, SERIAL_CONNECTED, SERIAL_CONNECTION_LOST, SERIAL_DEVICE, \
-    SERIAL_ENABLED, SERIAL_ENDPOINT, SERIAL_FILTERS, SERIAL_PROMPT, SERIAL_SEND_COMMAND, \
-    SERIAL_TIMEOUT
+    SERIAL_ENABLED, SERIAL_ENDPOINT, SERIAL_FILTERS, SERIAL_PROMPT, SERIAL_RESUME, \
+    SERIAL_SEND_COMMAND, SERIAL_SUSPEND, SERIAL_TIMEOUT
 from .client import SerialClient
 from .connection import find_serial_port, start_serial_connection
 from .messages import SendSerialCommandData
@@ -54,6 +55,79 @@ def serial_exec(sut, messagebus):
     return SerialClient(messagebus, sut.entity, sut.serial.timeout, sut.serial.prompt)
 
 
+@requires(sut='Sut', can=['serial'])
+@requires(messagebus='MessageBus')
+@component(name='RawSerialPort', can=['serial'], provided_by_extension='zserial')
+class RawSerialPort(object):
+    """
+    Access the serial port in raw byte mode.
+
+    Temporarily suspend the packetized log line handling to provide raw byte
+    access to the serial port.
+
+    Example:
+
+    .. code-block:: python
+
+        @requires(serial='RawSerialPort')
+        @requires(exec='Exec', can=['serial'])
+        def test_xmodem_recv(serial,exec):
+            with open('/dev/null', 'wb') as f:
+                exec.send_line('sz -X --1k -q /proc/cpuinfo',
+                    prefix_output=False,
+                    endmark='Give your local XMODEM receive command now.')
+                with serial.suspended() as ser:
+                    def getc(size, timeout=1):
+                        return ser.read(size) or None
+
+                    def putc(data, timeout=1):
+                        return ser.write(data)
+
+                    modem = XMODEM1k(getc, putc)
+                    modem.recv(f)
+
+        @requires(serial='RawSerialPort')
+        @requires(exec='Exec', can=['serial'])
+        def test_xmodem_send(serial,exec):
+            with open('/proc/version', 'rb') as f:
+                exec.send_line('rz -X -q -y /dev/null',
+                    prefix_output=False,
+                    endmark='rz: ready to receive /tmp/foo')
+                with serial.suspended() as ser:
+                    def getc(size, timeout=1):
+                        return ser.read(size) or None
+
+                    def putc(data, timeout=1):
+                        return ser.write(data)
+
+                    modem = XMODEM1k(getc, putc)
+                    modem.send(f)
+    """
+
+    def __init__(self, sut, messagebus):
+        self._sut = sut
+        self._messagebus = messagebus
+
+    @contextmanager
+    def suspended(self):
+        """Temporarily suspend the normal serial log line handling."""
+
+        try:
+            yield self.suspend()
+        finally:
+            self.resume()
+
+    def suspend(self):
+        logger.debug('Suspending serial port for entity {entity}'.format(entity=self._sut.entity))
+        return self._messagebus.send_request(
+            SERIAL_SUSPEND, SERIAL_ENDPOINT, entity=self._sut.entity).wait()[0].result()
+
+    def resume(self):
+        logger.debug('Resuming serial port for entity {entity}'.format(entity=self._sut.entity))
+        self._messagebus.send_request(
+            SERIAL_RESUME, SERIAL_ENDPOINT, entity=self._sut.entity).wait()[0].result()
+
+
 @CommandExtension(
     name='zserial',
     extends=[RUN_COMMAND],
@@ -69,7 +143,8 @@ def serial_exec(sut, messagebus):
     endpoints_and_messages={
         SERIAL_ENDPOINT: [
             SERIAL_SEND_COMMAND, LOG_LINE_RECEIVED, SERIAL_CONNECTION_LOST, SERIAL_CONNECTED,
-            CRITICAL_EXTENSION_ERROR, SERIAL_RECONNECT, SERIAL_RAW_LINE
+            CRITICAL_EXTENSION_ERROR, SERIAL_RECONNECT, SERIAL_RAW_LINE, SERIAL_SUSPEND,
+            SERIAL_RESUME
         ]
     },
     groups=['exec', 'serial'],
@@ -129,7 +204,14 @@ class SerialExtension(AbstractExtension):
                 (
                     'Error when trying to send serial command \'{line}\'. '
                     'Serial connection closed').format(line=line))
-        self._serial_connection.write_line(line)
+
+        if self._serial_connection.is_suspended():
+            logging.warning(
+                ('Ignoring command \'{line}\'. '
+                 'Serial connection suspended').format(line=line))
+        else:
+            self._serial_connection.write_line(line)
+
         if event is not None:
             event.wait(timeout)
 
@@ -137,6 +219,24 @@ class SerialExtension(AbstractExtension):
     def handle_raw_line(self, message):
         raw_line = message.data
         self._serial_connection.parse_raw_line(raw_line)
+
+    @callback_dispatcher([SERIAL_SUSPEND], [SERIAL_ENDPOINT], entity_option_id=SUT)
+    def suspend(self, message):
+        if self._serial_connection is None:
+            raise SerialException(
+                'Error when trying to suspend serial port: Serial connection closed')
+
+        self._serial_connection.suspend()
+        return self._serial_connection.instance()
+
+    @callback_dispatcher([SERIAL_RESUME], [SERIAL_ENDPOINT], entity_option_id=SUT)
+    def resume(self, message):
+        if self._serial_connection is None:
+            raise SerialException(
+                'Error when trying to resume serial port: Serial connection closed')
+
+        if self._serial_connection.is_suspended():
+            self._serial_connection.resume()
 
     @sequential_dispatcher(
         [SERIAL_CONNECTION_LOST, SERIAL_RECONNECT], [SERIAL_ENDPOINT], entity_option_id=SUT)

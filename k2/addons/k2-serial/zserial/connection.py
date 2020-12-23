@@ -27,12 +27,26 @@ class SerialConnectionError(Exception):
 
 class SerialConnectionWrapper(object):
 
-    def __init__(self, thread, connection):
+    def __init__(self, thread, connection, serial, protocol_factory):
         self.thread = thread
         self.connection = connection
+        self.serial = serial
+        self.protocol_factory = protocol_factory
 
     def close(self):
         self.thread.close()
+
+    def suspend(self):
+        self.thread.stop()
+        if self.thread.is_alive():
+            raise SerialConnectionError('Failed to suspend serial thread')
+
+    def resume(self):
+        self.thread = ReaderThread(self.serial, self.protocol_factory)
+        self.connection = self.thread.__enter__()
+
+    def is_suspended(self):
+        return not self.thread.is_alive()
 
     def write_line(self, line):
         logger.debug('Writing line to serial port: {line}'.format(line=line))
@@ -41,6 +55,9 @@ class SerialConnectionWrapper(object):
     def parse_raw_line(self, line):
         self.connection.parse_raw_line(line)
 
+    def instance(self):
+        return self.serial
+
 
 def start_serial_connection(port, baudrate, virtual, timeout, messagebus, entity, filters):
     serial_thread = None
@@ -48,9 +65,11 @@ def start_serial_connection(port, baudrate, virtual, timeout, messagebus, entity
         serial = serial_for_url(
             port, baudrate=baudrate, rtscts=virtual, dsrdtr=virtual, timeout=timeout)
         _lock_serial_port(serial)
-        serial_thread = ReaderThread(serial, _serial_connection(messagebus, entity, filters))
+        protocol_factory = _serial_connection(messagebus, entity, filters)
+        serial_thread = ReaderThread(serial, protocol_factory)
 
-        return SerialConnectionWrapper(serial_thread, serial_thread.__enter__())
+        return SerialConnectionWrapper(
+            serial_thread, serial_thread.__enter__(), serial, protocol_factory)
     except Exception as e:
         if serial_thread is not None:
             serial_thread.close()

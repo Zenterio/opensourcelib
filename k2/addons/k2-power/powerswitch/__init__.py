@@ -48,7 +48,7 @@ POWER_SWITCH_POWEROFF = MessageId(
     """)
 
 POWER_SWITCH_POWER_STATE = MessageId(
-    'POWER_SWITCH_POWER_STATUS', """\
+    'POWER_SWITCH_POWER_STATE', """\
     Check if the power is on
 
     response: True/False

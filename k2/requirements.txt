@@ -20,6 +20,7 @@ addons/k2-serial
 addons/k2-sispmpowerswitch
 addons/k2-sutevents
 addons/k2-telnet
+addons/k2-upgrade
 addons/k2-zelenium
 numpy==1.19.4 --only-binary numpy
 arrow==0.12.1

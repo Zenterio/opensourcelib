@@ -5,6 +5,7 @@ ext.connectioncheck.enabled: false
 ext.coredumps.enabled: false
 ext.dummypowermeter.enabled: false
 ext.gtestrunner.enabled: false
+ext.gude.enabled: false
 ext.healthcheck.enabled: false
 ext.iprcu.enabled: false
 ext.iprcucc.enabled: false

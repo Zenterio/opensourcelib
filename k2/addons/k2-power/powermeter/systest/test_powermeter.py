@@ -17,36 +17,39 @@ class zk2PowerMeter(object):
     def __init__(self, zk2):
         self.zk2 = zk2
 
-    def __call__(self, server_port, json=False, expected_exit_code=0):
+    def __call__(self, json=False, expected_exit_code=0):
         return self.zk2(
-            ['powermeter', 'gude'],
+            ['powermeter', 'dummypowermeter'],
             'powermeter --suts-ids box '
-            '--suts-box@powermeter gude '
-            '--suts-box@gude-ip localhost:{port} '
-            '--suts-box@gude-port 4 '
-            '{json}'.format(port=server_port, json='--json' if json else ''),
+            '--suts-box@powermeter dummy '
+            '{json}'.format(json='--json' if json else ''),
             expected_exit_code=expected_exit_code)
 
 
 @requires(powermeter=zk2PowerMeter)
 def test_powermeter_power(powermeter):
-    with GudeMock() as server:
-        server.set_default_sensor_value(42)
-        result = powermeter(server.port)
-        assert '42.0 W' in result.stdout
-
-
-@requires(powermeter=zk2PowerMeter)
-def test_powermeter_power_error(powermeter):
-    with GudeMock() as server:
-        server.set_error()
-        powermeter(server.port, expected_exit_code=1)
+    result = powermeter()
+    assert '4.2 W' in result.stdout
 
 
 @requires(powermeter=zk2PowerMeter)
 def test_powermeter_state_json_format(powermeter):
+    result = powermeter(json=True)
+    json.loads(result.stdout)
+
+
+@requires(zk2='Zk2')
+def test_powermeter_power_error(zk2):
     with GudeMock() as server:
-        result = powermeter(server.port, json=True)
+        server.set_error()
+        result = zk2(
+            ['powermeter', 'gude'],
+            'powermeter --suts-ids box '
+            '--suts-box@powermeter gude '
+            '--suts-box@gude-ip localhost:{port} '
+            '--suts-box@gude-port 4 '
+            '--json'.format(port=server.port),
+            expected_exit_code=1)
         json.loads(result.stdout)
 
 

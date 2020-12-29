@@ -12,6 +12,7 @@ addons/k2-linuxutils
 addons/k2-looper
 addons/k2-metrics
 addons/k2-monitor
+addons/k2-multirunner
 addons/k2-networking
 addons/k2-orchestration
 addons/k2-power

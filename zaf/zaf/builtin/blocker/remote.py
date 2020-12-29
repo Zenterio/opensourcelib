@@ -61,14 +61,18 @@ class RemoteBlocker(object):
         return message.message_id.name == BLOCKING_COMPLETED.name
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._blocking_started_queue:
-            self._blocking_started_queue.__exit__(None, None, None)
+        try:
+            if self._blocking_started_queue:
+                self._blocking_started_queue.__exit__(None, None, None)
 
-        if self._blocking_finished_queue:
-            self._blocking_finished_queue.__exit__(None, None, None)
+            if self._blocking_finished_queue:
+                self._blocking_finished_queue.__exit__(None, None, None)
 
-        if not self._stop_blocking_sent:
-            self.stop_blocking()
+            if not self._stop_blocking_sent:
+                self.stop_blocking()
+        except EOFError:
+            # remote already disconnected
+            pass
 
 
 @FrameworkExtension(

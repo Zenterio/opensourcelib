@@ -118,7 +118,7 @@ class SerialExtension(AbstractExtension):
     @sequential_dispatcher([SERIAL_SEND_COMMAND], [SERIAL_ENDPOINT], entity_option_id=SUT)
     def send_serial_command(self, message):
         data = message.data
-        if isinstance(message.data, SendSerialCommandData):
+        if isinstance(data, SendSerialCommandData):
             self._send_serial_command(data.line, event=data.event, timeout=data.timeout)
         else:
             self._send_serial_command(data)

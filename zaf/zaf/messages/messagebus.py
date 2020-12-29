@@ -267,7 +267,8 @@ class MessageBus(object):
 
         :param message_id: The MessageId of the request that should be sent
         :param receiver_endpoint_id: The EndpointId of the recipients of the messages
-        :para data: The message data
+        :param entity: If given, only send request to the specified entity at endpoint
+        :param data: The message data
         """
         futures = FuturesCollection()
 

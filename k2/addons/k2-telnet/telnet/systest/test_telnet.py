@@ -99,6 +99,7 @@ def test_sut_recovery_initiated_when_telnet_connection_check_fails(
         '--remote-port {remote_port} '
         '--blocker-enabled true '
         '--blocker-init-enabled true '
+        '--blocker-exit-enabled true '
         'run --suts-ids box --suts-box@ip invalid_ip '
         '--suts-box@telnet-enabled true '
         '--suts-box@telnet-port -3 '
@@ -112,5 +113,6 @@ def test_sut_recovery_initiated_when_telnet_connection_check_fails(
             with client.local_message_queue([SUT_RECOVERY_PERFORM], entities=['box']) as queue:
                 blocker_helper.stop_init_blocking(client)
                 queue.get(timeout=10)
+            blocker_helper.stop_exit_blocking(client)
     finally:
         process.wait(timeout=10)

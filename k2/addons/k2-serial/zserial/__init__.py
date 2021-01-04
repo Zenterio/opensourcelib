@@ -33,11 +33,16 @@ SERIAL_SUSPEND = MessageId(
     Suspends log line handling and returns a reference to the serial port. This
     can be used when raw byte access is temporarily needed. The log line
     handling is resumed with SERIAL_RESUME.
+
+    NOTE: This behavior is not thread safe. If multiple components try to
+          suspend the same serial connection at the same time, an exception
+          will be raised.
     """)
 
 SERIAL_RESUME = MessageId(
     'SERIAL_RESUME', """\
     Resumes line handling of the serial port. Counterpart of SERIAL_SUSPEND.
+    An exception will be raised if the serial port was not already suspended.
     """)
 
 SERIAL_RAW_LINE = MessageId(

@@ -10,7 +10,8 @@ from zaf.messages.dispatchers import LocalMessageQueue
 from k2 import CRITICAL_EXTENSION_ERROR
 from zserial import SERIAL_RECONNECT
 
-from .. import SERIAL_CONNECTION_LOST, SERIAL_ENDPOINT, SERIAL_SEND_COMMAND
+from .. import SERIAL_CONNECTION_LOST, SERIAL_ENDPOINT, SERIAL_RESUME, SERIAL_SEND_COMMAND, \
+    SERIAL_SUSPEND
 from ..connection import SerialConnectionError
 from ..serial import SerialException
 from .utils import create_harness
@@ -31,16 +32,20 @@ class TestSerialExtension(TestCase):
             create_harness(device=None).__enter__()
 
     def test_extension_is_not_connected_until_inialize_sut_is_received(self):
+        connection = MagicMock()
+        connection.is_suspended = MagicMock(return_value=False)
         with patch('zserial.serial.find_serial_port', return_value=('device', False)), \
-                patch('zserial.serial.start_serial_connection', return_value=MagicMock()):
+                patch('zserial.serial.start_serial_connection', return_value=connection):
             with create_harness() as harness:
                 self.assertIsNone(harness.extension._serial_connection)
                 harness.trigger_event(BEFORE_COMMAND, APPLICATION_ENDPOINT)
                 self.assertIsNotNone(harness.extension._serial_connection)
 
     def test_raises_exception_if_send_serial_command_called_after_closing_connection(self):
+        connection = MagicMock()
+        connection.is_suspended = MagicMock(return_value=False)
         with patch('zserial.serial.find_serial_port', return_value=('device', False)), \
-                patch('zserial.serial.start_serial_connection', return_value=MagicMock()):
+                patch('zserial.serial.start_serial_connection', return_value=connection):
             with create_harness() as harness:
                 harness.trigger_event(BEFORE_COMMAND, APPLICATION_ENDPOINT)
                 self.assertIsNotNone(harness.extension._serial_connection)
@@ -52,6 +57,7 @@ class TestSerialExtension(TestCase):
     def test_send_serial_command_message_write_line_to_connection(self):
         connection = MagicMock()
         written_lines = queue.Queue()
+        connection.is_suspended = MagicMock(return_value=False)
         connection.write_line.side_effect = lambda line: written_lines.put(line)
 
         with patch('zserial.serial.find_serial_port', return_value=('device', False)):
@@ -66,6 +72,7 @@ class TestSerialExtension(TestCase):
     def test_send_serial_command_message_write_line_to_connection_only_if_entity_matches(self):
         connection = MagicMock()
         written_lines = queue.Queue()
+        connection.is_suspended = MagicMock(return_value=False)
         connection.write_line.side_effect = lambda line: written_lines.put(line)
 
         with patch('zserial.serial.find_serial_port', return_value=('device', False)):
@@ -106,3 +113,26 @@ class TestSerialExtension(TestCase):
                             patch('time.sleep'):
                         harness.trigger_event(BEFORE_COMMAND, APPLICATION_ENDPOINT)
                         assert error_queue.get(timeout=1).message_id == CRITICAL_EXTENSION_ERROR
+
+    def test_raises_exception_if_trying_to_suspend_when_already_suspended(self):
+        connection = MagicMock()
+        connection.is_suspended = MagicMock(return_value=True)
+        with patch('zserial.serial.find_serial_port', return_value=('device', False)), \
+                patch('zserial.serial.start_serial_connection', return_value=connection):
+            with create_harness() as harness:
+                harness.trigger_event(BEFORE_COMMAND, APPLICATION_ENDPOINT)
+                with self.assertRaises(SerialException):
+                    serial = harness.send_request(SERIAL_SUSPEND, SERIAL_ENDPOINT,
+                                                  'entity').wait()[0].result()
+                    self.assertIsNone(serial)
+
+    def test_raises_exception_if_trying_to_resume_and_active_connection(self):
+        connection = MagicMock()
+        connection.is_suspended = MagicMock(return_value=False)
+        with patch('zserial.serial.find_serial_port', return_value=('device', False)), \
+                patch('zserial.serial.start_serial_connection', return_value=connection):
+            with create_harness() as harness:
+                harness.trigger_event(BEFORE_COMMAND, APPLICATION_ENDPOINT)
+                with self.assertRaises(SerialException):
+                    harness.send_request(SERIAL_RESUME, SERIAL_ENDPOINT,
+                                         'entity').wait()[0].result()

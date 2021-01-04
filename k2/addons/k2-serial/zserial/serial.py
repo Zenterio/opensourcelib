@@ -226,6 +226,9 @@ class SerialExtension(AbstractExtension):
             raise SerialException(
                 'Error when trying to suspend serial port: Serial connection closed')
 
+        if self._serial_connection.is_suspended():
+            raise SerialException('Trying to suspend a serial connection that is already suspended')
+
         self._serial_connection.suspend()
         return self._serial_connection.instance()
 
@@ -235,8 +238,10 @@ class SerialExtension(AbstractExtension):
             raise SerialException(
                 'Error when trying to resume serial port: Serial connection closed')
 
-        if self._serial_connection.is_suspended():
-            self._serial_connection.resume()
+        if not self._serial_connection.is_suspended():
+            raise SerialException('Trying to resume a serial connection that is not suspended')
+
+        self._serial_connection.resume()
 
     @sequential_dispatcher(
         [SERIAL_CONNECTION_LOST, SERIAL_RECONNECT], [SERIAL_ENDPOINT], entity_option_id=SUT)

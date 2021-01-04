@@ -25,13 +25,37 @@ class SerialConnectionError(Exception):
     pass
 
 
+class SerialThreadFactory(object):
+
+    def __init__(self, serial, messagebus, entity, filters):
+        self._serial = serial
+        self._protocol_factory = _serial_connection(messagebus, entity, filters)
+
+    def create(self):
+        thread = None
+        try:
+            thread = ReaderThread(self._serial, self._protocol_factory)
+            connection = thread.__enter__()
+        except Exception as e:
+            if thread is not None:
+                thread.close()
+            raise e
+        return thread, connection
+
+    @property
+    def serial(self):
+        return self._serial
+
+
 class SerialConnectionWrapper(object):
 
-    def __init__(self, thread, connection, serial, protocol_factory):
-        self.thread = thread
-        self.connection = connection
-        self.serial = serial
-        self.protocol_factory = protocol_factory
+    def __init__(self, thread_factory):
+        self.thread_factory = thread_factory
+        self.thread = None
+        self.connection = None
+
+    def open(self):
+        self.resume()
 
     def close(self):
         self.thread.close()
@@ -42,8 +66,7 @@ class SerialConnectionWrapper(object):
             raise SerialConnectionError('Failed to suspend serial thread')
 
     def resume(self):
-        self.thread = ReaderThread(self.serial, self.protocol_factory)
-        self.connection = self.thread.__enter__()
+        self.thread, self.connection = self.thread_factory.create()
 
     def is_suspended(self):
         return not self.thread.is_alive()
@@ -56,24 +79,17 @@ class SerialConnectionWrapper(object):
         self.connection.parse_raw_line(line)
 
     def instance(self):
-        return self.serial
+        return self.thread_factory.serial
 
 
 def start_serial_connection(port, baudrate, virtual, timeout, messagebus, entity, filters):
-    serial_thread = None
-    try:
-        serial = serial_for_url(
-            port, baudrate=baudrate, rtscts=virtual, dsrdtr=virtual, timeout=timeout)
-        _lock_serial_port(serial)
-        protocol_factory = _serial_connection(messagebus, entity, filters)
-        serial_thread = ReaderThread(serial, protocol_factory)
-
-        return SerialConnectionWrapper(
-            serial_thread, serial_thread.__enter__(), serial, protocol_factory)
-    except Exception as e:
-        if serial_thread is not None:
-            serial_thread.close()
-        raise e
+    serial = serial_for_url(
+        port, baudrate=baudrate, rtscts=virtual, dsrdtr=virtual, timeout=timeout)
+    _lock_serial_port(serial)
+    thread_factory = SerialThreadFactory(serial, messagebus, entity, filters)
+    connection = SerialConnectionWrapper(thread_factory)
+    connection.open()
+    return connection
 
 
 def _lock_serial_port(serial):

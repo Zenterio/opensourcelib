@@ -170,6 +170,7 @@ def run_with_client(run, responses={}, expected_exit_code=None):
     :return: queue with the written lines
     """
     connection = MagicMock()
+    connection.is_suspended = MagicMock(return_value=False)
     written_lines = queue.Queue()
 
     with patch('zserial.serial.find_serial_port', return_value=('device', False)), \

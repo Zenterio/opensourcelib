@@ -160,3 +160,12 @@ class TestFindSerialPort(TestCase):
         with patch('zserial.connection.comports', return_value=self.devices()), \
                 patch('os.path.exists', return_value=False):
             self.assertRaises(PortNotFound, find_serial_port, 'not a port')
+
+    def test_invalid_url_raises_exception(self):
+        with patch('zserial.connection.serial_for_url', side_effect=Exception('Boom!')):
+            self.assertRaises(PortNotFound, find_serial_port, 'invalid://url')
+
+    def test_port_can_be_found_using_url(self):
+        url = 'valid://url'
+        with patch('zserial.connection.serial_for_url', return_value=MagicMock()):
+            self.assertEqual(find_serial_port(url), (url, True))

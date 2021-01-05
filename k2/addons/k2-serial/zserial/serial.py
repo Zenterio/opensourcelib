@@ -158,6 +158,8 @@ class SerialExtension(AbstractExtension):
                 self._serial_connection = start_serial_connection(
                     self._port, self._baudrate, self._virtual, self._timeout, messagebus,
                     self._entity, self._filters)
+                logger.debug(
+                    'Opened {port} for sut {sut}'.format(port=self._port, sut=self._entity))
                 return
             except Exception:
                 logger.debug(

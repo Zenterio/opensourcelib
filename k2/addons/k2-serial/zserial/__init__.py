@@ -59,7 +59,7 @@ SERIAL_BAUDRATE = ConfigOptionId(
 
 SERIAL_DEVICE = ConfigOptionId(
     'serial.device',
-    'The serial device. Multiple formats supported e.g [ttyXXX, /dev/ttyXXX, 3-10.5.1, guess]',
+    'The serial device. Multiple formats supported e.g [ttyXXX, /dev/ttyXXX, 3-10.5.1, socket://127.0.0.1:2012, guess]',
     at=SUT)
 
 SERIAL_TIMEOUT = ConfigOptionId(

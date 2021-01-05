@@ -3,7 +3,7 @@ import logging
 import os
 import re
 
-from serial import Serial
+from serial import serial_for_url
 from serial.threaded import LineReader, ReaderThread
 from serial.tools.list_ports import comports
 from zaf.extensions.extension import get_logger_name
@@ -45,7 +45,8 @@ class SerialConnectionWrapper(object):
 def start_serial_connection(port, baudrate, virtual, timeout, messagebus, entity, filters):
     serial_thread = None
     try:
-        serial = Serial(port, baudrate, rtscts=virtual, dsrdtr=virtual, timeout=timeout)
+        serial = serial_for_url(
+            port, baudrate=baudrate, rtscts=virtual, dsrdtr=virtual, timeout=timeout)
         _lock_serial_port(serial)
         serial_thread = ReaderThread(serial, _serial_connection(messagebus, entity, filters))
 
@@ -198,6 +199,14 @@ def find_serial_port(device):
     :return: Tuple containing the port and if the port is virtual
     :raises: PortNotFound if no matching serial port was found
     """
+    if '://' in device:
+        try:
+            serial_for_url(device, do_not_open=True)
+            return device, True
+        except Exception as e:
+            raise PortNotFound(
+                'No port found using URL "{url}": {msg}'.format(url=device, msg=str(e)))
+
     selected_port_info = None
     for port_info in comports():
         if device == 'guess' or port_info.device == device or port_info.name == device or port_info.location == device:

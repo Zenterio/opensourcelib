@@ -65,6 +65,8 @@ class RawSerialPort(object):
     Temporarily suspend the packetized log line handling to provide raw byte
     access to the serial port.
 
+    .. warning:: This component is not thread safe. Suspending the same serial port multiple times will break.
+
     Example:
 
     .. code-block:: python

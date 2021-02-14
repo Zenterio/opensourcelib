@@ -10,6 +10,9 @@ class BlockerHelper(object):
     def stop_init_blocking(self, remote_client):
         remote_client.send_request(STOP_BLOCKING_ON_MESSAGE, entity='init')
 
+    def stop_exit_blocking(self, remote_client):
+        remote_client.send_request(STOP_BLOCKING_ON_MESSAGE, entity='exit', is_async=True)
+
     def stop_blocking(self, remote_client, id):
         remote_client.send_request(STOP_BLOCKING_ON_MESSAGE, entity=id)
 

@@ -19,6 +19,8 @@ and :ref:`option-blocker.init.timeout`.
 This can be used to wait with the start of ZAF until an outside user is ready for it, for example until
 a user has connected with the :ref:`extension-remote` client.
 The ID for this blocking is hard coded to *init*.
+Similarly, the config options :ref:`option-blocker.exit.enabled` and :ref:`option-blocker.exit.timeout`
+can be used to wait for ZAF to exit. The ID for this blocking is hard coded to *exit*.
 """
 
 import functools
@@ -26,9 +28,10 @@ import logging
 from uuid import uuid4
 
 from zaf.application import AFTER_COMMAND, APPLICATION_ENDPOINT, BEFORE_COMMAND
-from zaf.builtin.blocker import BLOCKER_ENABLED, BLOCKER_ENDPOINT, BLOCKER_INIT_ENABLED, \
-    BLOCKER_INIT_TIMEOUT, BLOCKING_COMPLETED, BLOCKING_STARTED, BLOCKING_TIMED_OUT, \
-    START_BLOCKING_ON_MESSAGE, STOP_BLOCKING_ON_MESSAGE, StartBlockingInfo
+from zaf.builtin.blocker import BLOCKER_ENABLED, BLOCKER_ENDPOINT, BLOCKER_EXIT_ENABLED, \
+    BLOCKER_EXIT_TIMEOUT, BLOCKER_INIT_ENABLED, BLOCKER_INIT_TIMEOUT, BLOCKING_COMPLETED, \
+    BLOCKING_STARTED, BLOCKING_TIMED_OUT, START_BLOCKING_ON_MESSAGE, STOP_BLOCKING_ON_MESSAGE, \
+    StartBlockingInfo
 from zaf.config.options import ConfigOption
 from zaf.extensions.extension import AbstractExtension, FrameworkExtension
 from zaf.messages.dispatchers import CallbackDispatcher, LocalMessageQueue, SequentialDispatcher
@@ -60,6 +63,8 @@ class BlockerState(object):
         ConfigOption(BLOCKER_ENABLED, required=True),
         ConfigOption(BLOCKER_INIT_ENABLED, required=True),
         ConfigOption(BLOCKER_INIT_TIMEOUT, required=True),
+        ConfigOption(BLOCKER_EXIT_ENABLED, required=True),
+        ConfigOption(BLOCKER_EXIT_TIMEOUT, required=True),
     ],
     endpoints_and_messages={
         BLOCKER_ENDPOINT: [
@@ -75,6 +80,8 @@ class Blocker(AbstractExtension):
 
         self._init_enabled = config.get(BLOCKER_INIT_ENABLED)
         self._init_timeout = config.get(BLOCKER_INIT_TIMEOUT)
+        self._exit_enabled = config.get(BLOCKER_EXIT_ENABLED)
+        self._exit_timeout = config.get(BLOCKER_EXIT_TIMEOUT)
 
         self._ongoing_blockers = {}
 
@@ -99,12 +106,24 @@ class Blocker(AbstractExtension):
                         APPLICATION_ENDPOINT,
                         entity=None,
                         timeout=self._init_timeout),
-                    id='init')
+                    id='init',
+                    priority=100)
+
+            if self._exit_enabled:
+                print('EXITING BLOCKER')
+                self._start_blocking(
+                    StartBlockingInfo(
+                        AFTER_COMMAND,
+                        APPLICATION_ENDPOINT,
+                        entity=None,
+                        timeout=self._exit_timeout),
+                    id='exit',
+                    priority=100)
 
     def start_blocking(self, message):
         return self._start_blocking(blocking_info=message.data)
 
-    def _start_blocking(self, blocking_info, id=None):
+    def _start_blocking(self, blocking_info, id=None, priority=0):
         logger.debug('Starting to block on {data}'.format(data=blocking_info))
 
         def blocking_callback(id, timeout, message):
@@ -143,7 +162,7 @@ class Blocker(AbstractExtension):
 
         # Creates the blocking dispatcher that listens to the message described in the received StartBlockingInfo
         blocking_dispatcher = CallbackDispatcher(
-            self._messagebus, functools.partial(blocking_callback, id, blocking_info.timeout))
+            self._messagebus, functools.partial(blocking_callback, id, blocking_info.timeout), priority)
         blocking_dispatcher.register(
             message_ids=[blocking_info.message_id],
             endpoint_ids=[blocking_info.endpoint_id] if blocking_info.endpoint_id else None,

@@ -28,6 +28,22 @@ BLOCKER_INIT_TIMEOUT = ConfigOptionId(
     hidden=True,
     application_contexts=ApplicationContext.EXTENDABLE)
 
+BLOCKER_EXIT_ENABLED = ConfigOptionId(
+    'blocker.exit.enabled',
+    'Enable blocking on exit of zaf. ID for blocking is "exit".',
+    option_type=bool,
+    default=False,
+    hidden=True,
+    application_contexts=ApplicationContext.EXTENDABLE)
+
+BLOCKER_EXIT_TIMEOUT = ConfigOptionId(
+    'blocking.exit.timeout',
+    'Timeout for exit blocking.',
+    option_type=float,
+    default=5.0,
+    hidden=True,
+    application_contexts=ApplicationContext.EXTENDABLE)
+
 BLOCKER_ENDPOINT = EndpointId('blocker', 'Endpoint for blocker extension')
 
 StartBlockingInfo = namedtuple(

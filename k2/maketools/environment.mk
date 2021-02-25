@@ -49,6 +49,7 @@ define TEST_NODE
 	cp pip.conf .venv/
 	.venv/bin/${PYTHON} .venv/bin/pip install --upgrade setuptools
 	.venv/bin/${PYTHON} .venv/bin/pip install --upgrade --force-reinstall pip
+	.venv/bin/${PYTHON} .venv/bin/pip install --upgrade --force-reinstall wheel
 	cp pip.conf .venv/pip.conf
 	cat requirements.txt requirements-dev.txt | grep -v trusted-host | grep -v addons | xargs -L1 -P1 .venv/bin/${PYTHON} .venv/bin/pip install
 	cat requirements.txt requirements-dev.txt | grep -v trusted-host | grep addons | xargs -L1 -P1 .venv/bin/${PYTHON} .venv/bin/pip install -e

@@ -5,6 +5,7 @@ addons/k2-gitrepo
 addons/k2-gtestbinaryrunner
 addons/k2-gude
 addons/k2-healthcheck
+addons/k2-httpfileserver
 addons/k2-infra
 addons/k2-jenkins
 addons/k2-linuxutils
@@ -21,6 +22,7 @@ addons/k2-sispmpowerswitch
 addons/k2-sutevents
 addons/k2-telnet
 addons/k2-zelenium
+addons/k2-znail
 numpy==1.19.4 --only-binary numpy
 arrow==0.12.1
 docker-pycreds==0.4.0

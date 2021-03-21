@@ -107,5 +107,6 @@ class SutPowerControl(object):
         self._sutevents = sutevents
 
     def power_cycle_sut(self, off_time=POWER_CYCLE_TIME):
-        with self._sutevents.await_sut_reset_done():
-            self._switch.off_then_on(off_time=off_time)
+        with self._sutevents.expect_reset():
+            with self._sutevents.await_sut_reset_done():
+                self._switch.off_then_on(off_time=off_time)

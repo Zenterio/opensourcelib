@@ -8,7 +8,8 @@ from connectioncheck import CONNECTIONCHECK_RUN_CHECK
 from k2.sut import SUT
 
 from .. import SERIAL_CONNECTION_CHECK_ENABLED, SERIAL_CONNECTION_CHECK_ENDPOINT, \
-    SERIAL_CONNECTION_CHECK_REQUIRED, SERIAL_ENABLED, SERIAL_TIMEOUT
+    SERIAL_CONNECTION_CHECK_REQUIRED, SERIAL_ENABLED, SERIAL_PORT_IDS, SERIAL_TIMEOUT, \
+    SUT_SERIAL_PORTS
 from ..serialcc import SerialConnectionCheck
 
 
@@ -98,10 +99,16 @@ class TestSerialConnectionCheck(TestCase):
 
 
 def create_harness(
-        serial_enabled=True, serial_cc_enabled=True, serial_cc_required=True, sut=['entity']):
+        serial_enabled=True,
+        serial_cc_enabled=True,
+        serial_cc_required=True,
+        ports=['port'],
+        sut=['entity']):
     config = ConfigManager()
-    entity = sut[0]
+    entity = ports[0]
+    config.set(SERIAL_PORT_IDS, ports)
     config.set(SUT, sut)
+    config.set(SUT_SERIAL_PORTS, ports, entity=sut[0])
     config.set(SERIAL_ENABLED, serial_enabled, entity=entity)
     config.set(SERIAL_CONNECTION_CHECK_ENABLED, serial_cc_enabled, entity=entity)
     config.set(SERIAL_CONNECTION_CHECK_REQUIRED, serial_cc_required, entity=entity)

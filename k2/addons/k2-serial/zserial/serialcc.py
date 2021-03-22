@@ -8,18 +8,19 @@ import logging
 import os
 
 from zaf.component.decorator import requires
+from zaf.config import MissingConditionalConfigOption
 from zaf.config.options import ConfigOption
 from zaf.extensions.extension import AbstractExtension, CommandExtension, get_logger_name
-from zaf.messages.decorator import callback_dispatcher
+from zaf.messages.dispatchers import CallbackDispatcher
 
 from connectioncheck import CONNECTIONCHECK_RUN_CHECK
 from connectioncheck.connectioncheck import ConnectionCheckResult
 from k2.cmd.run import RUN_COMMAND
 from k2.sut import SUT
-from zserial import SERIAL_ENDPOINT, SERIAL_RECONNECT
+from zserial import SERIAL_ENDPOINT, SERIAL_PORT_IDS, SERIAL_RECONNECT
 
 from . import SERIAL_CONNECTION_CHECK_ENABLED, SERIAL_CONNECTION_CHECK_ENDPOINT, \
-    SERIAL_CONNECTION_CHECK_REQUIRED, SERIAL_ENABLED, SERIAL_TIMEOUT
+    SERIAL_CONNECTION_CHECK_REQUIRED, SERIAL_ENABLED, SERIAL_TIMEOUT, SUT_SERIAL_PORTS
 from .client import SerialClient
 
 logger = logging.getLogger(get_logger_name('k2', 'zserialcc'))
@@ -29,11 +30,13 @@ logger = logging.getLogger(get_logger_name('k2', 'zserialcc'))
     name='zserialcc',
     extends=[RUN_COMMAND],
     config_options=[
-        ConfigOption(SUT, required=True, instantiate_on=True),
+        ConfigOption(SERIAL_PORT_IDS, required=True, instantiate_on=True),
         ConfigOption(SERIAL_ENABLED, required=True),
         ConfigOption(SERIAL_CONNECTION_CHECK_ENABLED, required=True),
         ConfigOption(SERIAL_CONNECTION_CHECK_REQUIRED, required=True),
         ConfigOption(SERIAL_TIMEOUT, required=True),
+        ConfigOption(SUT, required=True),
+        ConfigOption(SUT_SERIAL_PORTS, required=True),
     ],
     endpoints_and_messages={SERIAL_CONNECTION_CHECK_ENDPOINT: [
         CONNECTIONCHECK_RUN_CHECK,
@@ -47,11 +50,26 @@ class SerialConnectionCheck(AbstractExtension):
     def __init__(self, config, instances):
         self._enabled = config.get(SERIAL_ENABLED) and config.get(SERIAL_CONNECTION_CHECK_ENABLED)
         self._required = config.get(SERIAL_CONNECTION_CHECK_REQUIRED)
-        self._entity = instances.get(SUT)
+        self._entity = instances.get(SERIAL_PORT_IDS)
         self._timeout = config.get(SERIAL_TIMEOUT)
 
-    @callback_dispatcher(
-        [CONNECTIONCHECK_RUN_CHECK], [SERIAL_CONNECTION_CHECK_ENDPOINT], entity_option_id=SUT)
+        self._suts = [
+            sut for sut in config.get(SUT)
+            if self._entity in config.get(SUT_SERIAL_PORTS, entity=sut)
+        ]
+
+        if self._enabled and not self._suts:
+            msg = "Error: connection check enabled for '{port}' but no suts who listens".format(
+                port=self._entity)
+            raise MissingConditionalConfigOption(msg)
+
+    def register_dispatchers(self, messagebus):
+        if self._enabled:
+            self.dispatcher = CallbackDispatcher(messagebus, self.run_check)
+            self.dispatcher.register(
+                [CONNECTIONCHECK_RUN_CHECK], [SERIAL_CONNECTION_CHECK_ENDPOINT],
+                entities=self._suts)
+
     @requires(messagebus='MessageBus')
     def run_check(self, message, messagebus):
         logger.info(
@@ -89,7 +107,7 @@ class SerialConnectionCheck(AbstractExtension):
         try:
             client.send_line('echo test')
             logger.info(
-                'Serial connection check for sut {entity} was successful'.format(
+                'Serial connection check for port {entity} was successful'.format(
                     entity=self._entity))
             return ConnectionCheckResult(
                 self.name, success=True, required=self._required, message='')

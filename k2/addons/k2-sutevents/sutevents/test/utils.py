@@ -27,7 +27,6 @@ def create_log_harness(
     config = ConfigManager()
     entity = sut[0]
     config.set(SUT, sut)
-    config.set(SUT_RESET_DONE_TIMEOUT, 1, entity=entity)
     config.set(SUT_LOG_SOURCES, log_sources, entity=entity)
     config.set(SUT_RESET_STARTED_PATTERN, reset_started_pattern, entity=entity)
     config.set(SUT_RESET_DONE_PATTERN, reset_done_pattern, entity=entity)

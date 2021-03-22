@@ -46,4 +46,4 @@ testinfra==1.16.0 --only-binary testinfra
 thrift==0.10.0
 wakeonlan==1.1.6
 websocket-client==0.55.0
-../packages/zenterio-zaf-1.1.0.post0.tar.gz
+../packages/zenterio-zaf-1.1.1.post0.tar.gz

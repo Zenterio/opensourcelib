@@ -14,7 +14,7 @@ from k2.sut import SUT
 from zserial import SERIAL_RECONNECT
 
 from .. import SERIAL_CONNECTION_LOST, SERIAL_ENABLED, SERIAL_ENDPOINT, SERIAL_LOG_ENABLED, \
-    SERIAL_RESUME, SERIAL_SEND_COMMAND, SERIAL_SUSPEND
+    SERIAL_RESUME, SERIAL_SEND_COMMAND, SERIAL_SUSPEND, SUT_SERIAL_PORTS
 from ..connection import SerialConnectionError
 from ..serial import SerialException, SerialLogSourceExtension
 from .utils import create_harness
@@ -141,7 +141,7 @@ class TestSerialExtension(TestCase):
                                          'entity').wait()[0].result()
 
 
-class TestSerialLogExtension(TestCase):
+class TestSerialLogSources(TestCase):
 
     def test_no_suts(self):
         config = ConfigManager()
@@ -149,65 +149,140 @@ class TestSerialLogExtension(TestCase):
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
-    def test_serial_not_enabled(self):
-        sut = 'entity'
+    def test_no_ports(self):
+        sut = 'sut'
         config = ConfigManager()
         config.set(SUT, [sut])
-        config.set(SERIAL_ENABLED, False, entity=sut)
-        config.set(SERIAL_LOG_ENABLED, True, entity=sut)
+        config.set(SUT_SERIAL_PORTS, [], entity=sut)
+        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+            ext_config = harness.extension.get_config(config, Mock(), Mock())
+            self.assertEqual(ext_config.config, {})
+
+    def test_serial_not_enabled(self):
+        sut = 'sut'
+        port = 'port'
+        config = ConfigManager()
+        config.set(SUT, [sut])
+        config.set(SUT_SERIAL_PORTS, [port], entity=sut)
+        config.set(SERIAL_ENABLED, False, entity=port)
+        config.set(SERIAL_LOG_ENABLED, True, entity=port)
 
         with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
     def test_serial_log_not_enabled(self):
-        sut = 'entity'
+        sut = 'sut'
+        port = 'port'
         config = ConfigManager()
         config.set(SUT, [sut])
-        config.set(SERIAL_ENABLED, True, entity=sut)
-        config.set(SERIAL_LOG_ENABLED, False, entity=sut)
+        config.set(SUT_SERIAL_PORTS, [port], entity=sut)
+        config.set(SERIAL_ENABLED, True, entity=port)
+        config.set(SERIAL_LOG_ENABLED, False, entity=port)
 
         with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
     def test_serial_log_enabled(self):
-        sut = 'entity'
+        sut = 'sut'
+        port = 'port'
         config = ConfigManager()
         config.set(SUT, [sut])
-        config.set(SERIAL_ENABLED, True, entity=sut)
-        config.set(SERIAL_LOG_ENABLED, True, entity=sut)
+        config.set(SUT_SERIAL_PORTS, [port], entity=sut)
+        config.set(SERIAL_ENABLED, True, entity=port)
+        config.set(SERIAL_LOG_ENABLED, True, entity=port)
 
         with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 1)
-            self.assertEqual(list(ext_config.config.values())[0], ['serial-entity'])
+            self.assertEqual(list(ext_config.config.values())[0], ['serial-port'])
 
     def test_serial_log_enabled_on_multiple_suts(self):
-        suts = ['entity1', 'entity2']
+        suts = ['sut1', 'sut2']
+        ports = ['port1', 'port2']
         config = ConfigManager()
         config.set(SUT, suts)
-        config.set(SERIAL_ENABLED, True, entity=suts[0])
-        config.set(SERIAL_ENABLED, True, entity=suts[1])
-        config.set(SERIAL_LOG_ENABLED, True, entity=suts[0])
-        config.set(SERIAL_LOG_ENABLED, True, entity=suts[1])
+        config.set(SUT_SERIAL_PORTS, ports[0:1], entity=suts[0])
+        config.set(SUT_SERIAL_PORTS, ports[1:2], entity=suts[1])
+        config.set(SERIAL_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_ENABLED, True, entity=ports[1])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
 
         with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 2)
-            self.assertEqual(list(ext_config.config.values())[0], ['serial-entity1'])
-            self.assertEqual(list(ext_config.config.values())[1], ['serial-entity2'])
+            self.assertEqual(list(ext_config.config.values())[0], ['serial-port1'])
+            self.assertEqual(list(ext_config.config.values())[1], ['serial-port2'])
 
     def test_serial_log_enabled_only_on_second_sut(self):
-        suts = ['entity1', 'entity2']
+        suts = ['sut1', 'sut2']
+        ports = ['port1', 'port2']
         config = ConfigManager()
         config.set(SUT, suts)
-        config.set(SERIAL_ENABLED, True, entity=suts[0])
-        config.set(SERIAL_ENABLED, True, entity=suts[1])
-        config.set(SERIAL_LOG_ENABLED, False, entity=suts[0])
-        config.set(SERIAL_LOG_ENABLED, True, entity=suts[1])
+        config.set(SUT_SERIAL_PORTS, ports[0:1], entity=suts[0])
+        config.set(SUT_SERIAL_PORTS, ports[1:2], entity=suts[1])
+        config.set(SERIAL_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_ENABLED, True, entity=ports[1])
+        config.set(SERIAL_LOG_ENABLED, False, entity=ports[0])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
 
         with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 1)
-            self.assertEqual(list(ext_config.config.values())[0], ['serial-entity2'])
+            self.assertEqual(list(ext_config.config.values())[0], ['serial-port2'])
+
+    def test_serial_log_enabled_on_multiple_ports(self):
+        sut = 'sut'
+        ports = ['port1', 'port2']
+        config = ConfigManager()
+        config.set(SUT, [sut])
+        config.set(SUT_SERIAL_PORTS, ports, entity=sut)
+        config.set(SERIAL_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_ENABLED, True, entity=ports[1])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
+
+        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+            ext_config = harness.extension.get_config(config, Mock(), Mock())
+            self.assertEqual(len(ext_config.config), 1)
+            self.assertEqual(list(ext_config.config.values())[0], ['serial-port1', 'serial-port2'])
+
+    def test_serial_log_enabled_only_on_second_port_for_single_sut(self):
+        sut = 'sut'
+        ports = ['port1', 'port2']
+        config = ConfigManager()
+        config.set(SUT, [sut])
+        config.set(SUT_SERIAL_PORTS, ports, entity=sut)
+        config.set(SERIAL_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_ENABLED, True, entity=ports[1])
+        config.set(SERIAL_LOG_ENABLED, False, entity=ports[0])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
+
+        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+            ext_config = harness.extension.get_config(config, Mock(), Mock())
+            self.assertEqual(len(ext_config.config), 1)
+            self.assertEqual(list(ext_config.config.values())[0], ['serial-port2'])
+
+    def test_serial_log_enabled_on_mix_of_ports_and_suts(self):
+        suts = ['sut1', 'sut2']
+        ports = ['port1', 'port2', 'port3', 'port4']
+        config = ConfigManager()
+        config.set(SUT, suts)
+        config.set(SUT_SERIAL_PORTS, ports[0:2], entity=suts[0])
+        config.set(SUT_SERIAL_PORTS, ports[2:4], entity=suts[1])
+        config.set(SERIAL_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_ENABLED, True, entity=ports[1])
+        config.set(SERIAL_ENABLED, True, entity=ports[2])
+        config.set(SERIAL_ENABLED, True, entity=ports[3])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[0])
+        config.set(SERIAL_LOG_ENABLED, False, entity=ports[1])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[2])
+        config.set(SERIAL_LOG_ENABLED, True, entity=ports[3])
+
+        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+            ext_config = harness.extension.get_config(config, Mock(), Mock())
+            self.assertEqual(len(ext_config.config), 2)
+            self.assertEqual(list(ext_config.config.values())[0], ['serial-port1'])
+            self.assertEqual(list(ext_config.config.values())[1], ['serial-port3', 'serial-port4'])

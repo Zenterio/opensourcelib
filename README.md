@@ -27,5 +27,5 @@ Components/Tools
 * zchangelog, generate change log from git and jira
 * Zebra, build environment tool
 * zftrace, file tracing utility
-* Znake, python build-system
+* Znake, python build-system, moved to [ZenDevelopmentEcosystem/znake](https://github.com/ZenDevelopmentEcosystem/znake)
 * Zpider, document generation tool

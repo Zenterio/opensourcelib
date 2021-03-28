@@ -1,6 +1,0 @@
-
-******
-Docker
-******
-
-.. automodule:: znake.docker

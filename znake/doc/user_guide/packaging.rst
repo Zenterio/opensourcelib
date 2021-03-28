@@ -1,6 +1,0 @@
-
-*********
-Packaging
-*********
-
-.. automodule:: znake.deb

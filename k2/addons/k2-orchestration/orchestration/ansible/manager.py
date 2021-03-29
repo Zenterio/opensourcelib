@@ -85,9 +85,9 @@ class AnsibleSuts(AbstractExtension):
             selected_nodes = config.get(ANSIBLE_NODE)
 
             if selected_nodes:
-                config = {'suts.ids': selected_nodes}
+                config = {SUT.key: selected_nodes}
             else:
-                config = {'suts.ids': config.get(ANSIBLE_NODES)}
+                config = {SUT.key: config.get(ANSIBLE_NODES)}
         else:
             config = {}
 

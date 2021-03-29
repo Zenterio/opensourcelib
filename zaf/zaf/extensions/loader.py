@@ -191,8 +191,8 @@ class ExtensionLoader(object):
 
             extension_instances = self.extension_manager.initialize_framework_extension(
                 extension, self.config)
-            for extension_instance in extension_instances:
-                if hasattr(extension, 'get_config'):
+            if hasattr(extension, 'get_config'):
+                for extension_instance in extension_instances:
                     extension_config = extension_instance.get_config(
                         self.config, main_config_options, commands_with_config_options)
 

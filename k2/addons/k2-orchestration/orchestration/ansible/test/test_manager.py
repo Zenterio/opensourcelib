@@ -2,6 +2,7 @@ from unittest import TestCase
 
 from zaf.config.manager import ConfigManager
 
+from k2.sut import SUT
 from orchestration.ansible import ANSIBLE_ENABLED, ANSIBLE_NODE, ANSIBLE_NODES
 from orchestration.ansible.manager import AnsibleSuts
 
@@ -24,7 +25,7 @@ class TestAnsibleSuts(TestCase):
         config.set(ANSIBLE_NODES, ['1', '2', '3'])
         config.set(ANSIBLE_ENABLED, False)
         ansible_suts = AnsibleSuts(None, None)
-        self.assertNotIn('suts.ids', ansible_suts.get_config(config, [], {}).config)
+        self.assertNotIn(SUT.key, ansible_suts.get_config(config, [], {}).config)
 
     def test_get_config_uses_ansible_nodes_as_suts_when_ansible_node_is_not_set(self):
         config = ConfigManager()
@@ -33,7 +34,7 @@ class TestAnsibleSuts(TestCase):
         config.set(ANSIBLE_ENABLED, True)
         ansible_suts = AnsibleSuts(None, None)
         self.assertCountEqual(
-            ansible_suts.get_config(config, [], {}).config['suts.ids'], ['1', '2', '3'])
+            ansible_suts.get_config(config, [], {}).config[SUT.key], ['1', '2', '3'])
 
     def test_get_config_uses_ansible_node_as_suts_when_set(self):
         config = ConfigManager()
@@ -42,5 +43,4 @@ class TestAnsibleSuts(TestCase):
         config.set(ANSIBLE_NODE, ['2', '3'])
         config.set(ANSIBLE_ENABLED, True)
         ansible_suts = AnsibleSuts(None, None)
-        self.assertCountEqual(
-            ansible_suts.get_config(config, [], {}).config['suts.ids'], ['2', '3'])
+        self.assertCountEqual(ansible_suts.get_config(config, [], {}).config[SUT.key], ['2', '3'])

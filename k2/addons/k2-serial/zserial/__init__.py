@@ -1,4 +1,5 @@
 from zaf.config.options import ConfigOptionId
+from zaf.config.types import Entity
 from zaf.messages.message import EndpointId, MessageId
 
 from k2.sut import SUT
@@ -51,7 +52,12 @@ SERIAL_RAW_LINE = MessageId(
     """)
 
 SERIAL_PORT_IDS = ConfigOptionId(
-    'ids', 'Identifies a serial port', namespace='serial.port', entity=True, multiple=True)
+    'ids',
+    'Identifies a serial port',
+    namespace='serial.port',
+    entity=True,
+    multiple=True,
+    option_type=Entity())
 
 SERIAL_ENABLED = ConfigOptionId(
     'enabled', 'Should serial port be enabled', at=SERIAL_PORT_IDS, option_type=bool, default=False)
@@ -122,4 +128,8 @@ SERIAL_FILTERS = ConfigOptionId(
     default=[r'###\ Error\ .*$', r'!!!Error\ .*$'])
 
 SUT_SERIAL_PORTS = ConfigOptionId(
-    'serial.ports', 'Serial ports available for this sut', at=SUT, multiple=True)
+    'serial.ports',
+    'Serial ports available for this sut',
+    at=SUT,
+    multiple=True,
+    option_type=Entity())

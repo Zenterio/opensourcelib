@@ -10,6 +10,7 @@ from zaf.messages.dispatchers import LocalMessageQueue
 from sutevents import LOG_LINE_RECEIVED
 from zserial import SERIAL_ENDPOINT, SERIAL_SEND_COMMAND
 
+from .log import serial_log_line_entity
 from .messages import SendSerialCommandData
 
 logger = logging.getLogger(get_logger_name('k2', 'zserial'))
@@ -47,6 +48,7 @@ class SerialClient(object):
         """
         self.messagebus = messagebus
         self.entity = entity
+        self.log_entity = serial_log_line_entity(self.entity)
         self.default_timeout = timeout
         self.default_endmark = re.compile(endmark)
 
@@ -104,7 +106,7 @@ class SerialClient(object):
         timeout = timeout if timeout is not None else self.default_timeout
         start_time = time.time()
         with LocalMessageQueue(self.messagebus, [LOG_LINE_RECEIVED], [SERIAL_ENDPOINT],
-                               [self.entity]) as queue:
+                               [self.log_entity]) as queue:
             serial_send_data = SendSerialCommandData(line, timeout)
             try:
                 serial_send_response = self.messagebus.send_request(

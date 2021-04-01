@@ -44,8 +44,8 @@ class TestSerialConnection(TestCase):
 
         messagebus.trigger_event.assert_has_calls(
             [
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', '### error'),
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', 'line'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', '### error'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', 'line'),
             ])
 
     def test_parse_raw_line_with_filter_with_multiple_end_of_line_patterns(self):
@@ -58,9 +58,9 @@ class TestSerialConnection(TestCase):
 
         messagebus.trigger_event.assert_has_calls(
             [
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', '!!! warning'),
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', '### error'),
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', 'line'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', '!!! warning'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', '### error'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', 'line'),
             ])
 
     def test_parse_raw_line_with_filter_with_multiple_in_line_patterns(self):
@@ -71,9 +71,9 @@ class TestSerialConnection(TestCase):
 
         messagebus.trigger_event.assert_has_calls(
             [
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', '!!! warning'),
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', '### error'),
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', 'line'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', '!!! warning'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', '### error'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', 'line'),
             ])
 
     def test_parse_raw_line_with_filter_matches_full_line(self):
@@ -84,7 +84,7 @@ class TestSerialConnection(TestCase):
 
         messagebus.trigger_event.assert_has_calls(
             [
-                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', '### error'),
+                call(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', '### error'),
             ])
 
     def test_trigger_connection_lost_message_on_connection_lost(self):

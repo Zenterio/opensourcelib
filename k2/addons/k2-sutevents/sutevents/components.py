@@ -10,6 +10,7 @@ from zaf.utils.future import Future
 
 from k2.cmd.run import RUN_COMMAND
 from k2.sut import SUT_RESET_DONE, SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED, SUT_RESET_STARTED
+from k2.sut.log import SUT_LOG_SOURCES, NoLogSources
 from sutevents import IS_SUT_RESET_EXPECTED, LOG_LINE_RECEIVED, SUTEVENTSCOMPONENT_ENDPOINT
 
 logger = logging.getLogger(get_logger_name('k2', 'sutevents.components'))
@@ -24,6 +25,7 @@ class SutEventTimeout(Exception):
 
 
 @requires(sut='Sut')
+@requires(config='Config')
 @requires(messagebus='MessageBus')
 @component(name='SutEvents', provided_by_extension='sutevents')
 class SutEvents(object):
@@ -33,9 +35,10 @@ class SutEvents(object):
     Simplifies listening or otherwise acting on events related to the SUT.
     """
 
-    def __init__(self, messagebus, sut):
+    def __init__(self, messagebus, config, sut):
         self._messagebus = messagebus
         self._sut = sut
+        self._log_entities = config.get(SUT_LOG_SOURCES, entity=sut.entity)
 
     def is_sut_reset_expected(self):
         """Check if a sut reset is expected for the sut right now."""
@@ -43,12 +46,16 @@ class SutEvents(object):
             IS_SUT_RESET_EXPECTED, entity=self._sut.entity).wait()[0].result()
 
     @contextmanager
-    def wait_for_log_line(self, log_line_regex):
+    def wait_for_log_line(self, log_line_regex, log_sources=None):
         """
         Context manager that can be used to wait for log lines matching a specific regex.
 
         Every call to get returns the next matching log lines represented by a regex Match object.
         See `Match Objects <https://docs.python.org/3/library/re.html#match-objects>`_ for more information.
+
+        By default, all available log sources are sourced for the expected log line. Use log_sources
+        to filter what log sources should be used. The specified log source still needs to be defined
+        for the sut.
 
         Example of how this can be used
 
@@ -65,10 +72,26 @@ class SutEvents(object):
         logger.debug('Waiting for logline {regex}'.format(regex=log_line_regex))
         compiled_regex = re.compile(log_line_regex)
 
+        if not self._log_entities:
+            msg = 'No log sources available for {sut}'.format(sut=self._sut.entity)
+            logger.error(msg)
+            raise NoLogSources(msg)
+
+        if log_sources is not None:
+            log_entities = log_sources if isinstance(log_sources, list) else [log_sources]
+            for entity in log_entities:
+                if entity not in self._log_entities:
+                    msg = '{source} is not among the available log sources for {sut}'.format(
+                        source=entity, sut=self._sut.entity)
+                    logger.error(msg)
+                    raise NoLogSources(msg)
+        else:
+            log_entities = self._log_entities
+
         def match(message):
             return compiled_regex.search(message.data) is not None
 
-        with LocalMessageQueue(self._messagebus, [LOG_LINE_RECEIVED], entities=[self._sut.entity],
+        with LocalMessageQueue(self._messagebus, [LOG_LINE_RECEIVED], entities=log_entities,
                                match=match) as queue:
 
             class QueueWrapper(object):
@@ -110,6 +133,10 @@ class SutEvents(object):
                     return result
 
             yield QueueWrapper(queue)
+
+    def wait_for_log_line_all(self, log_line_regex):
+        """Wait for a log line on all available log sources."""
+        return self.wait_for_log_line(log_line_regex)
 
     @contextmanager
     def expect_reset(self):

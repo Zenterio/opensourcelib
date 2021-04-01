@@ -29,9 +29,9 @@ class TestSutEventsLogExtension(TestCase):
         with create_log_harness(reset_started_pattern='STARTED') as harness:
             with harness.message_queue([SUT_RESET_STARTED], entities=['entity']) as queue:
                 harness.trigger_event(
-                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='entity', data='Not a match')
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity', data='Not a match')
                 harness.trigger_event(
-                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='entity', data='STARTED')
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity', data='STARTED')
                 self.assertEqual(queue.get(timeout=2).message_id, SUT_RESET_STARTED)
                 with self.assertRaises(Empty):
                     queue.get_nowait()
@@ -40,9 +40,9 @@ class TestSutEventsLogExtension(TestCase):
         with create_log_harness(reset_done_pattern='DONE') as harness:
             with harness.message_queue([SUT_RESET_DONE], entities=['entity']) as queue:
                 harness.trigger_event(
-                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='entity', data='Not a match')
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity', data='Not a match')
                 harness.trigger_event(
-                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='entity', data='DONE')
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity', data='DONE')
                 self.assertEqual(queue.get(timeout=2).message_id, SUT_RESET_DONE)
                 with self.assertRaises(Empty):
                     queue.get_nowait()
@@ -51,7 +51,7 @@ class TestSutEventsLogExtension(TestCase):
         with create_log_harness(reset_done_pattern='DONE', reset_done_delay=0.01) as harness:
             with harness.message_queue([SUT_RESET_DONE], entities=['entity']) as queue:
                 harness.trigger_event(
-                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='entity', data='DONE')
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity', data='DONE')
                 self.assertEqual(queue.get(timeout=2).message_id, SUT_RESET_DONE)
                 self.assertEqual(harness.extension.pattern_handlers['DONE'].interval, 0.01)
 

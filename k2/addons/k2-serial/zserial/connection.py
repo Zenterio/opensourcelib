@@ -11,6 +11,8 @@ from zaf.extensions.extension import get_logger_name
 from sutevents import LOG_LINE_RECEIVED
 from zserial import SERIAL_CONNECTED, SERIAL_CONNECTION_LOST, SERIAL_ENDPOINT, SERIAL_RAW_LINE
 
+from .log import serial_log_line_entity
+
 logger = logging.getLogger(get_logger_name('k2', 'zserial'))
 
 rawlogger = logging.getLogger('rawserial')
@@ -123,6 +125,7 @@ def _serial_connection(messagebus_arg, entity_arg, inline_filters_arg=None):
     class SerialConnection(LineReader):
         messagebus = messagebus_arg
         entity = entity_arg
+        log_entity = serial_log_line_entity(entity_arg)
         inline_filters = inline_filters_arg if inline_filters_arg else []
 
         def __init__(self):
@@ -175,7 +178,7 @@ def _serial_connection(messagebus_arg, entity_arg, inline_filters_arg=None):
                 if filtered:
                     logger.debug(filtered)
                     self.messagebus.trigger_event(
-                        LOG_LINE_RECEIVED, SERIAL_ENDPOINT, self.entity, filtered)
+                        LOG_LINE_RECEIVED, SERIAL_ENDPOINT, self.log_entity, filtered)
                     if reached_end_of_line:
                         self.stack.append(remaining)
                     else:
@@ -183,10 +186,11 @@ def _serial_connection(messagebus_arg, entity_arg, inline_filters_arg=None):
                 else:
                     logger.debug(remaining)
                     self.messagebus.trigger_event(
-                        LOG_LINE_RECEIVED, SERIAL_ENDPOINT, self.entity, remaining)
+                        LOG_LINE_RECEIVED, SERIAL_ENDPOINT, self.log_entity, remaining)
             else:
                 logger.debug(line)
-                self.messagebus.trigger_event(LOG_LINE_RECEIVED, SERIAL_ENDPOINT, self.entity, line)
+                self.messagebus.trigger_event(
+                    LOG_LINE_RECEIVED, SERIAL_ENDPOINT, self.log_entity, line)
 
     return SerialConnection
 

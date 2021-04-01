@@ -30,13 +30,14 @@ from zaf.component.decorator import requires
 from zaf.config.options import ConfigOption
 from zaf.extensions.extension import AbstractExtension, CommandExtension, get_logger_name
 from zaf.messages.decorator import callback_dispatcher, sequential_dispatcher
+from zaf.messages.dispatchers import SequentialDispatcher
 
 from k2.cmd.run import RUN_COMMAND, UNINITIALIZE_SUT
 from k2.sut import SUT, SUT_RESET_DONE, SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED, \
     SUT_RESET_STARTED
+from k2.sut.log import SUT_LOG_SOURCES
 from k2.utils.threading import LockableDict, ResetableTimer
 from sutevents import IS_SUT_RESET_EXPECTED
-from zserial import SERIAL_ENABLED
 
 from . import LOG_LINE_RECEIVED, SUT_RESET_DONE_DELAY, SUT_RESET_DONE_PATTERN, \
     SUT_RESET_STARTED_PATTERN, SUTEVENTSLOG_ENDPOINT
@@ -60,7 +61,7 @@ EVENT_TO_DELAY_CONFIG_ID = {SUT_RESET_DONE: SUT_RESET_DONE_DELAY}
         ConfigOption(SUT_RESET_STARTED_PATTERN, required=False),
         ConfigOption(SUT_RESET_DONE_PATTERN, required=False),
         ConfigOption(SUT_RESET_DONE_DELAY, required=False),
-        ConfigOption(SERIAL_ENABLED, required=False),
+        ConfigOption(SUT_LOG_SOURCES, required=False),
     ],
     endpoints_and_messages={
         SUTEVENTSLOG_ENDPOINT: [
@@ -72,7 +73,7 @@ EVENT_TO_DELAY_CONFIG_ID = {SUT_RESET_DONE: SUT_RESET_DONE_DELAY}
             UNINITIALIZE_SUT,
         ]
     },
-    activate_on=[SERIAL_ENABLED, SUT_RESET_STARTED_PATTERN, SUT_RESET_DONE_PATTERN])
+    activate_on=[SUT_LOG_SOURCES, SUT_RESET_STARTED_PATTERN, SUT_RESET_DONE_PATTERN])
 class SutEventsLogExtension(AbstractExtension):
     """
     Interprets log lines and translates to meaningful sut events.
@@ -93,6 +94,7 @@ class SutEventsLogExtension(AbstractExtension):
 
     def __init__(self, config, instances):
         self._entity = instances.get(SUT)
+        self._log_sources = config.get(SUT_LOG_SOURCES, entity=self._entity)
         self.pattern_handlers = LockableDict()
         for config_id, event in CONFIG_ID_TO_EVENT.items():
             pattern = config.get(config_id)
@@ -107,14 +109,18 @@ class SutEventsLogExtension(AbstractExtension):
     def destroy(self):
         self.cancel_triggers()
 
+    def register_dispatchers(self, messagebus):
+        if self._log_sources:
+            self.dispatcher = SequentialDispatcher(messagebus, self.handle_messages)
+            self.dispatcher.register([LOG_LINE_RECEIVED], entities=self._log_sources)
+
     @callback_dispatcher([UNINITIALIZE_SUT], entity_option_id=SUT)
     def cancel_triggers(self, message=None):
         with self.pattern_handlers.lock:
             for _, trigger in self.pattern_handlers.items():
                 trigger.cancel()
 
-    @sequential_dispatcher(
-        [LOG_LINE_RECEIVED, SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED], entity_option_id=SUT)
+    @sequential_dispatcher([SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED], entity_option_id=SUT)
     @requires(messagebus='MessageBus')
     def handle_messages(self, message, messagebus):
         """

@@ -8,9 +8,9 @@ from zaf.messages.decorator import callback_dispatcher, sequential_dispatcher
 from k2.cmd.run import RUN_COMMAND, UNINITIALIZE_SUT
 from k2.sut import SUT, SUT_RESET_DONE, SUT_RESET_DONE_TIMEOUT, SUT_RESET_EXPECTED, \
     SUT_RESET_NOT_EXPECTED, SUT_RESET_STARTED
+from k2.sut.log import SUT_LOG_SOURCES
 from k2.utils.threading import ResetableTimer
 from sutevents import IS_SUT_RESET_EXPECTED
-from zserial import SERIAL_ENABLED
 
 from . import SUT_RESET_DONE_PATTERN, SUT_RESET_STARTED_PATTERN, SUTEVENTSTIME_ENDPOINT
 from .components import SutEvents  # noqa
@@ -24,7 +24,7 @@ logger = logging.getLogger(get_logger_name('k2', 'sutevents.time'))
     config_options=[
         ConfigOption(SUT, required=True, instantiate_on=True),
         ConfigOption(SUT_RESET_DONE_TIMEOUT, required=True),
-        ConfigOption(SERIAL_ENABLED, required=False),
+        ConfigOption(SUT_LOG_SOURCES, required=False),
         ConfigOption(SUT_RESET_STARTED_PATTERN, required=False),
         ConfigOption(SUT_RESET_DONE_PATTERN, required=False),
     ],
@@ -37,7 +37,7 @@ logger = logging.getLogger(get_logger_name('k2', 'sutevents.time'))
             SUT_RESET_NOT_EXPECTED,
         ]
     },
-    deactivate_on=[SERIAL_ENABLED, SUT_RESET_STARTED_PATTERN, SUT_RESET_DONE_PATTERN])
+    deactivate_on=[SUT_LOG_SOURCES, SUT_RESET_STARTED_PATTERN, SUT_RESET_DONE_PATTERN])
 class SutEventsTimeExtension(AbstractExtension):
     """
     A time-based implementation that should only be used if logs are not available.

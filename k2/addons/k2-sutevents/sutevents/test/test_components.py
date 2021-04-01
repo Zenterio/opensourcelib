@@ -6,6 +6,7 @@ from zaf.component.manager import ComponentManager
 from zaf.messages.messagebus import MessageBus
 
 from k2.sut import SUT_RESET_DONE, SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED
+from k2.sut.log import SUT_LOG_SOURCES
 from sutevents import LOG_LINE_RECEIVED, SUTEVENTSCOMPONENT_ENDPOINT
 from sutevents.components import NoMatchingLogLine, SutEventTimeout
 
@@ -13,6 +14,10 @@ from ..components import SutEvents
 from .utils import MOCK_ENDPOINT, create_component_harness
 
 TIMEOUT = 5
+
+
+def config_get_log_sources(config_option, entity):
+    return ['log-entity'] if config_option == SUT_LOG_SOURCES and entity == 'entity' else None
 
 
 class TestSutEventsComponentsExtension(unittest.TestCase):
@@ -29,13 +34,15 @@ class TestWaitForLine(unittest.TestCase):
         self.endpoint = MOCK_ENDPOINT
         self.sut = Mock()
         self.sut.entity = 'entity'
+        self.config = Mock()
+        self.config.get = MagicMock(side_effect=config_get_log_sources)
         self.messagebus.define_endpoints_and_messages({self.endpoint: [LOG_LINE_RECEIVED]})
 
     def test_wait_for_line_times_out(self):
-        sut_events = SutEvents(self.messagebus, self.sut)
+        sut_events = SutEvents(self.messagebus, self.config, self.sut)
         with sut_events.wait_for_log_line(r'not matching') as lines:
             self.messagebus.trigger_event(
-                LOG_LINE_RECEIVED, self.endpoint, entity='entity', data='line')
+                LOG_LINE_RECEIVED, self.endpoint, entity='log-entity', data='line')
             with self.assertRaises(NoMatchingLogLine):
                 lines.get(timeout=0)
 
@@ -65,11 +72,11 @@ class TestWaitForLine(unittest.TestCase):
         self.assertEqual(match.group('second'), 'second')
 
     def wait_for_lines(self, log_line_regex, lines, expected_matches):
-        sut_events = SutEvents(self.messagebus, self.sut)
+        sut_events = SutEvents(self.messagebus, self.config, self.sut)
         with sut_events.wait_for_log_line(log_line_regex) as received_lines:
             for line in lines:
                 self.messagebus.trigger_event(
-                    LOG_LINE_RECEIVED, self.endpoint, entity='entity', data=line)
+                    LOG_LINE_RECEIVED, self.endpoint, entity='log-entity', data=line)
 
             return [received_lines.get(timeout=0) for _ in range(0, expected_matches)]
 
@@ -77,11 +84,11 @@ class TestWaitForLine(unittest.TestCase):
         lines = ['first A', 'second B', 'third A', 'fourth B']
         regex = r'A'
         matching_lines = ['first A', 'third A']
-        sut_events = SutEvents(self.messagebus, self.sut)
+        sut_events = SutEvents(self.messagebus, self.config, self.sut)
         with sut_events.wait_for_log_line(regex) as queue:
             for line in lines:
                 self.messagebus.trigger_event(
-                    LOG_LINE_RECEIVED, self.endpoint, entity='entity', data=line)
+                    LOG_LINE_RECEIVED, self.endpoint, entity='log-entity', data=line)
             self.messagebus.wait_for_not_active()
             matches = queue.get_all()
         strings = [match.string for match in matches]
@@ -93,11 +100,12 @@ class TestExpectReset(unittest.TestCase):
     def test_expect_reset_sends_messages(self):
         sut = Mock()
         sut.entity = 'my_entity'
+        config = Mock()
 
         with create_component_harness() as harness, \
                 harness.message_queue([SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED], entities=['my_entity']) as queue:
 
-            sutevents = SutEvents(harness.messagebus, sut)
+            sutevents = SutEvents(harness.messagebus, config, sut)
             with sutevents.expect_reset():
                 message = queue.get(TIMEOUT)
                 self.assertEqual(message.message_id, SUT_RESET_EXPECTED)
@@ -111,13 +119,14 @@ class TestAwaitSutMessage(unittest.TestCase):
         self.messagebus = MessageBus(Factory(ComponentManager({})))
         self.sut = MagicMock()
         self.sut.entity = 'entity1'
+        config = Mock()
 
         self.messagebus.define_endpoints_and_messages(
             {
                 MOCK_ENDPOINT: [SUT_RESET_EXPECTED],
                 SUTEVENTSCOMPONENT_ENDPOINT: [SUT_RESET_EXPECTED, SUT_RESET_DONE]
             })
-        self.sut_events = SutEvents(self.messagebus, self.sut)
+        self.sut_events = SutEvents(self.messagebus, config, self.sut)
 
     def test_that_await_message_returns_future_with_message(self):
         with self.sut_events.await_sut_message(SUT_RESET_EXPECTED, timeout=1) as future:

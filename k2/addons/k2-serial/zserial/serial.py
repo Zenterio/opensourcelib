@@ -21,20 +21,23 @@ from zaf.component.decorator import component, requires
 from zaf.component.util import add_cans, add_properties
 from zaf.config import MissingConditionalConfigOption
 from zaf.config.options import ConfigOption
-from zaf.extensions.extension import AbstractExtension, CommandExtension, get_logger_name
+from zaf.extensions.extension import AbstractExtension, CommandExtension, ExtensionConfig, \
+    FrameworkExtension, get_logger_name
 from zaf.messages.decorator import callback_dispatcher, sequential_dispatcher
 
 from k2 import CRITICAL_EXTENSION_ERROR
 from k2.cmd.run import RUN_COMMAND
 from k2.sut import SUT
+from k2.sut.log import sut_add_log_source
 from sutevents import LOG_LINE_RECEIVED
 from zserial import SERIAL_RAW_LINE, SERIAL_RECONNECT
 
 from . import SERIAL_BAUDRATE, SERIAL_CONNECTED, SERIAL_CONNECTION_LOST, SERIAL_DEVICE, \
-    SERIAL_ENABLED, SERIAL_ENDPOINT, SERIAL_FILTERS, SERIAL_PROMPT, SERIAL_RESUME, \
-    SERIAL_SEND_COMMAND, SERIAL_SUSPEND, SERIAL_TIMEOUT
+    SERIAL_ENABLED, SERIAL_ENDPOINT, SERIAL_FILTERS, SERIAL_LOG_ENABLED, SERIAL_PROMPT, \
+    SERIAL_RESUME, SERIAL_SEND_COMMAND, SERIAL_SUSPEND, SERIAL_TIMEOUT
 from .client import SerialClient
 from .connection import find_serial_port, start_serial_connection
+from .log import serial_log_line_entity
 from .messages import SendSerialCommandData
 
 logger = logging.getLogger(get_logger_name('k2', 'zserial'))
@@ -140,7 +143,7 @@ class RawSerialPort(object):
         ConfigOption(SERIAL_BAUDRATE, required=False),
         ConfigOption(SERIAL_PROMPT, required=False),
         ConfigOption(SERIAL_FILTERS, required=False),
-        ConfigOption(SERIAL_TIMEOUT, required=False)
+        ConfigOption(SERIAL_TIMEOUT, required=False),
     ],
     endpoints_and_messages={
         SERIAL_ENDPOINT: [
@@ -282,3 +285,16 @@ class SerialExtension(AbstractExtension):
         if self._serial_connection:
             self._serial_connection.close()
             self._serial_connection = None
+
+
+@FrameworkExtension(name='zserial', load_order=91, groups=['log_sources', 'serial'])
+class SerialLogSourceExtension(AbstractExtension):
+
+    def get_config(self, config, requested_config_options, requested_command_config_options):
+        log_config = {}
+        for sut in config.get(SUT):
+            if config.get(SERIAL_ENABLED, entity=sut) and config.get(SERIAL_LOG_ENABLED,
+                                                                     entity=sut):
+                sut_add_log_source(log_config, sut, serial_log_line_entity(sut))
+
+        return ExtensionConfig(log_config, 1, 'zserial')

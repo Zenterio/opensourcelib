@@ -182,7 +182,7 @@ def run_with_client(run, responses={}, expected_exit_code=None):
 
             for response_line in responses.get(line, []):
                 harness.messagebus.trigger_event(
-                    LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'entity', response_line)
+                    LOG_LINE_RECEIVED, SERIAL_ENDPOINT, 'serial-entity', response_line)
 
         connection.write_line.side_effect = write_line
 

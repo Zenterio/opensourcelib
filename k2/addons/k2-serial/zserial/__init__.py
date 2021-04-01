@@ -53,6 +53,17 @@ SERIAL_RAW_LINE = MessageId(
 SERIAL_ENABLED = ConfigOptionId(
     'serial.enabled', 'Should serial be enabled', at=SUT, option_type=bool, default=False)
 
+SERIAL_LOG_ENABLED = ConfigOptionId(
+    'serial.log',
+    """\
+    Should serial trigger LOG_LINE_RECEIVED events.
+
+    LOG_LINE_RECEIVED events are used by other extensions (e.g. SutEvents) to provide additional
+    functionality and components.""",
+    at=SUT,
+    option_type=bool,
+    default=True)
+
 SERIAL_CONNECTION_CHECK_ENABLED = ConfigOptionId(
     'serialcc.enabled',
     'Should serial connection check be enabled',

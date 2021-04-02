@@ -47,6 +47,27 @@ class TestSutEventsLogExtension(TestCase):
                 with self.assertRaises(Empty):
                     queue.get_nowait()
 
+    def test_detects_full_reset_on_multiple_sources(self):
+        with create_log_harness(reset_started_pattern='STARTED', reset_done_pattern='DONE',
+                                log_sources=['log-entity-1', 'log-entity-2']) as harness:
+            with harness.message_queue([SUT_RESET_STARTED, SUT_RESET_DONE],
+                                       entities=['entity']) as queue:
+                harness.trigger_event(
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity-1', data='Not a match')
+                harness.trigger_event(
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity-2', data='STARTED')
+                self.assertEqual(queue.get(timeout=2).message_id, SUT_RESET_STARTED)
+                with self.assertRaises(Empty):
+                    queue.get_nowait()
+
+                harness.trigger_event(
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity-2', data='Not a match')
+                harness.trigger_event(
+                    LOG_LINE_RECEIVED, MOCK_ENDPOINT, entity='log-entity-1', data='DONE')
+                self.assertEqual(queue.get(timeout=2).message_id, SUT_RESET_DONE)
+                with self.assertRaises(Empty):
+                    queue.get_nowait()
+
     def test_trigger_reset_done_with_delay(self):
         with create_log_harness(reset_done_pattern='DONE', reset_done_delay=0.01) as harness:
             with harness.message_queue([SUT_RESET_DONE], entities=['entity']) as queue:

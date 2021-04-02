@@ -40,6 +40,9 @@ from .client import SerialClient
 from .connection import find_serial_port, start_serial_connection
 from .log import serial_log_line_entity
 from .messages import SendSerialCommandData
+from .sut import SUT_SERIAL_BAUDRATE, SUT_SERIAL_DEVICE, SUT_SERIAL_ENABLED, SUT_SERIAL_FILTERS, \
+    SUT_SERIAL_LOG_ENABLED, SUT_SERIAL_PROMPT, SUT_SERIAL_TIMEOUT, \
+    add_sut_options_to_extension_config
 
 logger = logging.getLogger(get_logger_name('k2', 'zserial'))
 
@@ -147,6 +150,13 @@ class RawSerialPort(object):
         ConfigOption(SERIAL_TIMEOUT, required=False),
         ConfigOption(SUT, required=False),
         ConfigOption(SUT_SERIAL_PORTS, required=False),
+        ConfigOption(SUT_SERIAL_BAUDRATE, required=False),
+        ConfigOption(SUT_SERIAL_DEVICE, required=False),
+        ConfigOption(SUT_SERIAL_ENABLED, required=False),
+        ConfigOption(SUT_SERIAL_FILTERS, required=False),
+        ConfigOption(SUT_SERIAL_LOG_ENABLED, required=False),
+        ConfigOption(SUT_SERIAL_PROMPT, required=False),
+        ConfigOption(SUT_SERIAL_TIMEOUT, required=False),
     ],
     endpoints_and_messages={
         SERIAL_ENDPOINT: [
@@ -299,11 +309,18 @@ class SerialExtension(AbstractExtension):
 class SerialLogSourceExtension(AbstractExtension):
 
     def get_config(self, config, requested_config_options, requested_command_config_options):
-        log_config = {}
+        extension_config = {}
         for sut in config.get(SUT):
-            for port in config.get(SUT_SERIAL_PORTS, entity=sut):
-                if config.get(SERIAL_ENABLED, entity=port) and config.get(SERIAL_LOG_ENABLED,
-                                                                          entity=port):
-                    sut_add_log_source(log_config, sut, serial_log_line_entity(port))
+            if config.get(SUT_SERIAL_ENABLED, entity=sut):
+                if config.get(SUT_SERIAL_PORTS, entity=sut):
+                    raise MissingConditionalConfigOption(
+                        'Mixing of sut and serial port id options is not supported!')
+                add_sut_options_to_extension_config(sut, extension_config, config)
+                sut_add_log_source(extension_config, sut, serial_log_line_entity(sut))
+            else:
+                for port in config.get(SUT_SERIAL_PORTS, entity=sut):
+                    if config.get(SERIAL_ENABLED, entity=port) and config.get(SERIAL_LOG_ENABLED,
+                                                                              entity=port):
+                        sut_add_log_source(extension_config, sut, serial_log_line_entity(port))
 
-        return ExtensionConfig(log_config, 1, 'zserial')
+        return ExtensionConfig(extension_config, 1, 'zserial')

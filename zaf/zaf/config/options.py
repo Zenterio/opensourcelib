@@ -91,7 +91,7 @@ class ConfigOptionId(InternalConfigOptionId):
             raise ValueError('Invalid type for config option with name {name}'.format(name=name))
 
         if entity is True:
-            if option_type not in [str, Entity]:
+            if option_type != str and type(option_type) != Entity:
                 raise ValueError(
                     "Option '{name}' is an entity and must have an option of type Entity".format(
                         name=name))

@@ -6,7 +6,7 @@ from zaf.component.manager import ComponentManager
 from zaf.messages.messagebus import MessageBus
 
 from k2.sut import SUT_RESET_DONE, SUT_RESET_EXPECTED, SUT_RESET_NOT_EXPECTED
-from k2.sut.log import SUT_LOG_SOURCES
+from k2.sut.log import SUT_LOG_SOURCES, NoLogSources
 from sutevents import LOG_LINE_RECEIVED, SUTEVENTSCOMPONENT_ENDPOINT
 from sutevents.components import NoMatchingLogLine, SutEventTimeout
 
@@ -89,6 +89,41 @@ class TestWaitForLine(unittest.TestCase):
             for line in lines:
                 self.messagebus.trigger_event(
                     LOG_LINE_RECEIVED, self.endpoint, entity='log-entity', data=line)
+            self.messagebus.wait_for_not_active()
+            matches = queue.get_all()
+        strings = [match.string for match in matches]
+        self.assertEqual(strings, matching_lines)
+
+    def test_wait_for_line_raises_no_log_sources_error_if_log_source_is_unavailable(self):
+        sut_events = SutEvents(self.messagebus, self.config, self.sut)
+        with self.assertRaises(NoLogSources):
+            sut_events.wait_for_log_line(
+                r'not matching', log_sources='log-source-unavailable').__enter__()
+
+    def test_wait_for_line_raises_no_log_sources_error_if_no_log_sources_defined_for_sut(self):
+        config = Mock()
+        config.get = MagicMock(return_value=[])
+        sut_events = SutEvents(self.messagebus, config, self.sut)
+        with self.assertRaises(NoLogSources):
+            sut_events.wait_for_log_line(
+                r'not matching', log_sources='not-a-log-source').__enter__()
+
+    def test_wait_for_line_matches_only_one_log_source(self):
+        lines = ['first A', 'second B', 'third A', 'fourth B']
+        regex = r'B'
+        matching_lines = ['second B', 'fourth B']
+        config = Mock()
+        config.get = MagicMock(return_value=['log-source-A', 'log-source-B'])
+        sut_events = SutEvents(self.messagebus, config, self.sut)
+        with sut_events.wait_for_log_line(regex, log_sources='log-source-B') as queue:
+            self.messagebus.trigger_event(
+                LOG_LINE_RECEIVED, self.endpoint, entity='log-source-A', data=lines[0])
+            self.messagebus.trigger_event(
+                LOG_LINE_RECEIVED, self.endpoint, entity='log-source-B', data=lines[1])
+            self.messagebus.trigger_event(
+                LOG_LINE_RECEIVED, self.endpoint, entity='log-source-A', data=lines[2])
+            self.messagebus.trigger_event(
+                LOG_LINE_RECEIVED, self.endpoint, entity='log-source-B', data=lines[3])
             self.messagebus.wait_for_not_active()
             matches = queue.get_all()
         strings = [match.string for match in matches]

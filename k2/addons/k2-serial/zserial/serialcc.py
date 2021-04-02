@@ -22,6 +22,7 @@ from zserial import SERIAL_ENDPOINT, SERIAL_PORT_IDS, SERIAL_RECONNECT
 from . import SERIAL_CONNECTION_CHECK_ENABLED, SERIAL_CONNECTION_CHECK_ENDPOINT, \
     SERIAL_CONNECTION_CHECK_REQUIRED, SERIAL_ENABLED, SERIAL_TIMEOUT, SUT_SERIAL_PORTS
 from .client import SerialClient
+from .sut import SUT_SERIAL_CONNECTION_CHECK_ENABLED, SUT_SERIAL_CONNECTION_CHECK_REQUIRED
 
 logger = logging.getLogger(get_logger_name('k2', 'zserialcc'))
 
@@ -37,6 +38,8 @@ logger = logging.getLogger(get_logger_name('k2', 'zserialcc'))
         ConfigOption(SERIAL_TIMEOUT, required=True),
         ConfigOption(SUT, required=True),
         ConfigOption(SUT_SERIAL_PORTS, required=True),
+        ConfigOption(SUT_SERIAL_CONNECTION_CHECK_ENABLED, required=False),
+        ConfigOption(SUT_SERIAL_CONNECTION_CHECK_REQUIRED, required=False),
     ],
     endpoints_and_messages={SERIAL_CONNECTION_CHECK_ENDPOINT: [
         CONNECTIONCHECK_RUN_CHECK,

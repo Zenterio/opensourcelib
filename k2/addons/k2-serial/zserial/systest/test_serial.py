@@ -19,8 +19,11 @@ def test_serial_filter_out_command_response(zk2, VirtualSerialConnection):
                 'textreport', 'zserial'
             ],
             'run --suts-ids box --suts-box@ip localhost '
-            '--suts-box@serial-enabled true '
-            '--suts-box@serial-device {device} --suts-box@serial-baudrate 9600 '
+            '--serial-port-ids devport '
+            '--serial-port-devport@enabled true '
+            '--serial-port-devport@device {device} '
+            '--serial-port-devport@baudrate 9600 '
+            '--suts-box@serial-ports devport '
             'zserial.systest.data.suites.test_serial:test_serial_can_filter_out_command_results'.
             format(device=serial.device),
             wait=False)

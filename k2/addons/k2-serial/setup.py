@@ -21,7 +21,7 @@ setup(
     entry_points={
         'k2.addons': [
             'zserial = zserial.serial:SerialExtension',
-            'zseriallogsource = zserial.serial:SerialLogSourceExtension',
+            'zserialframework = zserial.serial:SerialFrameworkExtension',
             'zserialcc = zserial.serialcc:SerialConnectionCheck',
             'zserialcommand = zserial.serialcommand:SerialFrameworkExtension',
         ],

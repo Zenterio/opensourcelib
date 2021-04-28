@@ -16,7 +16,7 @@ from zserial import SERIAL_RECONNECT
 from .. import SERIAL_CONNECTION_LOST, SERIAL_ENABLED, SERIAL_ENDPOINT, SERIAL_LOG_ENABLED, \
     SERIAL_RESUME, SERIAL_SEND_COMMAND, SERIAL_SUSPEND, SUT_SERIAL_PORTS
 from ..connection import SerialConnectionError
-from ..serial import SerialException, SerialLogSourceExtension
+from ..serial import SerialException, SerialFrameworkExtension
 from .utils import create_harness
 
 
@@ -145,7 +145,7 @@ class TestSerialLogSources(TestCase):
 
     def test_no_suts(self):
         config = ConfigManager()
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
@@ -154,7 +154,7 @@ class TestSerialLogSources(TestCase):
         config = ConfigManager()
         config.set(SUT, [sut])
         config.set(SUT_SERIAL_PORTS, [], entity=sut)
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
@@ -167,7 +167,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_ENABLED, False, entity=port)
         config.set(SERIAL_LOG_ENABLED, True, entity=port)
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
@@ -180,7 +180,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_ENABLED, True, entity=port)
         config.set(SERIAL_LOG_ENABLED, False, entity=port)
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(ext_config.config, {})
 
@@ -193,7 +193,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_ENABLED, True, entity=port)
         config.set(SERIAL_LOG_ENABLED, True, entity=port)
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 1)
             self.assertEqual(list(ext_config.config.values())[0], ['serial-port'])
@@ -210,7 +210,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[0])
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 2)
             self.assertEqual(list(ext_config.config.values())[0], ['serial-port1'])
@@ -228,7 +228,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_LOG_ENABLED, False, entity=ports[0])
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 1)
             self.assertEqual(list(ext_config.config.values())[0], ['serial-port2'])
@@ -244,7 +244,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[0])
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 1)
             self.assertEqual(list(ext_config.config.values())[0], ['serial-port1', 'serial-port2'])
@@ -260,7 +260,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_LOG_ENABLED, False, entity=ports[0])
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[1])
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 1)
             self.assertEqual(list(ext_config.config.values())[0], ['serial-port2'])
@@ -281,7 +281,7 @@ class TestSerialLogSources(TestCase):
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[2])
         config.set(SERIAL_LOG_ENABLED, True, entity=ports[3])
 
-        with ExtensionTestHarness(SerialLogSourceExtension, config=config) as harness:
+        with ExtensionTestHarness(SerialFrameworkExtension, config=config) as harness:
             ext_config = harness.extension.get_config(config, Mock(), Mock())
             self.assertEqual(len(ext_config.config), 2)
             self.assertEqual(list(ext_config.config.values())[0], ['serial-port1'])

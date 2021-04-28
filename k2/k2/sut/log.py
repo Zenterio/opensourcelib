@@ -8,7 +8,7 @@ FrameworkExtension and implementing the get_config member, like so:
 .. code-block:: python
 
     @FrameworkExtension(name='zserial', load_order=91, groups=['log_sources', 'serial'])
-    class SerialLogSourceExtension(AbstractExtension):
+    class SerialFrameworkExtension(AbstractExtension):
         def get_config(self, config, requested_config_options, requested_command_config_options):
             log_config = dict()
             for sut in config.get(SUT):

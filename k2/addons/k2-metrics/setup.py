@@ -17,7 +17,7 @@ setup(
             'systest'
         ]),
     install_requires=[
-        'numpy==1.19.4',
+        'numpy==1.22.0',
         'matplotlib==3.3.3',
         'pandas==1.1.4',
     ],
